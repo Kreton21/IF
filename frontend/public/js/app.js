@@ -562,45 +562,30 @@ async function showOrderSuccess(orderId) {
     
     const order = await response.json();
     
-    // Hide hero, tickets, checkout sections
-    const hero = document.querySelector('.hero');
-    const ticketsSec = document.getElementById('tickets');
-    const checkoutSec = document.getElementById('checkout-section');
-    if (hero) hero.style.display = 'none';
-    if (ticketsSec) ticketsSec.style.display = 'none';
-    if (checkoutSec) checkoutSec.style.display = 'none';
+    // Hide all sections except success
+    document.querySelectorAll('#page-home > section, #page-home > header, #page-home > footer, #page-home > nav').forEach(el => {
+      if (el.id !== 'success-section') el.style.display = 'none';
+    });
     
     // Show success section
     const successSection = document.getElementById('success-section');
-    if (successSection) {
-      successSection.classList.remove('hidden');
-    }
+    successSection.classList.remove('hidden');
     
     // Update order number
     const orderNumEl = document.getElementById('success-order-number');
-    if (orderNumEl && order.order_number) {
+    if (orderNumEl) {
       orderNumEl.textContent = order.order_number;
     }
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Clear URL without reload
     window.history.replaceState({}, document.title, '/');
   } catch (error) {
     console.error('Error loading order:', error);
-    // Show error section
-    const hero = document.querySelector('.hero');
-    const ticketsSec = document.getElementById('tickets');
-    const checkoutSec = document.getElementById('checkout-section');
-    if (hero) hero.style.display = 'none';
-    if (ticketsSec) ticketsSec.style.display = 'none';
-    if (checkoutSec) checkoutSec.style.display = 'none';
-    
-    const errorSection = document.getElementById('error-section');
-    if (errorSection) {
-      errorSection.classList.remove('hidden');
-    }
+    // Hide all sections except error
+    document.querySelectorAll('#page-home > section, #page-home > header, #page-home > footer, #page-home > nav').forEach(el => {
+      if (el.id !== 'error-section') el.style.display = 'none';
+    });
+    document.getElementById('error-section').classList.remove('hidden');
   }
 }
 
