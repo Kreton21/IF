@@ -562,14 +562,11 @@ async function showOrderSuccess(orderId) {
     
     const order = await response.json();
     
-    // Hide all sections except success
-    document.querySelectorAll('#page-home > section, #page-home > header, #page-home > footer, #page-home > nav').forEach(el => {
-      if (el.id !== 'success-section') el.style.display = 'none';
-    });
-    
-    // Show success section
-    const successSection = document.getElementById('success-section');
-    successSection.classList.remove('hidden');
+    // Switch pages: hide home, show success
+    document.getElementById('page-home').classList.remove('active');
+    document.getElementById('page-home').classList.add('hidden');
+    document.getElementById('page-success').classList.remove('hidden');
+    document.getElementById('page-success').classList.add('active');
     
     // Update order number
     const orderNumEl = document.getElementById('success-order-number');
@@ -577,15 +574,27 @@ async function showOrderSuccess(orderId) {
       orderNumEl.textContent = order.order_number;
     }
     
+    // Display QR codes for each ticket
+    const qrContainer = document.getElementById('qr-codes-container');
+    if (qrContainer && order.tickets && order.tickets.length > 0) {
+      qrContainer.innerHTML = order.tickets.map(ticket => `
+        <div class="qr-ticket">
+          <p class="qr-ticket-name">${ticket.ticket_type_name || 'Billet'}</p>
+          <p class="qr-ticket-attendee">${ticket.attendee_first_name} ${ticket.attendee_last_name}</p>
+          <img class="qr-img" src="${API_BASE}/tickets/${ticket.qr_token}/qr" alt="QR Code" />
+        </div>
+      `).join('');
+    }
+    
     // Clear URL without reload
     window.history.replaceState({}, document.title, '/');
   } catch (error) {
     console.error('Error loading order:', error);
-    // Hide all sections except error
-    document.querySelectorAll('#page-home > section, #page-home > header, #page-home > footer, #page-home > nav').forEach(el => {
-      if (el.id !== 'error-section') el.style.display = 'none';
-    });
-    document.getElementById('error-section').classList.remove('hidden');
+    // Switch pages: hide home, show error
+    document.getElementById('page-home').classList.remove('active');
+    document.getElementById('page-home').classList.add('hidden');
+    document.getElementById('page-error').classList.remove('hidden');
+    document.getElementById('page-error').classList.add('active');
   }
 }
 

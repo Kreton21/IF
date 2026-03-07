@@ -221,28 +221,6 @@
     </div>
   </section>
 
-  <!-- RESULT: SUCCESS (hidden) -->
-  <section class="result-sec hidden" id="success-section">
-    <div class="result-card success">
-      <div class="result-ico">✅</div>
-      <h2>Paiement confirmé !</h2>
-      <p>Votre commande <strong class="order-num" id="success-order-number"></strong> a été validée.</p>
-      <p>Vos billets avec QR codes ont été envoyés à votre adresse email.</p>
-      <div class="result-note">📱 Présentez le QR code (imprimé ou sur mobile) à l'entrée du festival.</div>
-      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Retour à l'accueil</button>
-    </div>
-  </section>
-
-  <!-- RESULT: ERROR (hidden) -->
-  <section class="result-sec hidden" id="error-section">
-    <div class="result-card error">
-      <div class="result-ico">❌</div>
-      <h2>Erreur de paiement</h2>
-      <p>Le paiement n'a pas pu être finalisé. Veuillez réessayer.</p>
-      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Réessayer</button>
-    </div>
-  </section>
-
   <!-- RECAP -->
   <section class="sec recap-sec">
     <div class="inner">
@@ -572,6 +550,33 @@
     </div>
   </section>
   <footer><div class="f-logo">L'INTERFILIÈRES 2026</div><p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay</p></footer>
+</div>
+
+<!-- ════ RESULT: SUCCESS (outside page-home) ════ -->
+<div class="page hidden" id="page-success">
+  <section class="result-sec">
+    <div class="result-card success">
+      <div class="result-ico">✅</div>
+      <h2>Paiement confirmé !</h2>
+      <p>Votre commande <strong class="order-num" id="success-order-number"></strong> a été validée.</p>
+      <div id="qr-codes-container"></div>
+      <p style="margin-top:16px">Vos billets avec QR codes ont également été envoyés à votre adresse email.</p>
+      <div class="result-note">📱 Présentez le QR code (imprimé ou sur mobile) à l'entrée du festival.</div>
+      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Retour à l'accueil</button>
+    </div>
+  </section>
+</div>
+
+<!-- ════ RESULT: ERROR (outside page-home) ════ -->
+<div class="page hidden" id="page-error">
+  <section class="result-sec">
+    <div class="result-card error">
+      <div class="result-ico">❌</div>
+      <h2>Erreur de paiement</h2>
+      <p>Le paiement n'a pas pu être finalisé. Veuillez réessayer.</p>
+      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Réessayer</button>
+    </div>
+  </section>
 </div>
 
 <script src="js/app.js"></script>

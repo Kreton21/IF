@@ -444,6 +444,27 @@ a { text-decoration:none; color:inherit; }
   font-size:.85rem; color:#2f855a;
 }
 
+/* QR Codes in success page */
+#qr-codes-container {
+  display:flex; flex-wrap:wrap; justify-content:center; gap:24px;
+  margin-top:24px;
+}
+.qr-ticket {
+  background:var(--cream); border-radius:16px; padding:20px;
+  border:1px solid var(--border); text-align:center;
+}
+.qr-ticket-name {
+  font-family:'Bebas Neue',sans-serif; font-size:1.2rem;
+  color:var(--text); margin-bottom:4px;
+}
+.qr-ticket-attendee {
+  font-size:.85rem; color:var(--muted); margin-bottom:12px;
+}
+.qr-img {
+  width:200px; height:200px; border-radius:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.1);
+}
+
 /* ════════════════════════════════════════
    NOTIFICATION
 ════════════════════════════════════════ */
