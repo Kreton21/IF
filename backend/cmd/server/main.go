@@ -71,7 +71,11 @@ func main() {
 	adminHandler := handlers.NewAdminHandler(adminService, ticketService)
 
 	// 7. Créer le routeur
-	frontendDir := "../frontend"
+	// Determine frontend directory (try relative path, then use env var or default)
+	frontendDir := os.Getenv("FRONTEND_DIR")
+	if frontendDir == "" {
+		frontendDir = "../frontend"
+	}
 	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, adminService, redisClient, frontendDir)
 
 	// 8. Créer les comptes par défaut si nécessaire
