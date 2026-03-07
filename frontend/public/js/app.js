@@ -20,6 +20,16 @@ const state = {
 // Initialisation
 // ══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  // Check for order_id in URL (payment return)
+  const urlParams = new URLSearchParams(window.location.search);
+  const orderId = urlParams.get('order_id');
+  
+  if (orderId) {
+    // Show success page with order details
+    showOrderSuccess(orderId);
+    return;
+  }
+  
   // Normal page — init everything
   initParticles();
   initCountdown();
@@ -539,6 +549,39 @@ async function pollOrderStatus(orderId) {
     }
   } catch (e) {
     console.error('Erreur polling:', e);
+  }
+}
+
+// Show order success page after payment redirect
+async function showOrderSuccess(orderId) {
+  try {
+    const response = await fetch(`${API_BASE}/orders/${orderId}/status`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch order');
+    }
+    
+    const order = await response.json();
+    
+    // Hide main content
+    document.getElementById('page-home').style.display = 'none';
+    
+    // Show success section
+    const successSection = document.getElementById('success-section');
+    successSection.classList.remove('hidden');
+    
+    // Update order number
+    const orderNumEl = document.getElementById('success-order-number');
+    if (orderNumEl) {
+      orderNumEl.textContent = order.order_number;
+    }
+    
+    // Clear URL without reload
+    window.history.replaceState({}, document.title, '/');
+  } catch (error) {
+    console.error('Error loading order:', error);
+    // Show error section
+    document.getElementById('page-home').style.display = 'none';
+    document.getElementById('error-section').classList.remove('hidden');
   }
 }
 
