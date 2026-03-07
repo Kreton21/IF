@@ -106,6 +106,29 @@ fi
 echo -e "${GREEN}✓ Docker containers running${NC}"
 echo ""
 
+# Step 4.5: Verify systemd service configuration
+if systemctl list-unit-files | grep -q "$SERVICE_NAME"; then
+    echo -e "${YELLOW}[4.5/5]${NC} Checking systemd service configuration..."
+    
+    if ! sudo grep -q "FRONTEND_DIR=$PROJECT_DIR/frontend" /etc/systemd/system/"$SERVICE_NAME" 2>/dev/null; then
+        echo -e "${YELLOW}⚠️  Updating systemd service with correct FRONTEND_DIR...${NC}"
+        
+        # Check if FRONTEND_DIR line exists but with wrong path
+        if sudo grep -q "Environment=\"FRONTEND_DIR=" /etc/systemd/system/"$SERVICE_NAME"; then
+            sudo sed -i "s|Environment=\"FRONTEND_DIR=.*\"|Environment=\"FRONTEND_DIR=$PROJECT_DIR/frontend\"|" /etc/systemd/system/"$SERVICE_NAME"
+        else
+            # Add FRONTEND_DIR after PATH environment variable
+            sudo sed -i "/Environment=\"PATH=/a Environment=\"FRONTEND_DIR=$PROJECT_DIR/frontend\"" /etc/systemd/system/"$SERVICE_NAME"
+        fi
+        
+        sudo systemctl daemon-reload
+        echo -e "${GREEN}✓ Service configuration updated${NC}"
+    else
+        echo -e "${GREEN}✓ Service configuration correct${NC}"
+    fi
+    echo ""
+fi
+
 # Step 5: Restart service
 echo -e "${YELLOW}[5/5]${NC} Restarting festival service..."
 
