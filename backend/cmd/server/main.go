@@ -26,6 +26,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Erreur configuration: %v", err)
 	}
+	
+	// Debug: log important config values
+	log.Printf("⚙️  Payment Provider: %s", cfg.PaymentProvider)
+	log.Printf("⚙️  Return URL: %s", cfg.HelloAssoReturnURL)
 
 	// 2. Connexion PostgreSQL
 	pgPool, err := database.NewPostgresPool(cfg.DatabaseURL)
@@ -64,6 +68,7 @@ func main() {
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("http://localhost:%s", cfg.Port)
 	}
+	log.Printf("🌐 Base URL: %s", baseURL)
 	qrService := services.NewQRCodeService(baseURL)
 	emailService := services.NewEmailService(cfg)
 
