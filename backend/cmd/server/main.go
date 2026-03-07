@@ -59,7 +59,12 @@ func main() {
 		log.Fatalf("Erreur payment provider: %v", err)
 	}
 
-	qrService := services.NewQRCodeService(fmt.Sprintf("http://localhost:%s", cfg.Port))
+	// Use BASE_URL from env or construct from port
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("http://localhost:%s", cfg.Port)
+	}
+	qrService := services.NewQRCodeService(baseURL)
 	emailService := services.NewEmailService(cfg)
 
 	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, paymentProvider, qrService, emailService, redisClient)

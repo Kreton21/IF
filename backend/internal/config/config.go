@@ -67,8 +67,8 @@ func Load() (*Config, error) {
 		HelloAssoClientSecret: getEnv("HELLOASSO_CLIENT_SECRET", ""),
 		HelloAssoOrgSlug:      getEnv("HELLOASSO_ORG_SLUG", ""),
 		HelloAssoAPIURL:       getEnv("HELLOASSO_API_URL", "https://api.helloasso.com"),
-		HelloAssoReturnURL:    getEnv("HELLOASSO_RETURN_URL", "http://localhost:8080/"),
-		HelloAssoErrorURL:     getEnv("HELLOASSO_ERROR_URL", "http://localhost:8080/"),
+		HelloAssoReturnURL:    getEnv("HELLOASSO_RETURN_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
+		HelloAssoErrorURL:     getEnv("HELLOASSO_ERROR_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
 
 		JWTSecret: mustGetEnv("JWT_SECRET"),
 
