@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IF Festival — Administration</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <!-- Login -->
+    <div id="login-page" class="login-page">
+        <div class="login-card">
+            <h1>🔐 Administration</h1>
+            <p>IF Festival</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <input type="text" id="login-username" placeholder="Nom d'utilisateur" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Mot de passe" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">Connexion</button>
+                <p id="login-error" class="error-text hidden"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <h1>🎵 IF Festival</h1>
+                <span class="header-badge">Admin</span>
+            </div>
+            <div class="header-right">
+                <span id="admin-name"></span>
+                <button onclick="logout()" class="btn btn-sm">Déconnexion</button>
+            </div>
+        </header>
+
+        <!-- Navigation tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="stats" onclick="switchTab('stats')">📊 Statistiques</button>
+            <button class="tab" data-tab="orders" onclick="switchTab('orders')">📋 Commandes</button>
+            <button class="tab" data-tab="tickets" onclick="switchTab('tickets')">🎟 Tickets</button>
+            <button class="tab" data-tab="scanner" onclick="switchTab('scanner')">📱 Scanner QR</button>
+        </nav>
+
+        <!-- Tab: Statistiques -->
+        <section id="tab-stats" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-orders">-</div>
+                    <div class="stat-label">Commandes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-tickets">-</div>
+                    <div class="stat-label">Tickets vendus</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-revenue">-</div>
+                    <div class="stat-label">Chiffre d'affaires</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-validated">-</div>
+                    <div class="stat-label">Tickets validés</div>
+                </div>
+            </div>
+
+            <!-- Stats par type -->
+            <div class="card">
+                <h3>📊 Par type de ticket</h3>
+                <div id="stats-by-type" class="table-container"></div>
+            </div>
+
+            <!-- Ventes par jour -->
+            <div class="card">
+                <h3>📈 Ventes par jour</h3>
+                <div id="stats-by-day" class="table-container"></div>
+            </div>
+
+            <!-- Commandes récentes -->
+            <div class="card">
+                <h3>🕐 Dernières commandes</h3>
+                <div id="recent-orders" class="table-container"></div>
+            </div>
+        </section>
+
+        <!-- Tab: Commandes -->
+        <section id="tab-orders" class="tab-content">
+            <div class="card">
+                <div class="filters">
+                    <input type="text" id="order-search" placeholder="🔍 Rechercher (email, nom, n° commande)" 
+                           oninput="debounceSearch()">
+                    <select id="order-status-filter" onchange="loadOrders()">
+                        <option value="">Tous les statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="paid">Payé</option>
+                        <option value="confirmed">Confirmé</option>
+                        <option value="cancelled">Annulé</option>
+                        <option value="refunded">Remboursé</option>
+                    </select>
+                </div>
+                <div id="orders-table" class="table-container"></div>
+                <div id="orders-pagination" class="pagination"></div>
+            </div>
+        </section>
+
+        <!-- Tab: Tickets -->
+        <section id="tab-tickets" class="tab-content">
+            <!-- Créer un type de ticket -->
+            <div class="card">
+                <h3>➕ Créer un type de ticket</h3>
+                <form id="create-tt-form">
+                    <div class="form-row">
+                        <div class="form-group"><label>Nom *</label><input type="text" id="tt-name" required placeholder="Standard, VIP..."></div>
+                        <div class="form-group"><label>Prix (€) *</label><input type="number" id="tt-price" required min="0" step="0.01" placeholder="15.00"></div>
+                    </div>
+                    <div class="form-group"><label>Description</label><input type="text" id="tt-desc" placeholder="Accès complet au festival"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Quantité totale *</label><input type="number" id="tt-qty" required min="1" placeholder="800"></div>
+
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Début ventes — Date *</label>
+                            <input type="date" id="tt-start-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Début ventes — Heure *</label>
+                            <input type="text" id="tt-start-time" required value="10:00" pattern="([01]\d|2[0-3]):[0-5]\d" placeholder="HH:MM" maxlength="5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fin ventes — Date *</label>
+                            <input type="date" id="tt-end-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Fin ventes — Heure *</label>
+                            <input type="text" id="tt-end-time" required value="23:59" pattern="([01]\d|2[0-3]):[0-5]\d" placeholder="HH:MM" maxlength="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Domaines email autorisés (banque)</label>
+                        <input type="text" id="tt-domains" placeholder="gmail.com, universite-paris-saclay.fr">
+                        <small>Séparés par des virgules. Vide = accessible à tous.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Créer</button>
+                    <span id="tt-msg" class="form-msg hidden"></span>
+                </form>
+            </div>
+
+            <!-- Liste des types de tickets avec catégories -->
+            <div class="card">
+                <h3>🎟 Types de tickets & catégories</h3>
+                <div id="tt-list"></div>
+            </div>
+
+            <!-- Réallocation -->
+            <div class="card">
+                <h3>🔄 Réallouer des places</h3>
+                <p style="color:#718096;margin-bottom:12px;">Transférer des places non-vendues d'une catégorie vers une autre (même type de ticket).</p>
+                <div class="form-row">
+                    <div class="form-group"><label>Source</label><select id="realloc-src"></select></div>
+                    <div class="form-group"><label>Cible</label><select id="realloc-dst"></select></div>
+                    <div class="form-group"><label>Quantité</label><input type="number" id="realloc-qty" min="1" value="1"></div>
+                </div>
+                <button onclick="doReallocate()" class="btn btn-primary">Transférer</button>
+                <span id="realloc-msg" class="form-msg hidden"></span>
+            </div>
+        </section>
+
+        <!-- Tab: Scanner QR -->
+        <section id="tab-scanner" class="tab-content">
+            <div class="scanner-container">
+                <div class="card scanner-card">
+                    <h2>📱 Validation des QR Codes</h2>
+                    <p>Scannez ou saisissez le code QR du participant</p>
+
+                    <!-- Camera scanner button -->
+                    <a href="/admin/scanner/" class="btn btn-primary btn-lg" style="display:inline-flex;align-items:center;gap:10px;margin:20px 0;font-size:1.05rem;padding:14px 28px;text-decoration:none">
+                        📷 Ouvrir le scanner caméra
+                    </a>
+                    
+                    <p style="font-size:.82rem;color:#888;margin-bottom:20px">Ou saisissez manuellement le code :</p>
+
+                    <div class="scanner-input-group">
+                        <input type="text" id="qr-input" placeholder="Saisissez ou scannez le QR code..."
+                               autofocus autocomplete="off">
+                        <button onclick="validateQR()" class="btn btn-primary">Valider</button>
+                    </div>
+
+                    <div id="qr-result" class="qr-result hidden"></div>
+
+                    <!-- Stats live de validation -->
+                    <div class="validation-stats">
+                        <div class="validation-stat">
+                            <span class="validation-count" id="validated-count">0</span>
+                            <span class="validation-label">Entrées validées</span>
+                        </div>
+                        <div class="validation-stat">
+                            <span class="validation-count" id="remaining-count">0</span>
+                            <span class="validation-label">Restants</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

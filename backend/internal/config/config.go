@@ -1,0 +1,102 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+
+	"github.com/joho/godotenv"
+)
+
+type Config struct {
+	Port string
+	Env  string
+
+	// PostgreSQL
+	DatabaseURL string
+
+	// Redis
+	RedisURL string
+
+	// Payment provider: "mock" or "helloasso"
+	PaymentProvider string
+
+	// HelloAsso (required only when PaymentProvider = "helloasso")
+	HelloAssoClientID     string
+	HelloAssoClientSecret string
+	HelloAssoOrgSlug      string
+	HelloAssoAPIURL       string
+	HelloAssoReturnURL    string
+	HelloAssoErrorURL     string
+
+	// JWT
+	JWTSecret string
+
+	// SMTP
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	SMTPFrom     string
+	SMTPFromName string
+
+	// Festival
+	FestivalName string
+	FestivalDate string
+}
+
+func Load() (*Config, error) {
+	// Charger .env si présent (ignoré en production)
+	_ = godotenv.Load()
+
+	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
+
+	paymentProvider := getEnv("PAYMENT_PROVIDER", "mock")
+
+	cfg := &Config{
+		Port: getEnv("PORT", "8080"),
+		Env:  getEnv("ENV", "development"),
+
+		DatabaseURL: mustGetEnv("DATABASE_URL"),
+		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
+
+		PaymentProvider: paymentProvider,
+
+		// HelloAsso — only required when PAYMENT_PROVIDER=helloasso
+		HelloAssoClientID:     getEnv("HELLOASSO_CLIENT_ID", ""),
+		HelloAssoClientSecret: getEnv("HELLOASSO_CLIENT_SECRET", ""),
+		HelloAssoOrgSlug:      getEnv("HELLOASSO_ORG_SLUG", ""),
+		HelloAssoAPIURL:       getEnv("HELLOASSO_API_URL", "https://api.helloasso.com"),
+		HelloAssoReturnURL:    getEnv("HELLOASSO_RETURN_URL", "http://localhost:8080/"),
+		HelloAssoErrorURL:     getEnv("HELLOASSO_ERROR_URL", "http://localhost:8080/"),
+
+		JWTSecret: mustGetEnv("JWT_SECRET"),
+
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     smtpPort,
+		SMTPUser:     getEnv("SMTP_USER", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:     getEnv("SMTP_FROM", ""),
+		SMTPFromName: getEnv("SMTP_FROM_NAME", "IF Festival"),
+
+		FestivalName: getEnv("FESTIVAL_NAME", "IF Festival"),
+		FestivalDate: getEnv("FESTIVAL_DATE", "2026-07-15"),
+	}
+
+	return cfg, nil
+}
+
+func getEnv(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
+}
+
+func mustGetEnv(key string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		fmt.Printf("WARNING: variable d'environnement %s non définie\n", key)
+	}
+	return val
+}

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Scanner QR — L'Interfilières 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --rose: #F97FA0;
+  --peach: #FF9B6A;
+  --night: #1E0845;
+  --purple: #7B3FA8;
+  --green: #38C97A;
+  --red: #E53E3E;
+  --white: #FFFFFF;
+  --offwhite: #FBF7FF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: var(--night);
+  color: var(--white);
+  overflow: hidden;
+}
+
+/* ── Border flash overlay ── */
+.border-flash {
+  position: fixed; inset: 0; z-index: 100;
+  pointer-events: none;
+  border: 8px solid transparent;
+  border-radius: 0;
+  transition: border-color 0.15s;
+}
+.border-flash.success { border-color: var(--green); }
+.border-flash.error   { border-color: var(--red); }
+
+/* ── Login screen ── */
+.login-screen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100vh; gap: 24px; padding: 24px;
+}
+.login-screen h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem; letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--rose), var(--peach));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.login-screen p { color: rgba(255,255,255,.55); font-size: .88rem; }
+.login-form {
+  display: flex; flex-direction: column; gap: 14px;
+  width: 100%; max-width: 340px;
+}
+.login-form input {
+  padding: 14px 18px; border-radius: 12px;
+  border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+  color: #fff; font-size: 1rem; font-family: inherit;
+  transition: border-color .3s;
+}
+.login-form input::placeholder { color: rgba(255,255,255,.35); }
+.login-form input:focus { outline: none; border-color: var(--rose); }
+.login-form button {
+  padding: 14px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--rose), var(--peach));
+  color: #fff; font-weight: 800; font-size: 1rem;
+  font-family: inherit; cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+}
+.login-form button:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(249,127,160,.4); }
+.login-error { color: var(--red); font-size: .85rem; text-align: center; min-height: 1.2em; }
+
+/* ── Idle screen (before scanning) ── */
+.idle-screen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100vh; gap: 28px; padding: 24px;
+  text-align: center;
+}
+.idle-screen h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.6rem; letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--rose), var(--peach));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.idle-screen p { color: rgba(255,255,255,.5); font-size: .9rem; max-width: 320px; line-height: 1.6; }
+
+.btn-scan {
+  padding: 20px 48px; border: none; border-radius: 16px;
+  background: linear-gradient(135deg, var(--rose), var(--peach));
+  color: #fff; font-weight: 900; font-size: 1.15rem;
+  font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 6px 30px rgba(249,127,160,.35);
+}
+.btn-scan:hover { transform: translateY(-3px); box-shadow: 0 10px 40px rgba(249,127,160,.5); }
+.btn-scan svg { width: 28px; height: 28px; }
+
+.btn-back {
+  position: fixed; top: 20px; left: 20px; z-index: 50;
+  padding: 10px 20px; border: 2px solid rgba(255,255,255,.25);
+  border-radius: 10px; background: rgba(30,8,69,.85);
+  backdrop-filter: blur(10px);
+  color: #fff; font-weight: 700; font-size: .85rem;
+  font-family: inherit; cursor: pointer;
+  transition: all .2s; display: none;
+}
+.btn-back:hover { border-color: var(--rose); color: var(--rose); }
+
+.staff-info {
+  position: fixed; top: 20px; right: 20px; z-index: 50;
+  color: rgba(255,255,255,.4); font-size: .75rem; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+
+/* ── Camera screen ── */
+.camera-screen {
+  position: relative;
+  width: 100%; height: 100vh;
+  background: #000;
+}
+.camera-screen.active { display: block; }
+.camera-screen.hidden { display: none; }
+
+.camera-screen video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+.scan-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding-bottom: 60px;
+  pointer-events: none;
+}
+
+.scan-hint {
+  color: rgba(255,255,255,.6);
+  font-size: .85rem; font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+  background: rgba(0,0,0,.35);
+  padding: 8px 20px; border-radius: 50px;
+}
+
+/* ── Result overlay ── */
+.result-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 32px;
+  backdrop-filter: blur(16px);
+  gap: 16px;
+}
+.result-overlay.success-bg { background: rgba(56,201,122,.15); }
+.result-overlay.error-bg { background: rgba(229,62,62,.15); }
+
+.result-icon {
+  font-size: 5rem; line-height: 1;
+  animation: popIn .35s cubic-bezier(.17,.67,.35,1.2);
+}
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.result-status {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.8rem; letter-spacing: 2px;
+}
+.result-status.valid { color: var(--green); }
+.result-status.invalid { color: var(--red); }
+
+.result-name {
+  font-size: 1.5rem; font-weight: 800;
+  color: var(--white);
+}
+
+.result-detail {
+  font-size: .95rem; color: rgba(255,255,255,.55);
+  line-height: 1.6;
+}
+
+.result-btn {
+  margin-top: 16px; padding: 14px 36px;
+  border: none; border-radius: 12px;
+  font-weight: 800; font-size: 1rem;
+  font-family: inherit; cursor: pointer;
+  transition: transform .2s; pointer-events: auto;
+}
+.result-btn:hover { transform: translateY(-2px); }
+.result-btn.btn-ok {
+  background: var(--green); color: #fff;
+  box-shadow: 0 4px 20px rgba(56,201,122,.4);
+}
+.result-btn.btn-err {
+  background: var(--red); color: #fff;
+  box-shadow: 0 4px 20px rgba(229,62,62,.4);
+}
+
+/* ── Canvas (hidden, for QR processing) ── */
+#qr-canvas { display: none; }
+
+/* ── Responsive ── */
+@media (max-width: 420px) {
+  .scan-reticle { width: 220px; height: 220px; }
+  .idle-screen h1 { font-size: 2rem; }
+  .btn-scan { padding: 16px 36px; font-size: 1rem; }
+  .result-status { font-size: 2.2rem; }
+  .result-name { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Border flash -->
+<div class="border-flash" id="borderFlash"></div>
+
+<!-- Staff info -->
+<div class="staff-info" id="staffInfo"></div>
+
+<!-- Back button -->
+<button class="btn-back" id="btnBack" onclick="stopScan()">← Retour</button>
+
+<!-- ═══ Login Screen ═══ -->
+<div class="login-screen" id="loginScreen">
+  <h1>L'INTERFILIÈRES</h1>
+  <p>Connexion scanner — Staff & Admin</p>
+  <form class="login-form" id="loginForm">
+    <input type="text" id="loginUser" placeholder="Identifiant" required autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Mot de passe" required autocomplete="current-password">
+    <button type="submit">Se connecter</button>
+  </form>
+  <p class="login-error" id="loginError"></p>
+</div>
+
+<!-- ═══ Idle Screen ═══ -->
+<div class="idle-screen" id="idleScreen" style="display:none">
+  <h1>SCANNER QR</h1>
+  <p>Scannez les billets des festivaliers à l'entrée du festival.</p>
+  <button class="btn-scan" id="btnStartScan" onclick="startScan()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+      <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+      <line x1="7" y1="12" x2="17" y2="12"/>
+    </svg>
+    Lancer le scan
+  </button>
+  <button class="btn-back" style="display:inline-block;position:static;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2)" onclick="logout()">Déconnexion</button>
+</div>
+
+<!-- ═══ Camera Screen ═══ -->
+<div class="camera-screen hidden" id="cameraScreen">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="qr-canvas"></canvas>
+  <div class="scan-overlay">
+    <p class="scan-hint">Pointez la caméra vers un QR code</p>
+  </div>
+</div>
+
+<!-- ═══ Result Overlay ═══ -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-icon" id="resultIcon"></div>
+  <div class="result-status" id="resultStatus"></div>
+  <div class="result-name" id="resultName"></div>
+  <div class="result-detail" id="resultDetail"></div>
+  <button class="result-btn" id="resultBtn" onclick="dismissResult()">Scanner suivant</button>
+</div>
+
+<!-- jsQR library for QR code decoding -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+const API_BASE = '/api/v1';
+
+let authToken = localStorage.getItem('admin_token');
+let staffName = localStorage.getItem('admin_name') || '';
+let videoStream = null;
+let scanning = false;
+let cooldown = false;  // prevent rapid re-scans
+let animFrame = null;
+
+// ══════════════ INIT ══════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+  if (authToken) {
+    showIdle();
+  }
+});
+
+// ══════════════ LOGIN ══════════════
+async function handleLogin(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Identifiants invalides');
+
+    authToken = data.token;
+    staffName = data.display_name || user;
+    localStorage.setItem('admin_token', authToken);
+    localStorage.setItem('admin_name', staffName);
+    if (data.role) localStorage.setItem('admin_role', data.role);
+
+    showIdle();
+  } catch (err) {
+    errEl.textContent = err.message;
+  }
+}
+
+function logout() {
+  authToken = null;
+  staffName = '';
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_name');
+  localStorage.removeItem('admin_role');
+  stopScan();
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('idleScreen').style.display = 'none';
+  document.getElementById('staffInfo').textContent = '';
+}
+
+function showIdle() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('idleScreen').style.display = 'flex';
+  document.getElementById('staffInfo').textContent = `👤 ${staffName}`;
+}
+
+// ══════════════ CAMERA ══════════════
+async function startScan() {
+  const video = document.getElementById('video');
+
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = videoStream;
+    await video.play();
+  } catch (err) {
+    alert('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+    console.error(err);
+    return;
+  }
+
+  document.getElementById('idleScreen').style.display = 'none';
+  document.getElementById('cameraScreen').classList.remove('hidden');
+  document.getElementById('cameraScreen').classList.add('active');
+  document.getElementById('btnBack').style.display = 'block';
+  scanning = true;
+  requestAnimationFrame(tick);
+}
+
+function stopScan() {
+  scanning = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+  document.getElementById('video').srcObject = null;
+  document.getElementById('cameraScreen').classList.remove('active');
+  document.getElementById('cameraScreen').classList.add('hidden');
+  document.getElementById('btnBack').style.display = 'none';
+  document.getElementById('idleScreen').style.display = 'flex';
+}
+
+// ══════════════ QR DECODE LOOP ══════════════
+function tick() {
+  if (!scanning) return;
+
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('qr-canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA && !cooldown) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert',
+    });
+
+    if (code && code.data) {
+      onQRDetected(code.data);
+    }
+  }
+
+  animFrame = requestAnimationFrame(tick);
+}
+
+// ══════════════ QR DETECTED → VALIDATE ══════════════
+async function onQRDetected(qrData) {
+  if (cooldown) return;
+  cooldown = true;
+
+  // Vibrate if supported
+  if (navigator.vibrate) navigator.vibrate(100);
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/validate-qr`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ qr_token: qrData }),
+    });
+
+    if (res.status === 401) {
+      logout();
+      alert('Session expirée. Veuillez vous reconnecter.');
+      return;
+    }
+
+    const data = await res.json();
+    showResult(data);
+
+  } catch (err) {
+    console.error('Erreur validation:', err);
+    showResult({
+      valid: false,
+      message: 'Erreur réseau. Réessayez.',
+      attendee_first_name: '',
+      attendee_last_name: '',
+    });
+  }
+}
+
+// ══════════════ RESULT DISPLAY ══════════════
+function showResult(data) {
+  const overlay = document.getElementById('resultOverlay');
+  const flash = document.getElementById('borderFlash');
+  const icon = document.getElementById('resultIcon');
+  const status = document.getElementById('resultStatus');
+  const name = document.getElementById('resultName');
+  const detail = document.getElementById('resultDetail');
+  const btn = document.getElementById('resultBtn');
+
+  flash.className = 'border-flash';
+
+  if (data.valid && !data.already_validated) {
+    // ✅ Valid - first scan
+    flash.classList.add('success');
+    overlay.className = 'result-overlay success-bg';
+    icon.textContent = '✅';
+    status.textContent = 'ENTRÉE VALIDÉE';
+    status.className = 'result-status valid';
+    name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
+    detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}`;
+    btn.className = 'result-btn btn-ok';
+  } else if (data.already_validated) {
+    // ⚠️ Already scanned
+    flash.classList.add('error');
+    overlay.className = 'result-overlay error-bg';
+    icon.textContent = '⛔';
+    status.textContent = 'DÉJÀ SCANNÉ';
+    status.className = 'result-status invalid';
+    name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
+    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}`;
+    btn.className = 'result-btn btn-err';
+  } else {
+    // ❌ Invalid
+    flash.classList.add('error');
+    overlay.className = 'result-overlay error-bg';
+    icon.textContent = '❌';
+    status.textContent = 'BILLET INVALIDE';
+    status.className = 'result-status invalid';
+    name.textContent = '';
+    detail.textContent = data.message || 'QR code non reconnu';
+    btn.className = 'result-btn btn-err';
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function dismissResult() {
+  document.getElementById('resultOverlay').style.display = 'none';
+  document.getElementById('borderFlash').className = 'border-flash';
+  // Small delay before allowing next scan
+  setTimeout(() => { cooldown = false; }, 600);
+}
+
+// Keyboard shortcut: press space or enter to dismiss
+document.addEventListener('keydown', (e) => {
+  if ((e.key === ' ' || e.key === 'Enter') && document.getElementById('resultOverlay').style.display === 'flex') {
+    e.preventDefault();
+    dismissResult();
+  }
+});
+</script>
+
+</body>
+</html>

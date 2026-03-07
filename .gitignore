@@ -1,0 +1,21 @@
+# Binaries
+/backend/server
+/backend/tmp/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/backend/vendor/
+
+# Data
+postgres_data/
+redis_data/

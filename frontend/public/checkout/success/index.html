@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiement confirmé — L'Interfilières 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sky:       #74C9F8;
+  --rose:      #F97FA0;
+  --peach:     #FF9B6A;
+  --warm:      #FFD166;
+  --lavender:  #C9B8FF;
+  --night:     #1E0845;
+  --purple:    #7B3FA8;
+  --white:     #FFFFFF;
+  --offwhite:  #FBF7FF;
+  --cream:     #FFF5EC;
+  --text:      #220850;
+  --muted:     #9B8AB4;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Montserrat',sans-serif;
+  color:var(--text);
+  background:var(--offwhite);
+  min-height:100vh;
+}
+
+/* ── Nav ── */
+.top-bar {
+  background:linear-gradient(135deg, var(--night) 0%, var(--purple) 100%);
+  padding:18px 5vw;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.top-logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.75rem;
+  letter-spacing:3px;
+  background:linear-gradient(135deg,var(--rose),var(--peach));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-decoration:none;
+}
+.top-back {
+  color:rgba(255,255,255,.8);
+  font-size:.85rem;
+  font-weight:600;
+  text-decoration:none;
+  transition:color .2s;
+}
+.top-back:hover { color:#fff; }
+
+/* ── Main ── */
+.container {
+  max-width:720px;
+  margin:0 auto;
+  padding:40px 20px 80px;
+}
+
+/* ── Success Header ── */
+.success-header {
+  text-align:center;
+  margin-bottom:36px;
+}
+.success-icon {
+  width:80px; height:80px;
+  background:linear-gradient(135deg, #4ade80, #22c55e);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 20px;
+  font-size:2.4rem;
+  box-shadow:0 8px 32px rgba(34,197,94,.3);
+  animation: pop .5s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes pop {
+  0% { transform:scale(0); }
+  100% { transform:scale(1); }
+}
+.success-header h1 {
+  font-size:1.8rem;
+  font-weight:800;
+  background:linear-gradient(135deg, var(--night), var(--purple));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:8px;
+}
+.success-header p {
+  color:var(--muted);
+  font-size:.95rem;
+}
+.order-number {
+  display:inline-block;
+  background:linear-gradient(135deg, var(--rose), var(--peach));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  font-weight:800;
+  font-size:1.1rem;
+}
+
+/* ── Info box ── */
+.info-box {
+  background:linear-gradient(135deg, rgba(201,184,255,.15), rgba(116,201,248,.1));
+  border:1px solid rgba(123,63,168,.12);
+  border-radius:14px;
+  padding:18px 22px;
+  margin-bottom:30px;
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+}
+.info-box .ib-icon { font-size:1.4rem; flex-shrink:0; margin-top:2px; }
+.info-box p { font-size:.88rem; color:var(--text); line-height:1.6; }
+
+/* ── Ticket cards ── */
+.ticket-list { display:flex; flex-direction:column; gap:20px; }
+
+.ticket-card {
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 4px 24px rgba(30,8,69,.07);
+  overflow:hidden;
+  border:1px solid rgba(30,8,69,.06);
+  transition:transform .2s, box-shadow .2s;
+}
+.ticket-card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 8px 36px rgba(30,8,69,.12);
+}
+.ticket-card-header {
+  background:linear-gradient(135deg, var(--night) 0%, var(--purple) 100%);
+  padding:16px 22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.ticket-card-header h3 {
+  color:#fff;
+  font-size:1rem;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+.ticket-badge {
+  background:rgba(255,255,255,.15);
+  color:rgba(255,255,255,.9);
+  font-size:.7rem;
+  font-weight:700;
+  padding:4px 10px;
+  border-radius:20px;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.ticket-card-body {
+  padding:24px;
+  display:flex;
+  align-items:center;
+  gap:24px;
+}
+.qr-wrap {
+  flex-shrink:0;
+  width:160px; height:160px;
+  background:var(--offwhite);
+  border-radius:14px;
+  border:2px dashed rgba(30,8,69,.1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+}
+.qr-wrap img {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  image-rendering:pixelated;
+}
+.ticket-info {
+  flex:1;
+}
+.ticket-info .ti-label {
+  font-size:.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.ticket-info .ti-value {
+  font-size:.92rem;
+  font-weight:600;
+  color:var(--text);
+  margin-bottom:14px;
+}
+.ticket-info .ti-token {
+  font-family:monospace;
+  font-size:.68rem;
+  color:var(--muted);
+  word-break:break-all;
+  background:var(--offwhite);
+  padding:6px 10px;
+  border-radius:8px;
+  margin-top:6px;
+}
+
+/* ── Loading ── */
+.loading {
+  text-align:center;
+  padding:60px 20px;
+}
+.spinner {
+  width:48px; height:48px;
+  border:4px solid rgba(123,63,168,.15);
+  border-top-color:var(--purple);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+  margin:0 auto 16px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading p { color:var(--muted); font-size:.9rem; }
+
+/* ── Error card ── */
+.error-card {
+  background:#fff;
+  border-radius:18px;
+  padding:40px;
+  text-align:center;
+  box-shadow:0 4px 24px rgba(30,8,69,.07);
+}
+.error-card .err-icon { font-size:2.2rem; margin-bottom:12px; }
+.error-card h2 { font-size:1.2rem; color:var(--text); margin-bottom:8px; }
+.error-card p { color:var(--muted); font-size:.88rem; margin-bottom:20px; }
+
+/* ── CTA ── */
+.btn-home {
+  display:inline-block;
+  background:linear-gradient(135deg, var(--rose), var(--peach));
+  color:#fff;
+  font-size:.88rem;
+  font-weight:700;
+  padding:12px 32px;
+  border-radius:50px;
+  text-decoration:none;
+  transition:transform .2s, box-shadow .2s;
+  border:none;
+  cursor:pointer;
+  box-shadow:0 4px 18px rgba(249,127,160,.35);
+}
+.btn-home:hover {
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(249,127,160,.5);
+}
+
+/* ── Responsive ── */
+@media (max-width:600px) {
+  .ticket-card-body {
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .qr-wrap { width:200px; height:200px; }
+  .success-header h1 { font-size:1.4rem; }
+  .container { padding:24px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="/" class="top-logo">L'INTERFILIÈRES</a>
+  <a href="/" class="top-back">← Retour à l'accueil</a>
+</div>
+
+<div class="container">
+  <!-- Loading state -->
+  <div id="loading-state" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement de votre commande…</p>
+  </div>
+
+  <!-- Success content (hidden until loaded) -->
+  <div id="success-content" style="display:none">
+    <div class="success-header">
+      <div class="success-icon">✓</div>
+      <h1>Paiement confirmé !</h1>
+      <p>Commande <span class="order-number" id="order-number"></span></p>
+    </div>
+
+    <div class="info-box">
+      <div class="ib-icon">📱</div>
+      <p>Présentez le <strong>QR code</strong> ci-dessous (sur mobile ou imprimé) à l'entrée du festival.
+        Chaque billet dispose de son propre QR code unique — <strong>un scan = une entrée</strong>.</p>
+    </div>
+
+    <div class="ticket-list" id="ticket-list"></div>
+
+    <div style="text-align:center; margin-top:36px;">
+      <a href="/" class="btn-home">🎵 Retour à l'accueil</a>
+    </div>
+  </div>
+
+  <!-- Error state (hidden) -->
+  <div id="error-state" style="display:none">
+    <div class="error-card">
+      <div class="err-icon">⚠️</div>
+      <h2>Impossible de charger la commande</h2>
+      <p id="error-message">La commande est introuvable ou n'a pas encore été confirmée.</p>
+      <a href="/" class="btn-home">Retour à l'accueil</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api/v1';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order_id');
+
+  if (!orderId) {
+    showError('Aucun identifiant de commande trouvé dans l\'URL.');
+    return;
+  }
+
+  loadOrder(orderId);
+});
+
+async function loadOrder(orderId, attempt = 0) {
+  try {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/status`);
+    if (!res.ok) throw new Error('Commande introuvable');
+
+    const order = await res.json();
+
+    if (order.status === 'pending' && attempt < 10) {
+      // Still processing — poll
+      setTimeout(() => loadOrder(orderId, attempt + 1), 2000);
+      return;
+    }
+
+    if (order.status === 'confirmed' || order.status === 'paid') {
+      renderSuccess(order);
+    } else if (order.status === 'cancelled') {
+      showError('Cette commande a été annulée.');
+    } else {
+      showError('Le paiement n\'a pas encore été confirmé. Vérifiez votre email.');
+    }
+  } catch (e) {
+    console.error(e);
+    showError(e.message || 'Erreur de chargement.');
+  }
+}
+
+function renderSuccess(order) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('success-content').style.display = 'block';
+  document.getElementById('order-number').textContent = order.order_number;
+
+  const list = document.getElementById('ticket-list');
+  list.innerHTML = '';
+
+  if (!order.tickets || order.tickets.length === 0) {
+    list.innerHTML = `
+      <div class="info-box">
+        <div class="ib-icon">📧</div>
+        <p>Vos billets ont été envoyés par email à <strong>${escapeHtml(order.customer_email)}</strong>.
+          Si vous ne les trouvez pas, vérifiez vos spams.</p>
+      </div>`;
+    return;
+  }
+
+  order.tickets.forEach((ticket, i) => {
+    const card = document.createElement('div');
+    card.className = 'ticket-card';
+    card.innerHTML = `
+      <div class="ticket-card-header">
+        <h3>🎟 ${escapeHtml(ticket.ticket_type_name || 'Billet')}</h3>
+        <span class="ticket-badge">Billet ${i + 1}/${order.tickets.length}</span>
+      </div>
+      <div class="ticket-card-body">
+        <div class="qr-wrap">
+          <img src="${API_BASE}/tickets/${ticket.qr_token}/qr"
+               alt="QR Code billet ${i + 1}"
+               loading="lazy" />
+        </div>
+        <div class="ticket-info">
+          <div class="ti-label">Participant</div>
+          <div class="ti-value">${escapeHtml(ticket.attendee_first_name)} ${escapeHtml(ticket.attendee_last_name)}</div>
+          <div class="ti-label">Type</div>
+          <div class="ti-value">${escapeHtml(ticket.ticket_type_name || '—')}</div>
+          <div class="ti-label">Token de vérification</div>
+          <div class="ti-token">${escapeHtml(ticket.qr_token)}</div>
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function showError(message) {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'block';
+  if (message) {
+    document.getElementById('error-message').textContent = message;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
