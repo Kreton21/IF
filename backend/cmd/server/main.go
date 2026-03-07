@@ -76,6 +76,20 @@ func main() {
 	if frontendDir == "" {
 		frontendDir = "../frontend"
 	}
+	log.Printf("📁 Frontend directory: %s", frontendDir)
+	
+	// Verify frontend directories exist
+	if _, err := os.Stat(frontendDir + "/admin"); err != nil {
+		log.Printf("⚠️  Warning: Admin directory not found at %s/admin", frontendDir)
+	} else {
+		log.Printf("✓ Admin directory found")
+	}
+	if _, err := os.Stat(frontendDir + "/public"); err != nil {
+		log.Printf("⚠️  Warning: Public directory not found at %s/public", frontendDir)
+	} else {
+		log.Printf("✓ Public directory found")
+	}
+	
 	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, adminService, redisClient, frontendDir)
 
 	// 8. Créer les comptes par défaut si nécessaire
