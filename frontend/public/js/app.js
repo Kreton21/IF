@@ -562,26 +562,45 @@ async function showOrderSuccess(orderId) {
     
     const order = await response.json();
     
-    // Hide main content
-    document.getElementById('page-home').style.display = 'none';
+    // Hide hero, tickets, checkout sections
+    const hero = document.querySelector('.hero');
+    const ticketsSec = document.getElementById('tickets');
+    const checkoutSec = document.getElementById('checkout-section');
+    if (hero) hero.style.display = 'none';
+    if (ticketsSec) ticketsSec.style.display = 'none';
+    if (checkoutSec) checkoutSec.style.display = 'none';
     
     // Show success section
     const successSection = document.getElementById('success-section');
-    successSection.classList.remove('hidden');
+    if (successSection) {
+      successSection.classList.remove('hidden');
+    }
     
     // Update order number
     const orderNumEl = document.getElementById('success-order-number');
-    if (orderNumEl) {
+    if (orderNumEl && order.order_number) {
       orderNumEl.textContent = order.order_number;
     }
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Clear URL without reload
     window.history.replaceState({}, document.title, '/');
   } catch (error) {
     console.error('Error loading order:', error);
     // Show error section
-    document.getElementById('page-home').style.display = 'none';
-    document.getElementById('error-section').classList.remove('hidden');
+    const hero = document.querySelector('.hero');
+    const ticketsSec = document.getElementById('tickets');
+    const checkoutSec = document.getElementById('checkout-section');
+    if (hero) hero.style.display = 'none';
+    if (ticketsSec) ticketsSec.style.display = 'none';
+    if (checkoutSec) checkoutSec.style.display = 'none';
+    
+    const errorSection = document.getElementById('error-section');
+    if (errorSection) {
+      errorSection.classList.remove('hidden');
+    }
   }
 }
 
