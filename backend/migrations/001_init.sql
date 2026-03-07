@@ -19,6 +19,7 @@ CREATE TABLE ticket_types (
     sale_end        TIMESTAMPTZ NOT NULL,
     is_active       BOOLEAN NOT NULL DEFAULT true,
     max_per_order   INTEGER NOT NULL DEFAULT 10,
+    allowed_domains TEXT[] DEFAULT '{}',        -- Domaines email autorisés (banque de domaines)
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
