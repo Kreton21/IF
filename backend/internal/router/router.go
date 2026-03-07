@@ -97,6 +97,11 @@ func NewRouter(
 		})
 	}
 
+	// Redirect /admin to /admin/
+	r.Get("/admin", func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "/admin/", http.StatusMovedPermanently)
+	})
+
 	// Admin interface
 	adminFS := http.FileServer(http.Dir(frontendDir + "/admin"))
 	r.Handle("/admin/*", noCache(http.StripPrefix("/admin/", adminFS)))
