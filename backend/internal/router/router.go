@@ -77,6 +77,7 @@ func NewRouter(
 		// --- Webhooks HelloAsso ---
 		r.Post("/webhooks/helloasso", webhookHandler.HandleHelloAssoWebhook)
 		r.Post("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
+		r.Post("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
 
 		// --- Admin (JWT requis) ---
 		r.Post("/admin/login", adminHandler.Login)

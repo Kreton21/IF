@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,6 +38,8 @@ type lydiaRequestDoResponse struct {
 	MobileURL  string `json:"mobile_url"`
 }
 
+var lydiaRefSanitizer = regexp.MustCompile(`[^A-Za-z0-9_-]`)
+
 func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutIntentRequest) (*CheckoutIntentResponse, error) {
 	if s.cfg.LydiaVendorToken == "" {
 		return nil, fmt.Errorf("LYDIA_VENDOR_TOKEN manquant")
@@ -48,9 +51,20 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	}
 	apiURL.Path = path.Join(apiURL.Path, "/api/request/do.json")
 
-	confirmURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia?event=confirm"
-	cancelURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia?event=cancel"
-	expireURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia?event=expire"
+	confirmURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia/confirm"
+	cancelURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia/cancel"
+	expireURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/webhooks/lydia/expire"
+
+	orderRef := req.Metadata["order_id"]
+	if orderNumber := strings.TrimSpace(req.Metadata["order_number"]); orderNumber != "" {
+		orderRef = orderNumber
+	}
+	orderRef = sanitizeLydiaReference(orderRef)
+	if orderRef == "" {
+		orderRef = fmt.Sprintf("ORD-%d", time.Now().Unix())
+	}
+
+	message := sanitizeLydiaMessage(req.ItemName)
 
 	form := url.Values{}
 	form.Set("amount", fmt.Sprintf("%.2f", float64(req.TotalAmount)/100.0))
@@ -58,8 +72,8 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	form.Set("vendor_token", s.cfg.LydiaVendorToken)
 	form.Set("type", "email")
 	form.Set("recipient", req.Payer.Email)
-	form.Set("message", req.ItemName)
-	form.Set("order_ref", req.Metadata["order_id"])
+	form.Set("message", message)
+	form.Set("order_ref", orderRef)
 	form.Set("payment_method", s.cfg.LydiaPaymentMethod)
 	form.Set("confirm_url", confirmURL)
 	form.Set("cancel_url", cancelURL)
@@ -149,6 +163,28 @@ func maskRecipient(value string) string {
 		return "***"
 	}
 	return strings.Repeat("*", len(v)-4) + v[len(v)-4:]
+}
+
+func sanitizeLydiaReference(value string) string {
+	v := strings.TrimSpace(value)
+	v = lydiaRefSanitizer.ReplaceAllString(v, "-")
+	v = strings.Trim(v, "-_")
+	if len(v) > 64 {
+		v = v[:64]
+	}
+	return v
+}
+
+func sanitizeLydiaMessage(value string) string {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return "Paiement billetterie"
+	}
+	v = strings.Join(strings.Fields(v), " ")
+	if len(v) > 120 {
+		v = v[:120]
+	}
+	return v
 }
 
 func (s *LydiaService) AutoConfirms() bool {

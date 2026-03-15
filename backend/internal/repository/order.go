@@ -91,6 +91,36 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*mo
 	return &o, nil
 }
 
+func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (*models.Order, error) {
+	if ref == "" {
+		return nil, nil
+	}
+
+	query := `
+		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
+		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
+		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
+		FROM orders
+		WHERE id = $1 OR order_number = $1
+		LIMIT 1`
+
+	var o models.Order
+	err := r.pool.QueryRow(ctx, query, ref).Scan(
+		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
+		&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur query order by reference: %w", err)
+	}
+
+	return &o, nil
+}
+
 func (r *OrderRepository) GetOrderByCheckoutID(ctx context.Context, checkoutID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,

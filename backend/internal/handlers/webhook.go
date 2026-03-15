@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/kreton/if-festival/internal/services"
 )
 
@@ -91,7 +92,10 @@ func (h *WebhookHandler) HandleHelloAssoWebhook(w http.ResponseWriter, r *http.R
 
 // HandleLydiaWebhook traite les callbacks Lydia (confirm/cancel/expire)
 func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Request) {
-	event := r.URL.Query().Get("event")
+	event := chi.URLParam(r, "event")
+	if event == "" {
+		event = r.URL.Query().Get("event")
+	}
 	if event == "" {
 		event = "confirm"
 	}

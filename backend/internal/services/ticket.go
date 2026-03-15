@@ -540,10 +540,19 @@ func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) 
 }
 
 func (s *TicketService) HandleLydiaWebhook(ctx context.Context, event string, form url.Values) error {
-	orderID := form.Get("order_ref")
-	if orderID == "" {
+	orderRef := strings.TrimSpace(form.Get("order_ref"))
+	if orderRef == "" {
 		return fmt.Errorf("order_ref manquant")
 	}
+
+	order, err := s.orderRepo.GetOrderByReference(ctx, orderRef)
+	if err != nil {
+		return fmt.Errorf("erreur résolution order_ref: %w", err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable pour order_ref=%s", orderRef)
+	}
+	orderID := order.ID
 
 	if sig := form.Get("sig"); sig != "" && s.cfg.LydiaVendorPrivateToken != "" {
 		if !s.verifyLydiaSignature(form, sig) {
