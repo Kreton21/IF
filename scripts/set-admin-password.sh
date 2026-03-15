@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKEND_DIR="$PROJECT_DIR/backend"
 SERVICE_FILE="${SERVICE_FILE:-/etc/systemd/system/festival.service}"
+SERVICE_NAME="${SERVICE_NAME:-festival.service}"
 
 usage() {
   echo "Usage: $0 <username> <new_password>"
@@ -33,8 +34,8 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 fi
 
 if [[ -z "${DATABASE_URL:-}" && -r "$SERVICE_FILE" ]]; then
-  DATABASE_URL="$(grep -E 'Environment="DATABASE_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="DATABASE_URL=([^\"]+)".*/\1/' || true)"
-  REDIS_URL="${REDIS_URL:-$(grep -E 'Environment="REDIS_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="REDIS_URL=([^\"]+)".*/\1/' || true)}"
+  DATABASE_URL="$(grep -E 'Environment="?DATABASE_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="?DATABASE_URL=([^" ]+)"?.*/\1/' || true)"
+  REDIS_URL="${REDIS_URL:-$(grep -E 'Environment="?REDIS_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="?REDIS_URL=([^" ]+)"?.*/\1/' || true)}"
 
   ENV_FILE_PATH="$(grep -E '^EnvironmentFile=' "$SERVICE_FILE" | head -n1 | cut -d'=' -f2- || true)"
   if [[ -n "$ENV_FILE_PATH" && -r "$ENV_FILE_PATH" ]]; then
@@ -44,6 +45,18 @@ if [[ -z "${DATABASE_URL:-}" && -r "$SERVICE_FILE" ]]; then
     if [[ -z "${REDIS_URL:-}" ]]; then
       REDIS_URL="$(grep -E '^REDIS_URL=' "$ENV_FILE_PATH" | head -n1 | cut -d'=' -f2- || true)"
     fi
+  fi
+fi
+
+if [[ -z "${DATABASE_URL:-}" ]] && command -v systemctl >/dev/null 2>&1; then
+  SYSTEMD_ENV="$(systemctl show "$SERVICE_NAME" --property=Environment --value 2>/dev/null || true)"
+  if [[ -n "$SYSTEMD_ENV" ]]; then
+    for kv in $SYSTEMD_ENV; do
+      case "$kv" in
+        DATABASE_URL=*) DATABASE_URL="${kv#DATABASE_URL=}" ;;
+        REDIS_URL=*) REDIS_URL="${REDIS_URL:-${kv#REDIS_URL=}}" ;;
+      esac
+    done
   fi
 fi
 
@@ -62,7 +75,14 @@ if ! command -v go >/dev/null 2>&1; then
   exit 1
 fi
 
-HASHED_PASSWORD="$(cd "$BACKEND_DIR" && PASSWORD="$NEW_PASSWORD" go run /dev/stdin <<'GOEOF'
+mkdir -p "$BACKEND_DIR/tmp"
+TMP_HASH_FILE="$(mktemp "$BACKEND_DIR/tmp/hash-password.XXXXXX.go")"
+cleanup() {
+  rm -f "$TMP_HASH_FILE"
+}
+trap cleanup EXIT
+
+cat > "$TMP_HASH_FILE" <<'GOEOF'
 package main
 
 import (
@@ -82,7 +102,8 @@ func main() {
   fmt.Print(string(hash))
 }
 GOEOF
-)"
+
+HASHED_PASSWORD="$(cd "$BACKEND_DIR" && PASSWORD="$NEW_PASSWORD" go run "$TMP_HASH_FILE")"
 
 UPDATED_ROWS="$(psql "$DATABASE_URL" -t -A -v ON_ERROR_STOP=1 -v username="$USERNAME" -v password_hash="$HASHED_PASSWORD" <<'SQLEOF'
 UPDATE admins
