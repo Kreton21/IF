@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -44,8 +45,13 @@ func NewRouter(
 		MaxAge:           300,
 	}))
 
+	rateLimitDisabled := strings.EqualFold(os.Getenv("DISABLE_RATE_LIMIT"), "1") ||
+		strings.EqualFold(os.Getenv("DISABLE_RATE_LIMIT"), "true")
+
 	// Rate limiting global (100 req/min)
-	r.Use(middleware.RateLimit(redisClient, 100, 1*time.Minute))
+	if !rateLimitDisabled {
+		r.Use(middleware.RateLimit(redisClient, 100, 1*time.Minute))
+	}
 
 	// ==========================================
 	// API Routes
@@ -55,7 +61,11 @@ func NewRouter(
 		// --- Public : Tickets ---
 		r.Route("/tickets", func(r chi.Router) {
 			r.Get("/types", ticketHandler.GetTicketTypes)
-			r.With(middleware.StrictRateLimit(redisClient)).Post("/checkout", ticketHandler.CreateCheckout)
+			if rateLimitDisabled {
+				r.Post("/checkout", ticketHandler.CreateCheckout)
+			} else {
+				r.With(middleware.StrictRateLimit(redisClient)).Post("/checkout", ticketHandler.CreateCheckout)
+			}
 		})
 
 		// --- Public : Commandes ---
