@@ -74,7 +74,10 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	form.Set("recipient", req.Payer.Email)
 	form.Set("message", message)
 	form.Set("order_ref", orderRef)
-	form.Set("payment_method", s.cfg.LydiaPaymentMethod)
+	paymentMethod := normalizeLydiaPaymentMethod(s.cfg.LydiaPaymentMethod)
+	if paymentMethod != "" {
+		form.Set("payment_method", paymentMethod)
+	}
 	form.Set("confirm_url", confirmURL)
 	form.Set("cancel_url", cancelURL)
 	form.Set("expire_url", expireURL)
@@ -185,6 +188,18 @@ func sanitizeLydiaMessage(value string) string {
 		v = v[:120]
 	}
 	return v
+}
+
+func normalizeLydiaPaymentMethod(value string) string {
+	v := strings.ToLower(strings.TrimSpace(value))
+	switch v {
+	case "":
+		return ""
+	case "cb", "lydia":
+		return v
+	default:
+		return ""
+	}
 }
 
 func (s *LydiaService) AutoConfirms() bool {

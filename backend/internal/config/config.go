@@ -83,7 +83,7 @@ func Load() (*Config, error) {
 		LydiaAPIURL:             getEnv("LYDIA_API_URL", "https://homologation.lydia-app.com"),
 		LydiaVendorToken:        getEnv("LYDIA_VENDOR_TOKEN", ""),
 		LydiaVendorPrivateToken: getEnv("LYDIA_VENDOR_PRIVATE_TOKEN", ""),
-		LydiaPaymentMethod:      getEnv("LYDIA_PAYMENT_METHOD", "cb"),
+		LydiaPaymentMethod:      getEnv("LYDIA_PAYMENT_METHOD", ""),
 		LydiaDebug:              lydiaDebug,
 
 		JWTSecret: mustGetEnv("JWT_SECRET"),
