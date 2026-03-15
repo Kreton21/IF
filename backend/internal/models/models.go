@@ -18,6 +18,7 @@ type TicketType struct {
 	SaleStart      time.Time         `json:"sale_start"`
 	SaleEnd        time.Time         `json:"sale_end"`
 	IsActive       bool              `json:"is_active"`
+	IsMasked       bool              `json:"is_masked"`
 	MaxPerOrder    int               `json:"max_per_order"`
 	AllowedDomains []string          `json:"allowed_domains"`
 	Categories     []TicketCategory  `json:"categories,omitempty"`
@@ -26,12 +27,13 @@ type TicketType struct {
 }
 
 type TicketCategory struct {
-	ID                string   `json:"id"`
-	TicketTypeID      string   `json:"ticket_type_id"`
-	Name              string   `json:"name"`
-	QuantityAllocated int      `json:"quantity_allocated"`
-	QuantitySold      int      `json:"quantity_sold"`
-	AllowedDomains    []string `json:"allowed_domains"`
+	ID                string    `json:"id"`
+	TicketTypeID      string    `json:"ticket_type_id"`
+	Name              string    `json:"name"`
+	QuantityAllocated int       `json:"quantity_allocated"`
+	QuantitySold      int       `json:"quantity_sold"`
+	IsMasked          bool      `json:"is_masked"`
+	AllowedDomains    []string  `json:"allowed_domains"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -219,6 +221,16 @@ type CreateTicketTypeRequest struct {
 	SaleStart      time.Time `json:"sale_start"`
 	SaleEnd        time.Time `json:"sale_end"`
 	MaxPerOrder    int       `json:"max_per_order"`
+	AllowedDomains []string  `json:"allowed_domains"`
+}
+
+type UpdateTicketTypeRequest struct {
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	PriceCents     int       `json:"price_cents"`
+	QuantityTotal  int       `json:"quantity_total"`
+	SaleStart      time.Time `json:"sale_start"`
+	SaleEnd        time.Time `json:"sale_end"`
 	AllowedDomains []string  `json:"allowed_domains"`
 }
 

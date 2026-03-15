@@ -83,6 +83,41 @@ func (s *TicketService) CreateTicketType(ctx context.Context, req models.CreateT
 	return tt, nil
 }
 
+// UpdateTicketType updates an existing ticket type
+func (s *TicketService) UpdateTicketType(ctx context.Context, id string, req models.UpdateTicketTypeRequest) (*models.TicketType, error) {
+	tt, err := s.ticketRepo.UpdateTicketType(ctx, id, req)
+	if err != nil {
+		return nil, fmt.Errorf("erreur mise à jour type ticket: %w", err)
+	}
+	s.redis.Del(ctx, "ticket_types:active")
+	return tt, nil
+}
+
+// GetAllTicketTypes returns all ticket types for admin (including inactive and masked)
+func (s *TicketService) GetAllTicketTypes(ctx context.Context) ([]models.TicketType, error) {
+	return s.ticketRepo.GetAllTicketTypes(ctx)
+}
+
+// ToggleTicketTypeMask toggles the masked status of a ticket type
+func (s *TicketService) ToggleTicketTypeMask(ctx context.Context, id string) (*models.TicketType, error) {
+	tt, err := s.ticketRepo.ToggleTicketTypeMask(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	s.redis.Del(ctx, "ticket_types:active")
+	return tt, nil
+}
+
+// ToggleCategoryMask toggles the masked status of a category
+func (s *TicketService) ToggleCategoryMask(ctx context.Context, categoryID string) (*models.TicketCategory, error) {
+	cat, err := s.ticketRepo.ToggleCategoryMask(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	s.redis.Del(ctx, "ticket_types:active")
+	return cat, nil
+}
+
 // ============================================
 // Catégories
 // ============================================
@@ -154,9 +189,12 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 			continue
 		}
 
-		// Filter categories by email domain
+		// Filter categories by email domain and masked status
 		var filteredCats []models.CategoryForEmail
 		for _, cat := range cats {
+			if cat.IsMasked {
+				continue
+			}
 			if len(cat.AllowedDomains) > 0 {
 				catMatch := false
 				for _, d := range cat.AllowedDomains {

@@ -114,9 +114,9 @@ func (h *AdminHandler) ValidateQR(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// GetTicketTypes retourne tous les types de tickets (pour admin, inclut les inactifs)
+// GetTicketTypes retourne tous les types de tickets (pour admin, inclut les inactifs et masqués)
 func (h *AdminHandler) GetTicketTypes(w http.ResponseWriter, r *http.Request) {
-	types, err := h.ticketService.GetAvailableTicketTypes(r.Context())
+	types, err := h.ticketService.GetAllTicketTypes(r.Context())
 	if err != nil {
 		log.Printf("Erreur récupération ticket types: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
@@ -241,6 +241,89 @@ func (h *AdminHandler) ReallocateCategories(w http.ResponseWriter, r *http.Reque
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Réallocation effectuée"})
+}
+
+// UpdateTicketType met à jour un type de ticket existant
+func (h *AdminHandler) UpdateTicketType(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	ticketTypeID := chi.URLParam(r, "ticketTypeID")
+	if ticketTypeID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID type de ticket manquant"})
+		return
+	}
+
+	var req models.UpdateTicketTypeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	if req.Name == "" || req.PriceCents < 0 || req.QuantityTotal < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données incomplètes"})
+		return
+	}
+
+	tt, err := h.ticketService.UpdateTicketType(r.Context(), ticketTypeID, req)
+	if err != nil {
+		log.Printf("Erreur mise à jour ticket type: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, tt)
+}
+
+// ToggleTicketTypeMask masque/démasque un type de ticket
+func (h *AdminHandler) ToggleTicketTypeMask(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	ticketTypeID := chi.URLParam(r, "ticketTypeID")
+	if ticketTypeID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID type de ticket manquant"})
+		return
+	}
+
+	tt, err := h.ticketService.ToggleTicketTypeMask(r.Context(), ticketTypeID)
+	if err != nil {
+		log.Printf("Erreur toggle mask ticket type: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, tt)
+}
+
+// ToggleCategoryMask masque/démasque une catégorie
+func (h *AdminHandler) ToggleCategoryMask(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	categoryID := chi.URLParam(r, "categoryID")
+	if categoryID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID catégorie manquant"})
+		return
+	}
+
+	cat, err := h.ticketService.ToggleCategoryMask(r.Context(), categoryID)
+	if err != nil {
+		log.Printf("Erreur toggle mask catégorie: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, cat)
 }
 
 // DeleteCategory supprime une catégorie vide

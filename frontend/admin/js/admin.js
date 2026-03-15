@@ -474,30 +474,81 @@ async function renderTicketTypesAdmin(types) {
         const totalAllocated = cats.reduce((s, c) => s + c.quantity_allocated, 0);
         const unallocated = tt.quantity_total - totalAllocated;
 
-        html += `<div class="tt-block">
+        const maskedClass = tt.is_masked ? ' tt-masked' : '';
+        const maskedBadge = tt.is_masked ? '<span class="badge badge-masked">MASQUÉ</span>' : '';
+        const maskBtnLabel = tt.is_masked ? 'Démasquer' : 'Masquer';
+        const maskBtnClass = tt.is_masked ? 'btn-success' : 'btn-warning';
+
+        html += `<div class="tt-block${maskedClass}">
             <div class="tt-header">
-                <strong>${tt.name}</strong> — ${formatPrice(tt.price_cents)}
-                <span style="color:#718096;font-size:0.85em;margin-left:8px;">
-                    ${tt.quantity_sold}/${tt.quantity_total} vendus · Domaines: ${domains}
-                </span>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <strong>${tt.name}</strong> — ${formatPrice(tt.price_cents)}
+                    ${maskedBadge}
+                    <span style="color:#718096;font-size:0.85em;">
+                        ${tt.quantity_sold}/${tt.quantity_total} vendus · Domaines: ${domains}
+                    </span>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:4px;">
+                    <button class="btn btn-sm btn-primary" onclick="toggleEditForm('${tt.id}')">Modifier</button>
+                    <button class="btn btn-sm ${maskBtnClass}" onclick="toggleTicketTypeMask('${tt.id}')">${maskBtnLabel}</button>
+                </div>
             </div>`;
+
+        // Inline edit form (hidden by default)
+        const sStart = tt.sale_start ? new Date(tt.sale_start) : new Date();
+        const sEnd = tt.sale_end ? new Date(tt.sale_end) : new Date();
+        const startDate = sStart.toISOString().slice(0, 10);
+        const startTime = sStart.toTimeString().slice(0, 5);
+        const endDate = sEnd.toISOString().slice(0, 10);
+        const endTime = sEnd.toTimeString().slice(0, 5);
+        const domainsStr = (tt.allowed_domains || []).join(', ');
+
+        html += `<div id="edit-form-${tt.id}" class="edit-form hidden" style="margin:10px 0;padding:12px;background:#f7fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <div class="form-row">
+                <div class="form-group"><label>Nom</label><input type="text" id="edit-name-${tt.id}" value="${escapeAttr(tt.name)}"></div>
+                <div class="form-group"><label>Prix (€)</label><input type="number" id="edit-price-${tt.id}" value="${(tt.price_cents / 100).toFixed(2)}" step="0.01" min="0"></div>
+            </div>
+            <div class="form-group"><label>Description</label><input type="text" id="edit-desc-${tt.id}" value="${escapeAttr(tt.description || '')}"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Quantité totale (min: ${tt.quantity_sold} vendus)</label><input type="number" id="edit-qty-${tt.id}" value="${tt.quantity_total}" min="${tt.quantity_sold}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Début vente — Date</label><input type="date" id="edit-start-date-${tt.id}" value="${startDate}"></div>
+                <div class="form-group"><label>Début vente — Heure</label><input type="text" id="edit-start-time-${tt.id}" value="${startTime}" pattern="([01]\\d|2[0-3]):[0-5]\\d" maxlength="5"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Fin vente — Date</label><input type="date" id="edit-end-date-${tt.id}" value="${endDate}"></div>
+                <div class="form-group"><label>Fin vente — Heure</label><input type="text" id="edit-end-time-${tt.id}" value="${endTime}" pattern="([01]\\d|2[0-3]):[0-5]\\d" maxlength="5"></div>
+            </div>
+            <div class="form-group"><label>Domaines email autorisés</label><input type="text" id="edit-domains-${tt.id}" value="${escapeAttr(domainsStr)}" placeholder="gmail.com, universite.fr"><small>Séparés par des virgules. Vide = accessible à tous.</small></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primary btn-sm" onclick="saveTicketType('${tt.id}')">Enregistrer</button>
+                <button class="btn btn-sm" onclick="toggleEditForm('${tt.id}')">Annuler</button>
+            </div>
+            <span id="edit-msg-${tt.id}" class="form-msg hidden"></span>
+        </div>`;
 
         // Category table
         if (cats.length > 0) {
             html += `<table class="cat-table">
-                <thead><tr><th>Catégorie</th><th>Alloués</th><th>Vendus</th><th>Restants</th><th>Domaines</th><th></th></tr></thead><tbody>`;
+                <thead><tr><th>Catégorie</th><th>Alloués</th><th>Vendus</th><th>Restants</th><th>Domaines</th><th>Actions</th></tr></thead><tbody>`;
             cats.forEach(c => {
                 const cDomains = (c.allowed_domains && c.allowed_domains.length > 0)
                     ? c.allowed_domains.map(d => `<span class="domain-tag">${d}</span>`).join(' ')
                     : '<span style="color:#a0aec0;">Tous</span>';
                 const remaining = c.quantity_allocated - c.quantity_sold;
-                html += `<tr>
-                    <td><strong>${c.name}</strong></td>
+                const catMaskedClass = c.is_masked ? ' cat-masked' : '';
+                const catMaskedBadge = c.is_masked ? ' <span class="badge badge-masked" style="font-size:0.7em;">MASQUÉ</span>' : '';
+                const catMaskBtn = c.is_masked
+                    ? `<button class="btn btn-sm btn-success" onclick="toggleCategoryMask('${c.id}')" title="Démasquer">👁</button>`
+                    : `<button class="btn btn-sm btn-warning" onclick="toggleCategoryMask('${c.id}')" title="Masquer">🚫</button>`;
+                html += `<tr class="${catMaskedClass}">
+                    <td><strong>${c.name}</strong>${catMaskedBadge}</td>
                     <td>${c.quantity_allocated}</td>
                     <td>${c.quantity_sold}</td>
                     <td>${remaining}</td>
                     <td>${cDomains}</td>
-                    <td>${c.quantity_sold === 0 ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory('${c.id}')">×</button>` : ''}</td>
+                    <td style="display:flex;gap:4px;">${catMaskBtn}${c.quantity_sold === 0 ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory('${c.id}')">×</button>` : ''}</td>
                 </tr>`;
             });
             html += '</tbody></table>';
@@ -526,6 +577,67 @@ async function renderTicketTypesAdmin(types) {
 
     container.innerHTML = html;
     populateReallocDropdowns(types, catsCache);
+}
+
+function escapeAttr(str) {
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function toggleEditForm(ticketTypeId) {
+    const form = document.getElementById(`edit-form-${ticketTypeId}`);
+    form.classList.toggle('hidden');
+}
+
+async function saveTicketType(ticketTypeId) {
+    const msg = document.getElementById(`edit-msg-${ticketTypeId}`);
+    msg.classList.add('hidden');
+
+    const domainsRaw = document.getElementById(`edit-domains-${ticketTypeId}`).value.trim();
+    const allowed = domainsRaw ? domainsRaw.split(',').map(d => d.trim().toLowerCase()).filter(Boolean) : [];
+
+    const body = {
+        name: document.getElementById(`edit-name-${ticketTypeId}`).value.trim(),
+        description: document.getElementById(`edit-desc-${ticketTypeId}`).value.trim(),
+        price_cents: Math.round(parseFloat(document.getElementById(`edit-price-${ticketTypeId}`).value) * 100),
+        quantity_total: parseInt(document.getElementById(`edit-qty-${ticketTypeId}`).value, 10),
+        sale_start: new Date(`${document.getElementById(`edit-start-date-${ticketTypeId}`).value}T${document.getElementById(`edit-start-time-${ticketTypeId}`).value}:00`).toISOString(),
+        sale_end: new Date(`${document.getElementById(`edit-end-date-${ticketTypeId}`).value}T${document.getElementById(`edit-end-time-${ticketTypeId}`).value}:00`).toISOString(),
+        allowed_domains: allowed,
+    };
+
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/ticket-types/${ticketTypeId}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        msg.textContent = '✅ Enregistré !';
+        msg.className = 'form-msg success-text';
+        setTimeout(() => loadTicketTypesAdmin(), 500);
+    } catch (err) {
+        msg.textContent = `❌ ${err.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+async function toggleTicketTypeMask(ticketTypeId) {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/ticket-types/${ticketTypeId}/mask`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        loadTicketTypesAdmin();
+    } catch (err) {
+        alert(`Erreur: ${err.message}`);
+    }
+}
+
+async function toggleCategoryMask(categoryId) {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/categories/${categoryId}/mask`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        loadTicketTypesAdmin();
+    } catch (err) {
+        alert(`Erreur: ${err.message}`);
+    }
 }
 
 async function addCategory(ticketTypeID) {

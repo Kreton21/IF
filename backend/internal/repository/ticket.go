@@ -25,9 +25,9 @@ func NewTicketRepository(pool *pgxpool.Pool) *TicketRepository {
 func (r *TicketRepository) GetActiveTicketTypes(ctx context.Context) ([]models.TicketType, error) {
 	query := `
 		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
-		       sale_start, sale_end, is_active, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_types
-		WHERE is_active = true
+		WHERE is_active = true AND is_masked = false
 		ORDER BY price_cents ASC`
 
 	rows, err := r.pool.Query(ctx, query)
@@ -42,7 +42,38 @@ func (r *TicketRepository) GetActiveTicketTypes(ctx context.Context) ([]models.T
 		err := rows.Scan(
 			&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
 			&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
-			&tt.IsActive, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+			&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("erreur scan ticket type: %w", err)
+		}
+		types = append(types, tt)
+	}
+
+	return types, nil
+}
+
+// GetAllTicketTypes returns all ticket types (including inactive and masked) for admin
+func (r *TicketRepository) GetAllTicketTypes(ctx context.Context) ([]models.TicketType, error) {
+	query := `
+		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
+		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		FROM ticket_types
+		ORDER BY created_at DESC`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query all ticket types: %w", err)
+	}
+	defer rows.Close()
+
+	var types []models.TicketType
+	for rows.Next() {
+		var tt models.TicketType
+		err := rows.Scan(
+			&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
+			&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
+			&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("erreur scan ticket type: %w", err)
@@ -56,7 +87,7 @@ func (r *TicketRepository) GetActiveTicketTypes(ctx context.Context) ([]models.T
 func (r *TicketRepository) GetTicketTypeByID(ctx context.Context, id string) (*models.TicketType, error) {
 	query := `
 		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
-		       sale_start, sale_end, is_active, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_types
 		WHERE id = $1`
 
@@ -64,7 +95,7 @@ func (r *TicketRepository) GetTicketTypeByID(ctx context.Context, id string) (*m
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
 		&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
-		&tt.IsActive, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+		&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -81,7 +112,7 @@ func (r *TicketRepository) CreateTicketType(ctx context.Context, req models.Crea
 		INSERT INTO ticket_types (name, description, price_cents, quantity_total, sale_start, sale_end, max_per_order, allowed_domains)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, name, description, price_cents, quantity_total, quantity_sold,
-		          sale_start, sale_end, is_active, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+		          sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`
 
 	var tt models.TicketType
 	err := r.pool.QueryRow(ctx, query,
@@ -90,13 +121,87 @@ func (r *TicketRepository) CreateTicketType(ctx context.Context, req models.Crea
 	).Scan(
 		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
 		&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
-		&tt.IsActive, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+		&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("erreur création ticket type: %w", err)
 	}
 
 	return &tt, nil
+}
+
+// UpdateTicketType updates editable fields of a ticket type
+func (r *TicketRepository) UpdateTicketType(ctx context.Context, id string, req models.UpdateTicketTypeRequest) (*models.TicketType, error) {
+	// Verify quantity_total is not reduced below quantity_sold
+	var currentSold int
+	err := r.pool.QueryRow(ctx, `SELECT quantity_sold FROM ticket_types WHERE id = $1`, id).Scan(&currentSold)
+	if err != nil {
+		return nil, fmt.Errorf("ticket type introuvable: %w", err)
+	}
+	if req.QuantityTotal < currentSold {
+		return nil, fmt.Errorf("impossible de réduire à %d : %d tickets déjà vendus", req.QuantityTotal, currentSold)
+	}
+
+	query := `
+		UPDATE ticket_types
+		SET name = $2, description = $3, price_cents = $4, quantity_total = $5,
+		    sale_start = $6, sale_end = $7, allowed_domains = $8
+		WHERE id = $1
+		RETURNING id, name, description, price_cents, quantity_total, quantity_sold,
+		          sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+
+	var tt models.TicketType
+	err = r.pool.QueryRow(ctx, query, id,
+		req.Name, req.Description, req.PriceCents, req.QuantityTotal,
+		req.SaleStart, req.SaleEnd, req.AllowedDomains,
+	).Scan(
+		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
+		&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
+		&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur mise à jour ticket type: %w", err)
+	}
+	return &tt, nil
+}
+
+// ToggleTicketTypeMask toggles the is_masked flag on a ticket type
+func (r *TicketRepository) ToggleTicketTypeMask(ctx context.Context, id string) (*models.TicketType, error) {
+	query := `
+		UPDATE ticket_types SET is_masked = NOT is_masked
+		WHERE id = $1
+		RETURNING id, name, description, price_cents, quantity_total, quantity_sold,
+		          sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+
+	var tt models.TicketType
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents,
+		&tt.QuantityTotal, &tt.QuantitySold, &tt.SaleStart, &tt.SaleEnd,
+		&tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur toggle mask ticket type: %w", err)
+	}
+	return &tt, nil
+}
+
+// ToggleCategoryMask toggles the is_masked flag on a category
+func (r *TicketRepository) ToggleCategoryMask(ctx context.Context, categoryID string) (*models.TicketCategory, error) {
+	query := `
+		UPDATE ticket_categories SET is_masked = NOT is_masked
+		WHERE id = $1
+		RETURNING id, ticket_type_id, name, quantity_allocated, quantity_sold,
+		          is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+
+	var c models.TicketCategory
+	err := r.pool.QueryRow(ctx, query, categoryID).Scan(
+		&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
+		&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur toggle mask catégorie: %w", err)
+	}
+	return &c, nil
 }
 
 // ============================================
@@ -106,7 +211,7 @@ func (r *TicketRepository) CreateTicketType(ctx context.Context, req models.Crea
 func (r *TicketRepository) GetCategoriesByTicketType(ctx context.Context, ticketTypeID string) ([]models.TicketCategory, error) {
 	query := `
 		SELECT id, ticket_type_id, name, quantity_allocated, quantity_sold,
-		       COALESCE(allowed_domains, '{}'), created_at, updated_at
+		       is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_categories
 		WHERE ticket_type_id = $1
 		ORDER BY name ASC`
@@ -121,7 +226,7 @@ func (r *TicketRepository) GetCategoriesByTicketType(ctx context.Context, ticket
 	for rows.Next() {
 		var c models.TicketCategory
 		err := rows.Scan(&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
-			&c.QuantitySold, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
+			&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("erreur scan category: %w", err)
 		}
@@ -153,12 +258,12 @@ func (r *TicketRepository) CreateCategory(ctx context.Context, req models.Create
 		INSERT INTO ticket_categories (ticket_type_id, name, quantity_allocated, allowed_domains)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, ticket_type_id, name, quantity_allocated, quantity_sold,
-		          COALESCE(allowed_domains, '{}'), created_at, updated_at`
+		          is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at`
 
 	var c models.TicketCategory
 	err = r.pool.QueryRow(ctx, query, req.TicketTypeID, req.Name, req.Quantity, req.AllowedDomains).Scan(
 		&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
-		&c.QuantitySold, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
+		&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("erreur création catégorie: %w", err)
 	}
