@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Port string
 	Env  string
+	BaseURL string
 
 	// PostgreSQL
 	DatabaseURL string
@@ -28,6 +29,12 @@ type Config struct {
 	HelloAssoAPIURL       string
 	HelloAssoReturnURL    string
 	HelloAssoErrorURL     string
+
+	// Lydia (required only when PaymentProvider = "lydia")
+	LydiaAPIURL             string
+	LydiaVendorToken        string
+	LydiaVendorPrivateToken string
+	LydiaPaymentMethod      string
 
 	// JWT
 	JWTSecret string
@@ -56,6 +63,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Port: getEnv("PORT", "8080"),
 		Env:  getEnv("ENV", "development"),
+		BaseURL: getEnv("BASE_URL", "http://localhost:8080"),
 
 		DatabaseURL: mustGetEnv("DATABASE_URL"),
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
@@ -69,6 +77,11 @@ func Load() (*Config, error) {
 		HelloAssoAPIURL:       getEnv("HELLOASSO_API_URL", "https://api.helloasso.com"),
 		HelloAssoReturnURL:    getEnv("HELLOASSO_RETURN_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
 		HelloAssoErrorURL:     getEnv("HELLOASSO_ERROR_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
+
+		LydiaAPIURL:             getEnv("LYDIA_API_URL", "https://homologation.lydia-app.com"),
+		LydiaVendorToken:        getEnv("LYDIA_VENDOR_TOKEN", ""),
+		LydiaVendorPrivateToken: getEnv("LYDIA_VENDOR_PRIVATE_TOKEN", ""),
+		LydiaPaymentMethod:      getEnv("LYDIA_PAYMENT_METHOD", "cb"),
 
 		JWTSecret: mustGetEnv("JWT_SECRET"),
 

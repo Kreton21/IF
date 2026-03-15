@@ -59,7 +59,12 @@ func main() {
 		helloAssoService = services.NewHelloAssoService(cfg)
 	}
 
-	paymentProvider, err := services.NewPaymentProvider(cfg.PaymentProvider, helloAssoService, cfg.HelloAssoReturnURL)
+	var lydiaService *services.LydiaService
+	if cfg.PaymentProvider == "lydia" {
+		lydiaService = services.NewLydiaService(cfg)
+	}
+
+	paymentProvider, err := services.NewPaymentProvider(cfg.PaymentProvider, helloAssoService, lydiaService, cfg.HelloAssoReturnURL)
 	if err != nil {
 		log.Fatalf("Erreur payment provider: %v", err)
 	}

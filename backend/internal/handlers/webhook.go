@@ -86,3 +86,33 @@ func (h *WebhookHandler) HandleHelloAssoWebhook(w http.ResponseWriter, r *http.R
 
 	w.WriteHeader(http.StatusOK)
 }
+
+// HandleLydiaWebhook traite les callbacks Lydia (confirm/cancel/expire)
+func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Request) {
+	event := r.URL.Query().Get("event")
+	if event == "" {
+		event = "confirm"
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Erreur parse form Lydia: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	formJSON, _ := json.Marshal(r.PostForm)
+	logID, err := h.adminService.SaveWebhookLog(r.Context(), "lydia:"+event, formJSON)
+	if err != nil {
+		log.Printf("Erreur enregistrement webhook Lydia: %v", err)
+	}
+
+	if err := h.ticketService.HandleLydiaWebhook(r.Context(), event, r.PostForm); err != nil {
+		log.Printf("Erreur traitement webhook Lydia (%s): %v", event, err)
+		h.adminService.MarkWebhookProcessed(r.Context(), logID, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	h.adminService.MarkWebhookProcessed(r.Context(), logID, "")
+	w.WriteHeader(http.StatusOK)
+}

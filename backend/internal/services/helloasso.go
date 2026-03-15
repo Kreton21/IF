@@ -128,6 +128,7 @@ type CheckoutPayer struct {
 
 type CheckoutIntentResponse struct {
 	ID          int    `json:"id"`
+	ExternalID  string `json:"external_id,omitempty"`
 	RedirectURL string `json:"redirectUrl"`
 }
 

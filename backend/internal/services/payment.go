@@ -67,6 +67,7 @@ func (m *MockPaymentProvider) Name() string {
 // Verify interface compliance at compile time
 var _ PaymentProvider = (*MockPaymentProvider)(nil)
 var _ PaymentProvider = (*HelloAssoService)(nil)
+var _ PaymentProvider = (*LydiaService)(nil)
 
 // ============================================
 // HelloAssoService interface methods
@@ -87,7 +88,7 @@ func (s *HelloAssoService) Name() string {
 // ============================================
 
 // NewPaymentProvider creates the appropriate payment provider based on config
-func NewPaymentProvider(providerName string, helloAssoService *HelloAssoService, returnURL string) (PaymentProvider, error) {
+func NewPaymentProvider(providerName string, helloAssoService *HelloAssoService, lydiaService *LydiaService, returnURL string) (PaymentProvider, error) {
 	switch providerName {
 	case "mock":
 		log.Println("🧪 Mode paiement MOCK activé — les commandes seront confirmées automatiquement")
@@ -98,7 +99,13 @@ func NewPaymentProvider(providerName string, helloAssoService *HelloAssoService,
 		}
 		log.Println("💳 Mode paiement HelloAsso activé")
 		return helloAssoService, nil
+	case "lydia":
+		if lydiaService == nil {
+			return nil, fmt.Errorf("Lydia service non configuré")
+		}
+		log.Println("💳 Mode paiement Lydia activé")
+		return lydiaService, nil
 	default:
-		return nil, fmt.Errorf("payment provider inconnu: %s (valeurs acceptées: mock, helloasso)", providerName)
+		return nil, fmt.Errorf("payment provider inconnu: %s (valeurs acceptées: mock, helloasso, lydia)", providerName)
 	}
 }

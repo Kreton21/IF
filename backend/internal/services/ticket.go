@@ -2,9 +2,12 @@ package services
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -346,7 +349,10 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	// 5. Mettre à jour la commande avec les infos checkout
-	checkoutID := fmt.Sprintf("%d", payResp.ID)
+	checkoutID := payResp.ExternalID
+	if checkoutID == "" {
+		checkoutID = fmt.Sprintf("%d", payResp.ID)
+	}
 	if err := s.orderRepo.UpdateOrderHelloAsso(ctx, order.ID, checkoutID, payResp.RedirectURL); err != nil {
 		log.Printf("WARN: erreur mise à jour checkout info: %v", err)
 	}
@@ -383,6 +389,11 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 
 // ProcessPaymentWebhook traite le webhook de confirmation de paiement HelloAsso
 func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload WebhookPaymentData, orderID string) error {
+	paymentID := fmt.Sprintf("%d", payload.ID)
+	return s.ProcessOrderPaymentConfirmed(ctx, orderID, paymentID)
+}
+
+func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderID string, paymentID string) error {
 	// 1. Récupérer la commande
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
@@ -398,9 +409,10 @@ func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload Webho
 	}
 
 	// 2. Mettre à jour le statut
-	paymentID := fmt.Sprintf("%d", payload.ID)
-	if err := s.orderRepo.SetHelloAssoPaymentID(ctx, order.ID, paymentID); err != nil {
-		log.Printf("WARN: erreur enregistrement payment ID: %v", err)
+	if paymentID != "" {
+		if err := s.orderRepo.SetHelloAssoPaymentID(ctx, order.ID, paymentID); err != nil {
+			log.Printf("WARN: erreur enregistrement payment ID: %v", err)
+		}
 	}
 
 	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusPaid); err != nil {
@@ -442,13 +454,11 @@ func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload Webho
 		}
 
 		for i := 0; i < item.Quantity; i++ {
-			// Générer token QR unique
 			qrToken, err := s.qrService.GenerateToken()
 			if err != nil {
 				return fmt.Errorf("erreur génération token QR: %w", err)
 			}
 
-			// Générer image QR
 			qrPNG, err := s.qrService.GenerateQRCode(qrToken)
 			if err != nil {
 				return fmt.Errorf("erreur génération QR code: %w", err)
@@ -467,8 +477,7 @@ func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload Webho
 				return fmt.Errorf("erreur création ticket: %w", err)
 			}
 
-			// Stocker le QR token dans Redis pour validation rapide
-			s.redis.Set(ctx, fmt.Sprintf("qr:%s", qrToken), order.ID, 0) // Pas d'expiration
+			s.redis.Set(ctx, fmt.Sprintf("qr:%s", qrToken), order.ID, 0)
 
 			emailTickets = append(emailTickets, TicketEmailData{
 				TicketTypeName: tt.Name,
@@ -483,23 +492,102 @@ func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload Webho
 		return fmt.Errorf("erreur commit tickets: %w", err)
 	}
 
-	// 5. Mettre à jour le statut en "confirmed"
 	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusConfirmed); err != nil {
 		log.Printf("WARN: erreur mise à jour statut confirmed: %v", err)
 	}
 
-	// 6. Envoyer l'email avec les tickets
 	customerName := fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName)
 	if err := s.emailService.SendTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, emailTickets); err != nil {
 		log.Printf("ERROR: erreur envoi email: %v", err)
-		// Ne pas retourner l'erreur — le paiement est validé, on peut renvoyer l'email plus tard
 	}
 
-	// Invalider le cache
 	s.redis.Del(ctx, "ticket_types:active")
 
 	log.Printf("✅ Commande %s confirmée — %d tickets générés", order.OrderNumber, len(emailTickets))
 	return nil
+}
+
+func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération commande: %w", err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable")
+	}
+	if order.Status != models.OrderStatusPending {
+		return nil
+	}
+
+	items, err := s.orderRepo.GetOrderItems(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération items commande: %w", err)
+	}
+
+	if len(items) > 0 {
+		if err := s.ticketRepo.ReleaseTickets(ctx, items); err != nil {
+			return fmt.Errorf("erreur libération stock: %w", err)
+		}
+	}
+
+	if err := s.orderRepo.UpdateOrderStatus(ctx, orderID, models.OrderStatusCancelled); err != nil {
+		return fmt.Errorf("erreur annulation commande: %w", err)
+	}
+
+	s.redis.Del(ctx, fmt.Sprintf("order:%s:items", orderID))
+	s.redis.Del(ctx, "ticket_types:active")
+	return nil
+}
+
+func (s *TicketService) HandleLydiaWebhook(ctx context.Context, event string, form url.Values) error {
+	orderID := form.Get("order_ref")
+	if orderID == "" {
+		return fmt.Errorf("order_ref manquant")
+	}
+
+	if sig := form.Get("sig"); sig != "" && s.cfg.LydiaVendorPrivateToken != "" {
+		if !s.verifyLydiaSignature(form, sig) {
+			return fmt.Errorf("signature Lydia invalide")
+		}
+	}
+
+	switch event {
+	case "confirm":
+		paymentID := form.Get("transaction_identifier")
+		if paymentID == "" {
+			paymentID = form.Get("request_uuid")
+		}
+		if paymentID == "" {
+			paymentID = form.Get("request_id")
+		}
+		return s.ProcessOrderPaymentConfirmed(ctx, orderID, paymentID)
+	case "cancel", "expire":
+		return s.CancelPendingOrder(ctx, orderID)
+	default:
+		return nil
+	}
+}
+
+func (s *TicketService) verifyLydiaSignature(form url.Values, providedSig string) bool {
+	keys := make([]string, 0, len(form))
+	for key := range form {
+		if key == "sig" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	parts := make([]string, 0, len(keys)+1)
+	for _, key := range keys {
+		parts = append(parts, key+"="+form.Get(key))
+	}
+	parts = append(parts, s.cfg.LydiaVendorPrivateToken)
+
+	raw := strings.Join(parts[:len(parts)-1], "&") + "&" + parts[len(parts)-1]
+	expected := fmt.Sprintf("%x", md5.Sum([]byte(raw)))
+
+	return strings.EqualFold(expected, providedSig)
 }
 
 // GetOrderStatus retourne le statut d'une commande
