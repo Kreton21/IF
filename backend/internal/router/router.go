@@ -84,6 +84,7 @@ func NewRouter(
 			r.Use(middleware.JWTAuth(adminService))
 
 			r.Post("/change-password", adminHandler.ChangePassword)
+			r.Post("/staff/change-password", adminHandler.SetStaffPassword)
 			r.Get("/stats", adminHandler.GetStats)
 			r.Get("/orders", adminHandler.ListOrders)
 			r.Post("/validate-qr", adminHandler.ValidateQR)

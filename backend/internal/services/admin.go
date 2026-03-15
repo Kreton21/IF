@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -109,6 +110,15 @@ func (s *AdminService) CreateAdmin(ctx context.Context, username, password, disp
 	return s.adminRepo.CreateAdmin(ctx, admin)
 }
 
+func (s *AdminService) revokeSessions(ctx context.Context, adminID string) error {
+	key := fmt.Sprintf("auth:password_changed_at:%s", adminID)
+	value := strconv.FormatInt(time.Now().Unix(), 10)
+	if err := s.redis.Set(ctx, key, value, 0).Err(); err != nil {
+		return fmt.Errorf("erreur invalidation sessions: %w", err)
+	}
+	return nil
+}
+
 func (s *AdminService) ChangePassword(ctx context.Context, adminID, currentPassword, newPassword string) error {
 	if len(newPassword) < 8 {
 		return fmt.Errorf("le nouveau mot de passe doit contenir au moins 8 caractères")
@@ -133,6 +143,46 @@ func (s *AdminService) ChangePassword(ctx context.Context, adminID, currentPassw
 
 	if err := s.adminRepo.UpdatePasswordHash(ctx, adminID, string(hash)); err != nil {
 		return fmt.Errorf("erreur mise à jour mot de passe: %w", err)
+	}
+
+	if err := s.revokeSessions(ctx, adminID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *AdminService) SetStaffPassword(ctx context.Context, username, newPassword string) error {
+	if len(newPassword) < 8 {
+		return fmt.Errorf("le nouveau mot de passe doit contenir au moins 8 caractères")
+	}
+
+	admin, err := s.adminRepo.GetByUsername(ctx, username)
+	if err != nil {
+		return fmt.Errorf("erreur récupération compte staff: %w", err)
+	}
+	if admin == nil {
+		return fmt.Errorf("compte introuvable")
+	}
+	if admin.Role != "staff" {
+		return fmt.Errorf("ce compte n'est pas un staff")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("erreur hash password: %w", err)
+	}
+
+	updated, err := s.adminRepo.UpdatePasswordHashByUsername(ctx, username, string(hash))
+	if err != nil {
+		return fmt.Errorf("erreur mise à jour mot de passe staff: %w", err)
+	}
+	if updated == 0 {
+		return fmt.Errorf("compte staff introuvable")
+	}
+
+	if err := s.revokeSessions(ctx, admin.ID); err != nil {
+		return err
 	}
 
 	return nil
@@ -162,6 +212,28 @@ func (s *AdminService) ValidateJWT(tokenStr string) (jwt.MapClaims, error) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
+		return nil, fmt.Errorf("token invalide")
+	}
+
+	adminID, ok := claims["sub"].(string)
+	if !ok || adminID == "" {
+		return nil, fmt.Errorf("token invalide")
+	}
+
+	iatFloat, ok := claims["iat"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("token invalide")
+	}
+	tokenIssuedAt := int64(iatFloat)
+
+	key := fmt.Sprintf("auth:password_changed_at:%s", adminID)
+	revokedAtStr, err := s.redis.Get(context.Background(), key).Result()
+	if err == nil && revokedAtStr != "" {
+		revokedAt, parseErr := strconv.ParseInt(revokedAtStr, 10, 64)
+		if parseErr == nil && tokenIssuedAt <= revokedAt {
+			return nil, fmt.Errorf("token invalide ou expiré")
+		}
+	} else if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("token invalide")
 	}
 

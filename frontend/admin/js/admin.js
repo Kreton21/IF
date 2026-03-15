@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (changePwdForm) {
         changePwdForm.addEventListener('submit', handleChangePassword);
     }
+    const staffPwdForm = document.getElementById('staff-password-form');
+    if (staffPwdForm) {
+        staffPwdForm.addEventListener('submit', handleSetStaffPassword);
+    }
 
     // Le scanner QR écoute les entrées clavier (lecteur USB)
     document.getElementById('qr-input').addEventListener('keypress', (e) => {
@@ -167,6 +171,66 @@ async function handleChangePassword(e) {
         msg.textContent = '✅ Mot de passe mis à jour';
         msg.className = 'form-msg success-text';
         document.getElementById('change-password-form').reset();
+        setTimeout(() => {
+            alert('Mot de passe modifié. Vous allez être déconnecté.');
+            logout();
+        }, 400);
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+async function handleSetStaffPassword(e) {
+    e.preventDefault();
+
+    if (adminRole === 'staff') {
+        return;
+    }
+
+    const msg = document.getElementById('staff-password-msg');
+    const username = document.getElementById('staff-username').value.trim();
+    const newPassword = document.getElementById('staff-new-password').value;
+    const confirmPassword = document.getElementById('staff-confirm-password').value;
+
+    msg.classList.add('hidden');
+
+    if (!username || !newPassword) {
+        msg.textContent = '❌ Username staff et mot de passe requis';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        msg.textContent = '❌ Minimum 8 caractères';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        msg.textContent = '❌ La confirmation ne correspond pas';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/staff/change-password`, {
+            method: 'POST',
+            body: JSON.stringify({
+                username,
+                new_password: newPassword,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors du changement du mot de passe staff');
+        }
+
+        msg.textContent = '✅ Mot de passe staff mis à jour (sessions invalidées)';
+        msg.className = 'form-msg success-text';
+        document.getElementById('staff-password-form').reset();
+        document.getElementById('staff-username').value = username;
     } catch (error) {
         msg.textContent = `❌ ${error.message}`;
         msg.className = 'form-msg error-text';

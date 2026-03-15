@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKEND_DIR="$PROJECT_DIR/backend"
+SERVICE_FILE="${SERVICE_FILE:-/etc/systemd/system/festival.service}"
 
 usage() {
   echo "Usage: $0 <username> <new_password>"
@@ -26,8 +27,23 @@ fi
 
 if [[ -z "${DATABASE_URL:-}" ]]; then
   if [[ -f "$BACKEND_DIR/.env" ]]; then
-    # shellcheck disable=SC1090
-    source "$BACKEND_DIR/.env"
+    DATABASE_URL="$(grep -E '^DATABASE_URL=' "$BACKEND_DIR/.env" | head -n1 | cut -d'=' -f2- || true)"
+    REDIS_URL="${REDIS_URL:-$(grep -E '^REDIS_URL=' "$BACKEND_DIR/.env" | head -n1 | cut -d'=' -f2- || true)}"
+  fi
+fi
+
+if [[ -z "${DATABASE_URL:-}" && -r "$SERVICE_FILE" ]]; then
+  DATABASE_URL="$(grep -E 'Environment="DATABASE_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="DATABASE_URL=([^\"]+)".*/\1/' || true)"
+  REDIS_URL="${REDIS_URL:-$(grep -E 'Environment="REDIS_URL=' "$SERVICE_FILE" | head -n1 | sed -E 's/.*Environment="REDIS_URL=([^\"]+)".*/\1/' || true)}"
+
+  ENV_FILE_PATH="$(grep -E '^EnvironmentFile=' "$SERVICE_FILE" | head -n1 | cut -d'=' -f2- || true)"
+  if [[ -n "$ENV_FILE_PATH" && -r "$ENV_FILE_PATH" ]]; then
+    if [[ -z "${DATABASE_URL:-}" ]]; then
+      DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE_PATH" | head -n1 | cut -d'=' -f2- || true)"
+    fi
+    if [[ -z "${REDIS_URL:-}" ]]; then
+      REDIS_URL="$(grep -E '^REDIS_URL=' "$ENV_FILE_PATH" | head -n1 | cut -d'=' -f2- || true)"
+    fi
   fi
 fi
 
@@ -78,8 +94,20 @@ SQLEOF
 
 ACTIVE_COUNT="$(echo "$UPDATED_ROWS" | tail -n1)"
 if [[ "$ACTIVE_COUNT" == "0" ]]; then
-  echo "Error: active admin '$USERNAME' not found."
+  echo "Error: active account '$USERNAME' not found."
   exit 1
 fi
 
-echo "Password updated successfully for admin '$USERNAME'."
+ADMIN_INFO="$(psql "$DATABASE_URL" -t -A -F '|' -v ON_ERROR_STOP=1 -v username="$USERNAME" <<'SQLEOF'
+SELECT id, role FROM admins WHERE username = :'username' AND is_active = true LIMIT 1;
+SQLEOF
+)"
+
+ADMIN_ID="$(echo "$ADMIN_INFO" | cut -d'|' -f1)"
+
+if [[ -n "${REDIS_URL:-}" && -n "$ADMIN_ID" ]] && command -v redis-cli >/dev/null 2>&1; then
+  NOW_TS="$(date +%s)"
+  REDIS_URL="$REDIS_URL" redis-cli SET "auth:password_changed_at:${ADMIN_ID}" "$NOW_TS" >/dev/null || true
+fi
+
+echo "Password updated successfully for '$USERNAME'."

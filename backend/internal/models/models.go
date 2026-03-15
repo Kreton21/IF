@@ -156,6 +156,11 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password"`
 }
 
+type SetStaffPasswordRequest struct {
+	Username    string `json:"username"`
+	NewPassword string `json:"new_password"`
+}
+
 type LoginResponse struct {
 	Token       string `json:"token"`
 	DisplayName string `json:"display_name"`

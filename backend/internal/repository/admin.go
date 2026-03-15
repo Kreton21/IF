@@ -87,6 +87,17 @@ func (r *AdminRepository) UpdatePasswordHash(ctx context.Context, adminID, newHa
 	return nil
 }
 
+func (r *AdminRepository) UpdatePasswordHashByUsername(ctx context.Context, username, newHash string) (int64, error) {
+	result, err := r.pool.Exec(ctx,
+		`UPDATE admins SET password_hash = $1 WHERE username = $2 AND is_active = true`,
+		newHash, username,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("erreur update password hash by username: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
 // SaveWebhookLog enregistre un webhook reçu pour audit
 func (r *AdminRepository) SaveWebhookLog(ctx context.Context, eventType string, payload []byte) (int64, error) {
 	var id int64

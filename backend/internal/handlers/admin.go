@@ -80,6 +80,33 @@ func (h *AdminHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Mot de passe mis à jour"})
 }
 
+// SetStaffPassword permet à un admin de changer le mot de passe d'un staff
+func (h *AdminHandler) SetStaffPassword(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.SetStaffPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	if req.Username == "" || req.NewPassword == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Username et nouveau mot de passe requis"})
+		return
+	}
+
+	if err := h.adminService.SetStaffPassword(r.Context(), req.Username, req.NewPassword); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Mot de passe staff mis à jour"})
+}
+
 // GetStats retourne les statistiques de vente
 func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.adminService.GetStats(r.Context())
