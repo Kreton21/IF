@@ -109,6 +109,35 @@ func (s *AdminService) CreateAdmin(ctx context.Context, username, password, disp
 	return s.adminRepo.CreateAdmin(ctx, admin)
 }
 
+func (s *AdminService) ChangePassword(ctx context.Context, adminID, currentPassword, newPassword string) error {
+	if len(newPassword) < 8 {
+		return fmt.Errorf("le nouveau mot de passe doit contenir au moins 8 caractères")
+	}
+
+	admin, err := s.adminRepo.GetByID(ctx, adminID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération admin: %w", err)
+	}
+	if admin == nil {
+		return fmt.Errorf("admin introuvable")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(currentPassword)); err != nil {
+		return fmt.Errorf("mot de passe actuel invalide")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("erreur hash password: %w", err)
+	}
+
+	if err := s.adminRepo.UpdatePasswordHash(ctx, adminID, string(hash)); err != nil {
+		return fmt.Errorf("erreur mise à jour mot de passe: %w", err)
+	}
+
+	return nil
+}
+
 // SaveWebhookLog enregistre un webhook reçu
 func (s *AdminService) SaveWebhookLog(ctx context.Context, eventType string, payload []byte) (int64, error) {
 	return s.adminRepo.SaveWebhookLog(ctx, eventType, payload)

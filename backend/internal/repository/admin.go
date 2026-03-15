@@ -38,6 +38,27 @@ func (r *AdminRepository) GetByUsername(ctx context.Context, username string) (*
 	return &a, nil
 }
 
+func (r *AdminRepository) GetByID(ctx context.Context, adminID string) (*models.Admin, error) {
+	query := `
+		SELECT id, username, password_hash, display_name, role, is_active, last_login, created_at
+		FROM admins
+		WHERE id = $1 AND is_active = true`
+
+	var a models.Admin
+	err := r.pool.QueryRow(ctx, query, adminID).Scan(
+		&a.ID, &a.Username, &a.PasswordHash, &a.DisplayName,
+		&a.Role, &a.IsActive, &a.LastLogin, &a.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur query admin by id: %w", err)
+	}
+
+	return &a, nil
+}
+
 func (r *AdminRepository) UpdateLastLogin(ctx context.Context, adminID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE admins SET last_login = NOW() WHERE id = $1`, adminID)
@@ -53,6 +74,17 @@ func (r *AdminRepository) CreateAdmin(ctx context.Context, admin *models.Admin) 
 	return r.pool.QueryRow(ctx, query,
 		admin.Username, admin.PasswordHash, admin.DisplayName, admin.Role,
 	).Scan(&admin.ID, &admin.CreatedAt)
+}
+
+func (r *AdminRepository) UpdatePasswordHash(ctx context.Context, adminID, newHash string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE admins SET password_hash = $1 WHERE id = $2 AND is_active = true`,
+		newHash, adminID,
+	)
+	if err != nil {
+		return fmt.Errorf("erreur update password hash: %w", err)
+	}
+	return nil
 }
 
 // SaveWebhookLog enregistre un webhook reçu pour audit

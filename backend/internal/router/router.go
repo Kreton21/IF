@@ -83,6 +83,7 @@ func NewRouter(
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(middleware.JWTAuth(adminService))
 
+			r.Post("/change-password", adminHandler.ChangePassword)
 			r.Get("/stats", adminHandler.GetStats)
 			r.Get("/orders", adminHandler.ListOrders)
 			r.Post("/validate-qr", adminHandler.ValidateQR)

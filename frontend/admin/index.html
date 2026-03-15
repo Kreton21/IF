@@ -35,9 +35,37 @@
             </div>
             <div class="header-right">
                 <span id="admin-name"></span>
+                <button id="change-password-btn" onclick="togglePasswordPanel()" class="btn btn-sm hidden">Changer mot de passe</button>
                 <button onclick="logout()" class="btn btn-sm">Déconnexion</button>
             </div>
         </header>
+
+        <section id="password-panel" class="tab-content hidden" style="display:block;padding-bottom:0;">
+            <div class="card password-card">
+                <h3>🔒 Changer le mot de passe admin</h3>
+                <form id="change-password-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Mot de passe actuel</label>
+                            <input type="password" id="current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nouveau mot de passe</label>
+                            <input type="password" id="new-password" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirmer nouveau mot de passe</label>
+                            <input type="password" id="confirm-password" required minlength="8">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                        <button type="button" class="btn btn-sm" onclick="togglePasswordPanel()">Fermer</button>
+                        <span id="password-msg" class="form-msg hidden"></span>
+                    </div>
+                </form>
+            </div>
+        </section>
 
         <!-- Navigation tabs -->
         <nav class="tabs">

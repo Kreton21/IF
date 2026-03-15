@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('login-form').addEventListener('submit', handleLogin);
+    const changePwdForm = document.getElementById('change-password-form');
+    if (changePwdForm) {
+        changePwdForm.addEventListener('submit', handleChangePassword);
+    }
 
     // Le scanner QR écoute les entrées clavier (lecteur USB)
     document.getElementById('qr-input').addEventListener('keypress', (e) => {
@@ -87,6 +91,14 @@ function showDashboard() {
 
     // Masquer les onglets selon le rôle
     const isStaff = adminRole === 'staff';
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    if (changePasswordBtn) {
+        changePasswordBtn.classList.toggle('hidden', isStaff);
+    }
+    const passwordPanel = document.getElementById('password-panel');
+    if (passwordPanel) {
+        passwordPanel.classList.add('hidden');
+    }
     document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"]').forEach(tab => {
         tab.style.display = isStaff ? 'none' : '';
     });
@@ -96,6 +108,68 @@ function showDashboard() {
         switchTab('scanner');
     } else {
         loadStats();
+    }
+}
+
+function togglePasswordPanel() {
+    if (adminRole === 'staff') return;
+    const panel = document.getElementById('password-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+}
+
+async function handleChangePassword(e) {
+    e.preventDefault();
+
+    if (adminRole === 'staff') {
+        return;
+    }
+
+    const msg = document.getElementById('password-msg');
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    msg.classList.add('hidden');
+
+    if (!currentPassword || !newPassword) {
+        msg.textContent = '❌ Mot de passe actuel et nouveau requis';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        msg.textContent = '❌ Minimum 8 caractères';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        msg.textContent = '❌ La confirmation ne correspond pas';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/change-password`, {
+            method: 'POST',
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors du changement de mot de passe');
+        }
+
+        msg.textContent = '✅ Mot de passe mis à jour';
+        msg.className = 'form-msg success-text';
+        document.getElementById('change-password-form').reset();
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
     }
 }
 

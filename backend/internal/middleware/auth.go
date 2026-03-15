@@ -70,3 +70,11 @@ func GetAdminRole(ctx context.Context) string {
 	}
 	return ""
 }
+
+// GetAdminID extrait l'ID admin du context
+func GetAdminID(ctx context.Context) string {
+	if id, ok := ctx.Value(AdminIDKey).(string); ok {
+		return id
+	}
+	return ""
+}

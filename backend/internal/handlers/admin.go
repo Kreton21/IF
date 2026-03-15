@@ -46,6 +46,40 @@ func (h *AdminHandler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// ChangePassword permet à un admin de changer son mot de passe
+func (h *AdminHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	adminID := middleware.GetAdminID(r.Context())
+	if adminID == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Session invalide"})
+		return
+	}
+
+	var req models.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Mot de passe actuel et nouveau requis"})
+		return
+	}
+
+	err := h.adminService.ChangePassword(r.Context(), adminID, req.CurrentPassword, req.NewPassword)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Mot de passe mis à jour"})
+}
+
 // GetStats retourne les statistiques de vente
 func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.adminService.GetStats(r.Context())
