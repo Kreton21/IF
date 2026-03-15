@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -75,6 +76,20 @@ func main() {
 	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, paymentProvider, qrService, emailService, redisClient)
 	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, redisClient)
 
+	pendingTTLMinutes := 20
+	if raw := os.Getenv("ORDER_PENDING_TTL_MINUTES"); raw != "" {
+		if parsed, parseErr := strconv.Atoi(raw); parseErr == nil && parsed > 0 {
+			pendingTTLMinutes = parsed
+		}
+	}
+
+	cleanupIntervalMinutes := 1
+	if raw := os.Getenv("ORDER_CLEANUP_INTERVAL_MINUTES"); raw != "" {
+		if parsed, parseErr := strconv.Atoi(raw); parseErr == nil && parsed > 0 {
+			cleanupIntervalMinutes = parsed
+		}
+	}
+
 	// 6. Initialiser les handlers
 	ticketHandler := handlers.NewTicketHandler(ticketService)
 	webhookHandler := handlers.NewWebhookHandler(ticketService, adminService)
@@ -124,6 +139,23 @@ func main() {
 			} else {
 				log.Println("👤 Compte staff créé (staff / staff2026)")
 			}
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(time.Duration(cleanupIntervalMinutes) * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			ctx := context.Background()
+			count, err := ticketService.CleanupExpiredPendingOrders(ctx, time.Duration(pendingTTLMinutes)*time.Minute)
+			if err != nil {
+				log.Printf("WARN: cleanup commandes expirées échoué: %v", err)
+			} else if count > 0 {
+				log.Printf("🧹 %d commande(s) pending expirée(s) annulée(s)", count)
+			}
+
+			<-ticker.C
 		}
 	}()
 

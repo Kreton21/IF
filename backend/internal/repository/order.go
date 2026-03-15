@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -317,4 +318,74 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 
 func (r *OrderRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return r.pool.Begin(ctx)
+}
+
+func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID string, items []models.CheckoutItem) error {
+	query := `
+		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity)
+		VALUES ($1, $2, $3, $4)`
+
+	for _, item := range items {
+		var categoryID interface{}
+		if item.CategoryID != "" {
+			categoryID = item.CategoryID
+		}
+		if _, err := tx.Exec(ctx, query, orderID, item.TicketTypeID, categoryID, item.Quantity); err != nil {
+			return fmt.Errorf("erreur insertion order_item: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]models.CheckoutItem, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT ticket_type_id, COALESCE(category_id::text, ''), quantity
+		FROM order_items
+		WHERE order_id = $1`, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query order_items: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]models.CheckoutItem, 0)
+	for rows.Next() {
+		var item models.CheckoutItem
+		if err := rows.Scan(&item.TicketTypeID, &item.CategoryID, &item.Quantity); err != nil {
+			return nil, fmt.Errorf("erreur scan order_item: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur lecture order_items: %w", err)
+	}
+
+	return items, nil
+}
+
+func (r *OrderRepository) GetExpiredPendingOrderIDs(ctx context.Context, olderThan time.Time) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id
+		FROM orders
+		WHERE status = 'pending' AND created_at < $1`, olderThan)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query commandes expirées: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("erreur scan commande expirée: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur lecture commandes expirées: %w", err)
+	}
+
+	return ids, nil
 }

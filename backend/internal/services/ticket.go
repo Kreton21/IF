@@ -302,6 +302,11 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		return nil, fmt.Errorf("erreur création commande: %w", err)
 	}
 
+	if err := s.orderRepo.SaveOrderItems(ctx, tx, order.ID, req.Items); err != nil {
+		s.ticketRepo.ReleaseTickets(ctx, req.Items)
+		return nil, fmt.Errorf("erreur sauvegarde items commande: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		s.ticketRepo.ReleaseTickets(ctx, req.Items)
 		return nil, fmt.Errorf("erreur commit: %w", err)
@@ -402,14 +407,23 @@ func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload Webho
 		return fmt.Errorf("erreur mise à jour statut: %w", err)
 	}
 
-	// 3. Récupérer les items de la commande depuis Redis
+	// 3. Récupérer les items de la commande (Redis cache puis fallback DB)
 	var items []models.CheckoutItem
 	itemsData, err := s.redis.Get(ctx, fmt.Sprintf("order:%s:items", order.ID)).Bytes()
-	if err != nil {
-		return fmt.Errorf("erreur récupération items: %w", err)
+	if err == nil {
+		if unmarshalErr := json.Unmarshal(itemsData, &items); unmarshalErr != nil {
+			items = nil
+		}
 	}
-	if err := json.Unmarshal(itemsData, &items); err != nil {
-		return fmt.Errorf("erreur décodage items: %w", err)
+
+	if len(items) == 0 {
+		items, err = s.orderRepo.GetOrderItems(ctx, order.ID)
+		if err != nil {
+			return fmt.Errorf("erreur récupération items depuis DB: %w", err)
+		}
+		if len(items) == 0 {
+			return fmt.Errorf("aucun item trouvé pour la commande")
+		}
 	}
 
 	// 4. Générer les tickets avec QR codes
@@ -514,6 +528,51 @@ func (s *TicketService) GetOrderStatus(ctx context.Context, orderID string) (*mo
 // GetQRCodeImage returns the QR code PNG data for a given token
 func (s *TicketService) GetQRCodeImage(ctx context.Context, qrToken string) ([]byte, error) {
 	return s.ticketRepo.GetQRCodeDataByToken(ctx, qrToken)
+}
+
+// CleanupExpiredPendingOrders annule les commandes pending trop anciennes
+// et libère leur stock réservé.
+func (s *TicketService) CleanupExpiredPendingOrders(ctx context.Context, pendingTTL time.Duration) (int, error) {
+	cutoff := time.Now().Add(-pendingTTL)
+	orderIDs, err := s.orderRepo.GetExpiredPendingOrderIDs(ctx, cutoff)
+	if err != nil {
+		return 0, err
+	}
+
+	cancelled := 0
+	for _, orderID := range orderIDs {
+		order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+		if err != nil || order == nil || order.Status != models.OrderStatusPending {
+			continue
+		}
+
+		items, err := s.orderRepo.GetOrderItems(ctx, orderID)
+		if err != nil {
+			log.Printf("WARN: impossible de récupérer les items de %s: %v", orderID, err)
+			continue
+		}
+
+		if len(items) > 0 {
+			if err := s.ticketRepo.ReleaseTickets(ctx, items); err != nil {
+				log.Printf("WARN: impossible de libérer le stock pour %s: %v", orderID, err)
+				continue
+			}
+		}
+
+		if err := s.orderRepo.UpdateOrderStatus(ctx, orderID, models.OrderStatusCancelled); err != nil {
+			log.Printf("WARN: impossible d'annuler %s: %v", orderID, err)
+			continue
+		}
+
+		s.redis.Del(ctx, fmt.Sprintf("order:%s:items", orderID))
+		cancelled++
+	}
+
+	if cancelled > 0 {
+		s.redis.Del(ctx, "ticket_types:active")
+	}
+
+	return cancelled, nil
 }
 
 func joinStrings(ss []string) string {
