@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
@@ -68,6 +69,18 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	form.Set("end_mobile_url", req.ReturnURL)
 	form.Set("expire_time", "1800")
 
+	if s.cfg.LydiaDebug {
+		log.Printf("[LYDIA DEBUG] request/do payload order_ref=%s amount=%s currency=%s type=%s recipient=%s payment_method=%s",
+			form.Get("order_ref"),
+			form.Get("amount"),
+			form.Get("currency"),
+			form.Get("type"),
+			maskRecipient(form.Get("recipient")),
+			form.Get("payment_method"),
+		)
+		log.Printf("[LYDIA DEBUG] callbacks confirm=%s cancel=%s expire=%s", confirmURL, cancelURL, expireURL)
+	}
+
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL.String(), strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("erreur création requête Lydia: %w", err)
@@ -81,6 +94,9 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	if s.cfg.LydiaDebug {
+		log.Printf("[LYDIA DEBUG] request/do HTTP=%d body=%s", resp.StatusCode, string(body))
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("erreur Lydia (HTTP %d): %s", resp.StatusCode, string(body))
 	}
@@ -111,6 +127,28 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 		ExternalID: externalID,
 		RedirectURL: out.MobileURL,
 	}, nil
+}
+
+func maskRecipient(value string) string {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return ""
+	}
+	if strings.Contains(v, "@") {
+		parts := strings.SplitN(v, "@", 2)
+		local := parts[0]
+		domain := parts[1]
+		if len(local) > 2 {
+			local = local[:2] + "***"
+		} else {
+			local = "***"
+		}
+		return local + "@" + domain
+	}
+	if len(v) <= 4 {
+		return "***"
+	}
+	return strings.Repeat("*", len(v)-4) + v[len(v)-4:]
 }
 
 func (s *LydiaService) AutoConfirms() bool {

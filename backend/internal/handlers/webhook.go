@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/kreton/if-festival/internal/services"
 )
@@ -100,6 +102,10 @@ func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if isLydiaDebugEnabled() {
+		log.Printf("[LYDIA DEBUG] webhook event=%s payload=%v", event, redactFormForLog(r.PostForm))
+	}
+
 	formJSON, _ := json.Marshal(r.PostForm)
 	logID, err := h.adminService.SaveWebhookLog(r.Context(), "lydia:"+event, formJSON)
 	if err != nil {
@@ -115,4 +121,26 @@ func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Reque
 
 	h.adminService.MarkWebhookProcessed(r.Context(), logID, "")
 	w.WriteHeader(http.StatusOK)
+}
+
+func isLydiaDebugEnabled() bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv("LYDIA_DEBUG")))
+	return raw == "1" || raw == "true" || raw == "yes" || raw == "on"
+}
+
+func redactFormForLog(form map[string][]string) map[string]string {
+	result := make(map[string]string, len(form))
+	for key, values := range form {
+		if len(values) == 0 {
+			continue
+		}
+		value := values[0]
+		switch strings.ToLower(key) {
+		case "sig":
+			result[key] = "***"
+		default:
+			result[key] = value
+		}
+	}
+	return result
 }

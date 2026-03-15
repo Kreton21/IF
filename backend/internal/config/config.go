@@ -35,6 +35,7 @@ type Config struct {
 	LydiaVendorToken        string
 	LydiaVendorPrivateToken string
 	LydiaPaymentMethod      string
+	LydiaDebug              bool
 
 	// JWT
 	JWTSecret string
@@ -59,6 +60,7 @@ func Load() (*Config, error) {
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
 
 	paymentProvider := getEnv("PAYMENT_PROVIDER", "mock")
+	lydiaDebug, _ := strconv.ParseBool(getEnv("LYDIA_DEBUG", "false"))
 
 	cfg := &Config{
 		Port: getEnv("PORT", "8080"),
@@ -82,6 +84,7 @@ func Load() (*Config, error) {
 		LydiaVendorToken:        getEnv("LYDIA_VENDOR_TOKEN", ""),
 		LydiaVendorPrivateToken: getEnv("LYDIA_VENDOR_PRIVATE_TOKEN", ""),
 		LydiaPaymentMethod:      getEnv("LYDIA_PAYMENT_METHOD", "cb"),
+		LydiaDebug:              lydiaDebug,
 
 		JWTSecret: mustGetEnv("JWT_SECRET"),
 
