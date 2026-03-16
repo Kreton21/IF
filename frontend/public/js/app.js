@@ -557,6 +557,7 @@ function populateBusFormOptions() {
   if (!state.busOptions) return;
 
   const stations = (state.busOptions.stations || []).filter(s => s.is_active);
+  const outbound = (state.busOptions.outbound_departures || []).filter(d => d.is_active);
   const fromSelect = document.getElementById('bus-from-station');
   const returnStationSelect = document.getElementById('bus-return-station');
 
@@ -567,8 +568,10 @@ function populateBusFormOptions() {
   returnStationSelect.innerHTML = stationOptions.join('');
 
   if (stations.length > 0) {
-    fromSelect.value = stations[0].id;
-    returnStationSelect.value = stations[0].id;
+    const stationWithOutbound = stations.find(s => outbound.some(d => d.station_id === s.id));
+    const defaultStationID = stationWithOutbound ? stationWithOutbound.id : stations[0].id;
+    fromSelect.value = defaultStationID;
+    returnStationSelect.value = defaultStationID;
   }
 
   refreshOutboundDepartureOptions();
@@ -581,7 +584,11 @@ function refreshOutboundDepartureOptions() {
   const departures = (state.busOptions?.outbound_departures || []).filter(d => d.is_active && d.station_id === selectedStation);
 
   let html = '<option value="">Choisir un horaire aller</option>';
-  html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+  if (departures.length === 0) {
+    html += '<option value="" disabled>Aucun horaire disponible pour cette station</option>';
+  } else {
+    html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+  }
   select.innerHTML = html;
 
   if (departures.length > 0) {
