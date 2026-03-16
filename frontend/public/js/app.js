@@ -766,6 +766,19 @@ function formatPrice(cents) {
   });
 }
 
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function showNotification(message, type = 'info') {
   const el = document.getElementById('notification');
   if (!el) return;
