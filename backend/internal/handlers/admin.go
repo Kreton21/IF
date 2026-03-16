@@ -363,6 +363,71 @@ func (h *AdminHandler) ToggleTicketTypeMask(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, tt)
 }
 
+func (h *AdminHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.ticketService.GetBusOptions(r.Context())
+	if err != nil {
+		log.Printf("Erreur récupération options bus admin: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *AdminHandler) CreateBusStation(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.CreateBusStationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	station, err := h.ticketService.CreateBusStation(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, station)
+}
+
+func (h *AdminHandler) CreateBusDeparture(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.CreateBusDepartureRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	dep, err := h.ticketService.CreateBusDeparture(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, dep)
+}
+
+func (h *AdminHandler) ListBusTickets(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.ticketService.ListBusTicketsAdmin(r.Context())
+	if err != nil {
+		log.Printf("Erreur récupération tickets bus admin: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, rows)
+}
+
 // ToggleCategoryMask masque/démasque une catégorie
 func (h *AdminHandler) ToggleCategoryMask(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())

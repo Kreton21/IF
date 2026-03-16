@@ -9,6 +9,7 @@ let adminName = localStorage.getItem('admin_name');
 let adminRole = localStorage.getItem('admin_role') || 'admin';
 let searchTimeout = null;
 let currentPage = 1;
+let busOptionsCache = null;
 
 // ==========================================
 // Initialisation
@@ -103,7 +104,7 @@ function showDashboard() {
     if (passwordPanel) {
         passwordPanel.classList.add('hidden');
     }
-    document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"]').forEach(tab => {
+    document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"], .tab[data-tab="bus"]').forEach(tab => {
         tab.style.display = isStaff ? 'none' : '';
     });
 
@@ -271,6 +272,7 @@ function switchTab(tabName) {
         case 'stats': loadStats(); break;
         case 'orders': loadOrders(); break;
         case 'tickets': loadTicketTypesAdmin(); break;
+        case 'bus': loadBusAdminData(); break;
         case 'scanner':
             document.getElementById('qr-input').focus();
             loadValidationStats();
@@ -473,6 +475,7 @@ async function validateQR() {
         resultEl.classList.remove('hidden', 'valid', 'invalid', 'warning');
 
         if (data.valid) {
+            const busDetails = data.ride_type ? `<br>Trajet : ${data.from_station} → ${data.to_station}${data.return_departure_at ? `<br>Retour : ${formatDateTime(data.return_departure_at)}` : ''}` : '';
             resultEl.classList.add('valid');
             resultEl.innerHTML = `
                 <div class="result-icon">✅</div>
@@ -481,10 +484,12 @@ async function validateQR() {
                     ${data.attendee_first_name} ${data.attendee_last_name}<br>
                     Ticket : ${data.ticket_type_name}<br>
                     Commande : ${data.order_number}
+                    ${busDetails}
                 </div>`;
             // Son de validation (optionnel)
             playSound('success');
         } else if (data.already_validated) {
+            const busDetails = data.ride_type ? `<br>Trajet : ${data.from_station} → ${data.to_station}` : '';
             resultEl.classList.add('warning');
             resultEl.innerHTML = `
                 <div class="result-icon">⚠️</div>
@@ -492,6 +497,7 @@ async function validateQR() {
                 <div class="result-details">
                     Ticket : ${data.ticket_type_name}<br>
                     Commande : ${data.order_number}
+                    ${busDetails}
                 </div>`;
             playSound('warning');
         } else {
@@ -860,6 +866,151 @@ async function doReallocate() {
         loadTicketTypesAdmin();
     } catch (err) {
         msg.textContent = `❌ ${err.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+async function loadBusAdminData() {
+    try {
+        const [optionsRes, ticketsRes] = await Promise.all([
+            apiFetch(`${API_BASE}/admin/bus/options`),
+            apiFetch(`${API_BASE}/admin/bus/tickets`),
+        ]);
+
+        busOptionsCache = await optionsRes.json();
+        const busTickets = await ticketsRes.json();
+
+        renderBusStationsSelects(busOptionsCache.stations || []);
+        renderBusDeparturesTable([...(busOptionsCache.outbound_departures || []), ...(busOptionsCache.return_departures || [])]);
+        renderBusTicketsTable(busTickets || []);
+    } catch (error) {
+        console.error('Erreur chargement bus admin:', error);
+    }
+}
+
+function renderBusStationsSelects(stations) {
+    const stationSelect = document.getElementById('bus-dep-station');
+    if (!stationSelect) return;
+    stationSelect.innerHTML = '<option value="">Choisir une station</option>' + stations
+        .filter(s => s.is_active)
+        .map(s => `<option value="${s.id}">${s.name}</option>`)
+        .join('');
+}
+
+function renderBusDeparturesTable(departures) {
+    const container = document.getElementById('bus-departures-table');
+    if (!container) return;
+    if (!departures.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucun horaire</p>';
+        return;
+    }
+
+    departures.sort((a, b) => new Date(a.departure_time) - new Date(b.departure_time));
+    let html = `<table><thead><tr>
+        <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th>
+    </tr></thead><tbody>`;
+
+    departures.forEach(d => {
+        html += `<tr>
+            <td>${d.station_name}</td>
+            <td>${d.direction === 'to_festival' ? 'Aller' : 'Retour'}</td>
+            <td>${formatDateTime(d.departure_time)}</td>
+            <td>${formatPrice(d.price_cents)}</td>
+            <td>${d.sold}</td>
+            <td>${d.capacity}</td>
+        </tr>`;
+    });
+
+    container.innerHTML = html + '</tbody></table>';
+}
+
+function renderBusTicketsTable(rows) {
+    const container = document.getElementById('bus-tickets-table');
+    if (!container) return;
+    if (!rows.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucun ticket navette</p>';
+        return;
+    }
+
+    let html = `<table><thead><tr>
+        <th>Commande</th><th>Client</th><th>Trajet</th><th>Départ</th><th>Retour</th><th>Scan</th>
+    </tr></thead><tbody>`;
+
+    rows.forEach(r => {
+        html += `<tr>
+            <td>${r.order_number}</td>
+            <td>${r.customer_first_name} ${r.customer_last_name}<br><small>${r.customer_email}</small></td>
+            <td>${r.from_station} → ${r.to_station}</td>
+            <td>${formatDateTime(r.departure_time)}</td>
+            <td>${r.return_departure_time ? formatDateTime(r.return_departure_time) : '-'}</td>
+            <td>${r.is_validated ? '✅' : '⏳'}</td>
+        </tr>`;
+    });
+
+    container.innerHTML = html + '</tbody></table>';
+}
+
+async function createBusStation() {
+    const msg = document.getElementById('bus-station-msg');
+    const name = document.getElementById('bus-station-name').value.trim();
+    msg.classList.add('hidden');
+
+    if (!name) {
+        msg.textContent = '❌ Nom de station requis';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/stations`, {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        msg.textContent = '✅ Station ajoutée';
+        msg.className = 'form-msg success-text';
+        document.getElementById('bus-station-name').value = '';
+        loadBusAdminData();
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+async function createBusDeparture() {
+    const msg = document.getElementById('bus-departure-msg');
+    msg.classList.add('hidden');
+
+    const stationID = document.getElementById('bus-dep-station').value;
+    const direction = document.getElementById('bus-dep-direction').value;
+    const departureTimeRaw = document.getElementById('bus-dep-time').value;
+    const price = parseFloat(document.getElementById('bus-dep-price').value || '0');
+    const capacity = parseInt(document.getElementById('bus-dep-capacity').value, 10);
+
+    if (!stationID || !direction || !departureTimeRaw || !capacity) {
+        msg.textContent = '❌ Champs incomplets';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures`, {
+            method: 'POST',
+            body: JSON.stringify({
+                station_id: stationID,
+                direction,
+                departure_time: new Date(departureTimeRaw).toISOString(),
+                price_cents: Math.round(price * 100),
+                capacity,
+                is_active: true,
+            }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        msg.textContent = '✅ Horaire ajouté';
+        msg.className = 'form-msg success-text';
+        loadBusAdminData();
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
         msg.className = 'form-msg error-text';
     }
 }

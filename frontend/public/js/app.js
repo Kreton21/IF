@@ -14,6 +14,8 @@ const state = {
   loading: false,
   customerEmail: '',
   selectedCategories: {}, // { ticketTypeId: categoryId }
+  busOptions: null,
+  busLoading: false,
 };
 
 // ══════════════════════════════════════
@@ -38,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initReveal();
   setupEmailGate();
   setupCheckoutForm();
+  setupBusForm();
 });
 
 // ══════════════════════════════════════
@@ -502,6 +505,141 @@ function setupCheckoutForm() {
       btn.textContent = '💳 Procéder au paiement';
     }
   });
+}
+
+function setupBusForm() {
+  const form = document.getElementById('bus-form');
+  if (!form) return;
+
+  const roundTrip = document.getElementById('bus-round-trip');
+  roundTrip.addEventListener('change', () => {
+    const wrap = document.getElementById('bus-return-fields');
+    wrap.classList.toggle('hidden', !roundTrip.checked);
+  });
+
+  const fromStation = document.getElementById('bus-from-station');
+  fromStation.addEventListener('change', refreshOutboundDepartureOptions);
+
+  form.addEventListener('submit', submitBusCheckout);
+}
+
+async function toggleBusSection() {
+  const section = document.getElementById('bus-section');
+  if (!section) return;
+
+  const willShow = section.classList.contains('hidden');
+  section.classList.toggle('hidden');
+
+  if (willShow) {
+    if (!state.busOptions) {
+      await loadBusOptions();
+    }
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+async function loadBusOptions() {
+  if (state.busLoading) return;
+  state.busLoading = true;
+  try {
+    const res = await fetch(`${API_BASE}/bus/options`);
+    if (!res.ok) throw new Error('Erreur chargement navettes');
+    state.busOptions = await res.json();
+    populateBusFormOptions();
+  } catch (error) {
+    showNotification(error.message || 'Impossible de charger les navettes', 'error');
+  } finally {
+    state.busLoading = false;
+  }
+}
+
+function populateBusFormOptions() {
+  if (!state.busOptions) return;
+
+  const stations = (state.busOptions.stations || []).filter(s => s.is_active);
+  const fromSelect = document.getElementById('bus-from-station');
+  const returnStationSelect = document.getElementById('bus-return-station');
+
+  const stationOptions = ['<option value="">Choisir une station</option>']
+    .concat(stations.map(s => `<option value="${s.id}">${s.name}</option>`));
+
+  fromSelect.innerHTML = stationOptions.join('');
+  returnStationSelect.innerHTML = stationOptions.join('');
+
+  refreshOutboundDepartureOptions();
+  refreshReturnDepartureOptions();
+}
+
+function refreshOutboundDepartureOptions() {
+  const selectedStation = document.getElementById('bus-from-station').value;
+  const select = document.getElementById('bus-outbound-time');
+  const departures = (state.busOptions?.outbound_departures || []).filter(d => d.is_active && d.station_id === selectedStation);
+
+  let html = '<option value="">Choisir un horaire aller</option>';
+  html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+  select.innerHTML = html;
+}
+
+function refreshReturnDepartureOptions() {
+  const select = document.getElementById('bus-return-time');
+  const departures = (state.busOptions?.return_departures || []).filter(d => d.is_active);
+
+  let html = '<option value="">Choisir un horaire retour</option>';
+  html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+  select.innerHTML = html;
+}
+
+async function submitBusCheckout(e) {
+  e.preventDefault();
+  if (state.busLoading) return;
+
+  const isRoundTrip = document.getElementById('bus-round-trip').checked;
+  const body = {
+    customer_first_name: document.getElementById('bus-first-name').value.trim(),
+    customer_last_name: document.getElementById('bus-last-name').value.trim(),
+    customer_email: document.getElementById('bus-email').value.trim(),
+    customer_phone: document.getElementById('bus-phone').value.trim(),
+    from_station_id: document.getElementById('bus-from-station').value,
+    outbound_departure_id: document.getElementById('bus-outbound-time').value,
+    round_trip: isRoundTrip,
+  };
+
+  if (isRoundTrip) {
+    body.return_departure_id = document.getElementById('bus-return-time').value;
+    body.return_station_id = document.getElementById('bus-return-station').value;
+  }
+
+  if (!body.customer_first_name || !body.customer_last_name || !body.customer_email || !body.customer_phone || !body.from_station_id || !body.outbound_departure_id) {
+    showNotification('Veuillez remplir tous les champs obligatoires de la navette', 'warning');
+    return;
+  }
+  if (isRoundTrip && (!body.return_departure_id || !body.return_station_id)) {
+    showNotification('Veuillez renseigner les champs retour', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('bus-checkout-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Redirection vers le paiement...';
+
+  try {
+    const res = await fetch(`${API_BASE}/bus/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur checkout navette');
+
+    localStorage.setItem('lastOrderId', data.order_id);
+    localStorage.setItem('lastOrderNumber', data.order_number);
+    window.location.href = data.checkout_url;
+  } catch (error) {
+    showNotification(error.message || 'Erreur checkout navette', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💳 Payer la navette';
+  }
 }
 
 // ══════════════════════════════════════

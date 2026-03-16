@@ -105,6 +105,65 @@ func (h *TicketHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+func (h *TicketHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.ticketService.GetBusOptions(r.Context())
+	if err != nil {
+		log.Printf("Erreur récupération options bus: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *TicketHandler) CreateBusCheckout(w http.ResponseWriter, r *http.Request) {
+	var req models.BusCheckoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	if req.CustomerEmail == "" || req.CustomerFirstName == "" || req.CustomerLastName == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Email, prénom et nom sont requis"})
+		return
+	}
+	if !isValidEmail(req.CustomerEmail) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Email invalide"})
+		return
+	}
+
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.Header.Get("X-Real-IP")
+	}
+	if ip == "" {
+		addr := r.RemoteAddr
+		if strings.HasPrefix(addr, "[") {
+			if idx := strings.LastIndex(addr, "]"); idx != -1 {
+				ip = addr[1:idx]
+			} else {
+				ip = "127.0.0.1"
+			}
+		} else if idx := strings.LastIndex(addr, ":"); idx != -1 {
+			ip = addr[:idx]
+		} else {
+			ip = addr
+		}
+	}
+	if ip == "" {
+		ip = "127.0.0.1"
+	}
+
+	resp, err := h.ticketService.CreateBusCheckout(r.Context(), req, ip, r.UserAgent())
+	if err != nil {
+		log.Printf("Erreur création checkout bus: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, resp)
+}
+
 // GetOrderStatus retourne le statut d'une commande
 func (h *TicketHandler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")

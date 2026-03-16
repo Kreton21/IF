@@ -68,6 +68,15 @@ func NewRouter(
 			}
 		})
 
+		r.Route("/bus", func(r chi.Router) {
+			r.Get("/options", ticketHandler.GetBusOptions)
+			if rateLimitDisabled {
+				r.Post("/checkout", ticketHandler.CreateBusCheckout)
+			} else {
+				r.With(middleware.StrictRateLimit(redisClient)).Post("/checkout", ticketHandler.CreateBusCheckout)
+			}
+		})
+
 		// --- Public : Commandes ---
 		r.Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
 
@@ -99,6 +108,10 @@ func NewRouter(
 			r.Post("/categories/{categoryID}/mask", adminHandler.ToggleCategoryMask)
 			r.Post("/categories/reallocate", adminHandler.ReallocateCategories)
 			r.Delete("/categories/{categoryID}", adminHandler.DeleteCategory)
+			r.Get("/bus/options", adminHandler.GetBusOptions)
+			r.Post("/bus/stations", adminHandler.CreateBusStation)
+			r.Post("/bus/departures", adminHandler.CreateBusDeparture)
+			r.Get("/bus/tickets", adminHandler.ListBusTickets)
 		})
 	})
 

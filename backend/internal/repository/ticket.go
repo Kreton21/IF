@@ -471,6 +471,43 @@ func (r *TicketRepository) CreateTicket(ctx context.Context, tx pgx.Tx, ticket *
 	).Scan(&ticket.ID, &ticket.CreatedAt)
 }
 
+func (r *TicketRepository) EnsureBusTicketType(ctx context.Context, tx pgx.Tx, name string) (*models.TicketType, error) {
+	query := `
+		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
+		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		FROM ticket_types
+		WHERE name = $1
+		LIMIT 1`
+
+	var tt models.TicketType
+	err := tx.QueryRow(ctx, query, name).Scan(
+		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents, &tt.QuantityTotal, &tt.QuantitySold,
+		&tt.SaleStart, &tt.SaleEnd, &tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+	)
+	if err == nil {
+		return &tt, nil
+	}
+	if err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("erreur lecture ticket type bus: %w", err)
+	}
+
+	err = tx.QueryRow(ctx, `
+		INSERT INTO ticket_types (name, description, price_cents, quantity_total, quantity_sold, sale_start, sale_end, is_active, is_masked, max_per_order, allowed_domains)
+		VALUES ($1, $2, 0, 999999, 0, NOW() - INTERVAL '1 day', NOW() + INTERVAL '10 years', true, false, 1, '{}')
+		RETURNING id, name, description, price_cents, quantity_total, quantity_sold,
+		          sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`,
+		name, "Ticket navette festival",
+	).Scan(
+		&tt.ID, &tt.Name, &tt.Description, &tt.PriceCents, &tt.QuantityTotal, &tt.QuantitySold,
+		&tt.SaleStart, &tt.SaleEnd, &tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur création ticket type bus: %w", err)
+	}
+
+	return &tt, nil
+}
+
 func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken string) (*models.Ticket, error) {
 	query := `
 		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated,
@@ -506,10 +543,15 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 	// Récupérer le ticket avec lock
 	query := `
 		SELECT t.id, t.order_id, t.is_validated, t.attendee_first_name, t.attendee_last_name,
-		       tt.name as ticket_type_name, o.order_number, o.status
+		       tt.name as ticket_type_name, o.order_number, o.status,
+		       COALESCE(bt.from_station, ''), COALESCE(bt.to_station, ''),
+		       od.departure_time, rd.departure_time, COALESCE(bt.is_round_trip, false)
 		FROM tickets t
 		JOIN ticket_types tt ON tt.id = t.ticket_type_id
 		JOIN orders o ON o.id = t.order_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		LEFT JOIN bus_departures od ON od.id = bt.outbound_departure_id
+		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
 		WHERE t.qr_token = $1
 		FOR UPDATE OF t`
 
@@ -522,11 +564,17 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		ticketTypeName    string
 		orderNumber       string
 		orderStatus       models.OrderStatus
+		fromStation       string
+		toStation         string
+		outboundAt        *time.Time
+		returnAt          *time.Time
+		isRoundTrip       bool
 	)
 
 	err = tx.QueryRow(ctx, query, qrToken).Scan(
 		&ticketID, &orderID, &isValidated, &attendeeFirstName, &attendeeLastName,
 		&ticketTypeName, &orderNumber, &orderStatus,
+		&fromStation, &toStation, &outboundAt, &returnAt, &isRoundTrip,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -565,6 +613,11 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 			TicketTypeName:    ticketTypeName,
 			OrderNumber:       orderNumber,
 			AlreadyValidated:  true,
+			RideType:          busRideType(isRoundTrip, fromStation),
+			FromStation:       fromStation,
+			ToStation:         toStation,
+			DepartureAt:       formatTimePtr(outboundAt),
+			ReturnDepartureAt: formatTimePtr(returnAt),
 		}, nil
 	}
 
@@ -599,7 +652,29 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		AttendeeLastName:  lastName,
 		TicketTypeName:    ticketTypeName,
 		OrderNumber:       orderNumber,
+		RideType:          busRideType(isRoundTrip, fromStation),
+		FromStation:       fromStation,
+		ToStation:         toStation,
+		DepartureAt:       formatTimePtr(outboundAt),
+		ReturnDepartureAt: formatTimePtr(returnAt),
 	}, nil
+}
+
+func busRideType(roundTrip bool, fromStation string) string {
+	if fromStation == "" {
+		return ""
+	}
+	if roundTrip {
+		return "bus_round_trip"
+	}
+	return "bus_one_way"
+}
+
+func formatTimePtr(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
 }
 
 func (r *TicketRepository) GetTicketsByOrderID(ctx context.Context, orderID string) ([]models.Ticket, error) {
@@ -644,6 +719,232 @@ func (r *TicketRepository) GetQRCodeDataByToken(ctx context.Context, qrToken str
 		return nil, err
 	}
 	return data, nil
+}
+
+func (r *TicketRepository) GetBusStations(ctx context.Context) ([]models.BusStation, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, name, is_active, created_at, updated_at
+		FROM bus_stations
+		ORDER BY name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query stations bus: %w", err)
+	}
+	defer rows.Close()
+
+	stations := make([]models.BusStation, 0)
+	for rows.Next() {
+		var s models.BusStation
+		if err := rows.Scan(&s.ID, &s.Name, &s.IsActive, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("erreur scan station bus: %w", err)
+		}
+		stations = append(stations, s)
+	}
+	return stations, nil
+}
+
+func (r *TicketRepository) GetBusDepartures(ctx context.Context, direction string) ([]models.BusDeparture, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.created_at, d.updated_at
+		FROM bus_departures d
+		JOIN bus_stations s ON s.id = d.station_id
+		WHERE d.direction = $1
+		ORDER BY d.departure_time ASC`, direction)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query départs bus: %w", err)
+	}
+	defer rows.Close()
+
+	departures := make([]models.BusDeparture, 0)
+	for rows.Next() {
+		var d models.BusDeparture
+		if err := rows.Scan(&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("erreur scan départ bus: %w", err)
+		}
+		departures = append(departures, d)
+	}
+	return departures, nil
+}
+
+func (r *TicketRepository) CreateBusStation(ctx context.Context, name string) (*models.BusStation, error) {
+	var s models.BusStation
+	err := r.pool.QueryRow(ctx, `
+		INSERT INTO bus_stations (name)
+		VALUES ($1)
+		RETURNING id, name, is_active, created_at, updated_at`, name).Scan(
+		&s.ID, &s.Name, &s.IsActive, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur création station bus: %w", err)
+	}
+	return &s, nil
+}
+
+func (r *TicketRepository) CreateBusDeparture(ctx context.Context, req models.CreateBusDepartureRequest) (*models.BusDeparture, error) {
+	var d models.BusDeparture
+	err := r.pool.QueryRow(ctx, `
+		INSERT INTO bus_departures (station_id, direction, departure_time, price_cents, capacity, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`,
+		req.StationID, req.Direction, req.DepartureTime, req.PriceCents, req.Capacity, req.IsActive,
+	).Scan(
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur création départ bus: %w", err)
+	}
+
+	_ = r.pool.QueryRow(ctx, `SELECT name FROM bus_stations WHERE id = $1`, d.StationID).Scan(&d.StationName)
+	return &d, nil
+}
+
+func (r *TicketRepository) GetBusDepartureByID(ctx context.Context, id string) (*models.BusDeparture, error) {
+	var d models.BusDeparture
+	err := r.pool.QueryRow(ctx, `
+		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.created_at, d.updated_at
+		FROM bus_departures d
+		JOIN bus_stations s ON s.id = d.station_id
+		WHERE d.id = $1`, id).Scan(
+		&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur récupération départ bus: %w", err)
+	}
+	return &d, nil
+}
+
+func (r *TicketRepository) ReserveBusDepartureSeat(ctx context.Context, tx pgx.Tx, departureID string) error {
+	cmd, err := tx.Exec(ctx, `
+		UPDATE bus_departures
+		SET sold = sold + 1, updated_at = NOW()
+		WHERE id = $1 AND is_active = true AND sold < capacity`, departureID)
+	if err != nil {
+		return fmt.Errorf("erreur réservation navette: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("navette complète ou indisponible")
+	}
+	return nil
+}
+
+func (r *TicketRepository) SaveBusOrderRide(ctx context.Context, tx pgx.Tx, orderID, departureID, rideKind, fromStation, toStation string) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO bus_order_rides (order_id, departure_id, ride_kind, from_station, to_station)
+		VALUES ($1, $2, $3, $4, $5)`, orderID, departureID, rideKind, fromStation, toStation)
+	if err != nil {
+		return fmt.Errorf("erreur sauvegarde ride bus: %w", err)
+	}
+	return nil
+}
+
+func (r *TicketRepository) GetBusOrderRides(ctx context.Context, orderID string) ([]map[string]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT departure_id::text, ride_kind, from_station, to_station
+		FROM bus_order_rides
+		WHERE order_id = $1
+		ORDER BY id ASC`, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query rides bus commande: %w", err)
+	}
+	defer rows.Close()
+
+	rides := make([]map[string]string, 0)
+	for rows.Next() {
+		var departureID, rideKind, fromStation, toStation string
+		if err := rows.Scan(&departureID, &rideKind, &fromStation, &toStation); err != nil {
+			return nil, fmt.Errorf("erreur scan ride bus: %w", err)
+		}
+		rides = append(rides, map[string]string{
+			"departure_id": departureID,
+			"ride_kind":   rideKind,
+			"from_station": fromStation,
+			"to_station":   toStation,
+		})
+	}
+	return rides, nil
+}
+
+func (r *TicketRepository) ReleaseBusOrderRides(ctx context.Context, orderID string) error {
+	rows, err := r.pool.Query(ctx, `
+		SELECT departure_id
+		FROM bus_order_rides
+		WHERE order_id = $1`, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération rides à libérer: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return fmt.Errorf("erreur scan departure_id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	for _, id := range ids {
+		_, err := r.pool.Exec(ctx, `
+			UPDATE bus_departures
+			SET sold = GREATEST(0, sold - 1), updated_at = NOW()
+			WHERE id = $1`, id)
+		if err != nil {
+			return fmt.Errorf("erreur libération place bus: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *TicketRepository) SaveBusTicketDetails(ctx context.Context, tx pgx.Tx, ticketID, outboundDepartureID string, returnDepartureID *string, fromStation, toStation string, isRoundTrip bool) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO bus_tickets (ticket_id, outbound_departure_id, return_departure_id, from_station, to_station, is_round_trip)
+		VALUES ($1, $2, $3, $4, $5, $6)`, ticketID, outboundDepartureID, returnDepartureID, fromStation, toStation, isRoundTrip)
+	if err != nil {
+		return fmt.Errorf("erreur sauvegarde détails ticket bus: %w", err)
+	}
+	return nil
+}
+
+func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]models.BusTicketAdminRow, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT t.id, o.order_number, o.customer_first_name, o.customer_last_name, o.customer_email,
+		       bt.from_station, bt.to_station, od.departure_time, rd.departure_time,
+		       bt.is_round_trip, t.is_validated, t.created_at
+		FROM bus_tickets bt
+		JOIN tickets t ON t.id = bt.ticket_id
+		JOIN orders o ON o.id = t.order_id
+		JOIN bus_departures od ON od.id = bt.outbound_departure_id
+		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
+		ORDER BY t.created_at DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query tickets bus admin: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.BusTicketAdminRow, 0)
+	for rows.Next() {
+		var row models.BusTicketAdminRow
+		var returnDeparture *time.Time
+		if err := rows.Scan(
+			&row.TicketID, &row.OrderNumber, &row.CustomerFirstName, &row.CustomerLastName, &row.CustomerEmail,
+			&row.FromStation, &row.ToStation, &row.DepartureTime, &returnDeparture,
+			&row.IsRoundTrip, &row.IsValidated, &row.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("erreur scan ticket bus admin: %w", err)
+		}
+		row.ReturnDepartureTime = returnDeparture
+		out = append(out, row)
+	}
+
+	return out, nil
 }
 
 func (r *TicketRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {

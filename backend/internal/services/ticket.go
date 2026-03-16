@@ -387,6 +387,216 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}, nil
 }
 
+func (s *TicketService) GetBusOptions(ctx context.Context) (*models.BusOptionsResponse, error) {
+	stations, err := s.ticketRepo.GetBusStations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	outbound, err := s.ticketRepo.GetBusDepartures(ctx, "to_festival")
+	if err != nil {
+		return nil, err
+	}
+
+	retour, err := s.ticketRepo.GetBusDepartures(ctx, "from_festival")
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.BusOptionsResponse{
+		Stations:           stations,
+		OutboundDepartures: outbound,
+		ReturnDepartures:   retour,
+	}, nil
+}
+
+func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusCheckoutRequest, ipAddress, userAgent string) (*models.CheckoutResponse, error) {
+	if req.CustomerEmail == "" || req.CustomerFirstName == "" || req.CustomerLastName == "" {
+		return nil, fmt.Errorf("email, prénom et nom sont requis")
+	}
+	if req.FromStationID == "" || req.OutboundDepartureID == "" {
+		return nil, fmt.Errorf("station de départ et horaire aller requis")
+	}
+
+	stations, err := s.ticketRepo.GetBusStations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("erreur chargement stations: %w", err)
+	}
+	stationByID := make(map[string]models.BusStation, len(stations))
+	for _, st := range stations {
+		stationByID[st.ID] = st
+	}
+
+	fromStation, ok := stationByID[req.FromStationID]
+	if !ok || !fromStation.IsActive {
+		return nil, fmt.Errorf("station de départ invalide")
+	}
+
+	outbound, err := s.ticketRepo.GetBusDepartureByID(ctx, req.OutboundDepartureID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur récupération horaire aller: %w", err)
+	}
+	if outbound == nil || outbound.Direction != "to_festival" || !outbound.IsActive {
+		return nil, fmt.Errorf("horaire aller invalide")
+	}
+	if outbound.StationID != req.FromStationID {
+		return nil, fmt.Errorf("l'horaire aller ne correspond pas à la station sélectionnée")
+	}
+
+	totalCents := outbound.PriceCents
+
+	var returnDeparture *models.BusDeparture
+	var returnStation models.BusStation
+	if req.RoundTrip {
+		if req.ReturnDepartureID == "" || req.ReturnStationID == "" {
+			return nil, fmt.Errorf("horaire retour et station de dépose requis")
+		}
+		ret, err := s.ticketRepo.GetBusDepartureByID(ctx, req.ReturnDepartureID)
+		if err != nil {
+			return nil, fmt.Errorf("erreur récupération horaire retour: %w", err)
+		}
+		if ret == nil || ret.Direction != "from_festival" || !ret.IsActive {
+			return nil, fmt.Errorf("horaire retour invalide")
+		}
+		returnDeparture = ret
+
+		st, ok := stationByID[req.ReturnStationID]
+		if !ok || !st.IsActive {
+			return nil, fmt.Errorf("station de dépose invalide")
+		}
+		returnStation = st
+
+		totalCents += returnDeparture.PriceCents
+	}
+
+	tx, err := s.orderRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("erreur transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.ticketRepo.ReserveBusDepartureSeat(ctx, tx, outbound.ID); err != nil {
+		return nil, err
+	}
+
+	if returnDeparture != nil {
+		if err := s.ticketRepo.ReserveBusDepartureSeat(ctx, tx, returnDeparture.ID); err != nil {
+			return nil, err
+		}
+	}
+
+	order := &models.Order{
+		CustomerEmail:     req.CustomerEmail,
+		CustomerFirstName: req.CustomerFirstName,
+		CustomerLastName:  req.CustomerLastName,
+		CustomerPhone:     req.CustomerPhone,
+		TotalCents:        totalCents,
+		Status:            models.OrderStatusPending,
+		IPAddress:         ipAddress,
+		UserAgent:         userAgent,
+	}
+
+	if err := s.orderRepo.CreateOrder(ctx, tx, order); err != nil {
+		return nil, fmt.Errorf("erreur création commande bus: %w", err)
+	}
+
+	if err := s.ticketRepo.SaveBusOrderRide(ctx, tx, order.ID, outbound.ID, "outbound", fromStation.Name, "Festival"); err != nil {
+		return nil, err
+	}
+
+	if returnDeparture != nil {
+		if err := s.ticketRepo.SaveBusOrderRide(ctx, tx, order.ID, returnDeparture.ID, "return", "Festival", returnStation.Name); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("erreur commit commande bus: %w", err)
+	}
+
+	rideLabel := fmt.Sprintf("Navette %s → Festival", fromStation.Name)
+	if returnDeparture != nil {
+		rideLabel += fmt.Sprintf(" + Retour Festival → %s", returnStation.Name)
+	}
+
+	payReq := CheckoutIntentRequest{
+		TotalAmount:      totalCents,
+		InitialAmount:    totalCents,
+		ItemName:         rideLabel,
+		BackURL:          s.cfg.HelloAssoErrorURL,
+		ErrorURL:         s.cfg.HelloAssoErrorURL,
+		ReturnURL:        fmt.Sprintf("%s?order_id=%s", s.cfg.HelloAssoReturnURL, order.ID),
+		ContainsDonation: false,
+		Payer: CheckoutPayer{
+			FirstName: req.CustomerFirstName,
+			LastName:  req.CustomerLastName,
+			Email:     req.CustomerEmail,
+		},
+		Metadata: map[string]string{
+			"order_id":     order.ID,
+			"order_number": order.OrderNumber,
+			"order_kind":   "bus",
+		},
+	}
+
+	payResp, err := s.paymentProvider.CreateCheckoutIntent(ctx, payReq)
+	if err != nil {
+		_ = s.ticketRepo.ReleaseBusOrderRides(ctx, order.ID)
+		_ = s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusCancelled)
+		return nil, fmt.Errorf("erreur %s checkout bus: %w", s.paymentProvider.Name(), err)
+	}
+
+	checkoutID := payResp.ExternalID
+	if checkoutID == "" {
+		checkoutID = fmt.Sprintf("%d", payResp.ID)
+	}
+	if err := s.orderRepo.UpdateOrderHelloAsso(ctx, order.ID, checkoutID, payResp.RedirectURL); err != nil {
+		log.Printf("WARN: erreur mise à jour checkout bus: %v", err)
+	}
+
+	if s.paymentProvider.AutoConfirms() {
+		mockPayload := WebhookPaymentData{ID: payResp.ID, Amount: totalCents, State: "Authorized"}
+		if err := s.ProcessPaymentWebhook(ctx, mockPayload, order.ID); err != nil {
+			log.Printf("ERROR: auto-confirmation bus échouée: %v", err)
+		}
+	}
+
+	return &models.CheckoutResponse{
+		OrderID:     order.ID,
+		OrderNumber: order.OrderNumber,
+		CheckoutURL: payResp.RedirectURL,
+		TotalCents:  totalCents,
+	}, nil
+}
+
+func (s *TicketService) CreateBusStation(ctx context.Context, req models.CreateBusStationRequest) (*models.BusStation, error) {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return nil, fmt.Errorf("nom de station requis")
+	}
+	return s.ticketRepo.CreateBusStation(ctx, name)
+}
+
+func (s *TicketService) CreateBusDeparture(ctx context.Context, req models.CreateBusDepartureRequest) (*models.BusDeparture, error) {
+	if req.StationID == "" {
+		return nil, fmt.Errorf("station requise")
+	}
+	if req.Direction != "to_festival" && req.Direction != "from_festival" {
+		return nil, fmt.Errorf("direction invalide")
+	}
+	if req.Capacity < 1 {
+		return nil, fmt.Errorf("capacité invalide")
+	}
+	if req.PriceCents < 0 {
+		return nil, fmt.Errorf("prix invalide")
+	}
+	return s.ticketRepo.CreateBusDeparture(ctx, req)
+}
+
+func (s *TicketService) ListBusTicketsAdmin(ctx context.Context) ([]models.BusTicketAdminRow, error) {
+	return s.ticketRepo.ListBusTickets(ctx, 300)
+}
+
 // ProcessPaymentWebhook traite le webhook de confirmation de paiement HelloAsso
 func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload WebhookPaymentData, orderID string) error {
 	paymentID := fmt.Sprintf("%d", payload.ID)
@@ -433,9 +643,10 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 		if err != nil {
 			return fmt.Errorf("erreur récupération items depuis DB: %w", err)
 		}
-		if len(items) == 0 {
-			return fmt.Errorf("aucun item trouvé pour la commande")
-		}
+	}
+
+	if len(items) == 0 {
+		return s.processBusOrderPaymentConfirmed(ctx, order, paymentID)
 	}
 
 	// 4. Générer les tickets avec QR codes
@@ -527,6 +738,12 @@ func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) 
 	if len(items) > 0 {
 		if err := s.ticketRepo.ReleaseTickets(ctx, items); err != nil {
 			return fmt.Errorf("erreur libération stock: %w", err)
+		}
+	}
+
+	if len(items) == 0 {
+		if err := s.ticketRepo.ReleaseBusOrderRides(ctx, orderID); err != nil {
+			return fmt.Errorf("erreur libération places navette: %w", err)
 		}
 	}
 
@@ -654,6 +871,11 @@ func (s *TicketService) CleanupExpiredPendingOrders(ctx context.Context, pending
 				log.Printf("WARN: impossible de libérer le stock pour %s: %v", orderID, err)
 				continue
 			}
+		} else {
+			if err := s.ticketRepo.ReleaseBusOrderRides(ctx, orderID); err != nil {
+				log.Printf("WARN: impossible de libérer les places navette pour %s: %v", orderID, err)
+				continue
+			}
 		}
 
 		if err := s.orderRepo.UpdateOrderStatus(ctx, orderID, models.OrderStatusCancelled); err != nil {
@@ -681,4 +903,115 @@ func joinStrings(ss []string) string {
 		result += s
 	}
 	return result
+}
+
+func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, order *models.Order, paymentID string) error {
+	rides, err := s.ticketRepo.GetBusOrderRides(ctx, order.ID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération rides bus: %w", err)
+	}
+	if len(rides) == 0 {
+		return fmt.Errorf("aucun item trouvé pour la commande")
+	}
+
+	outboundDepartureID := ""
+	fromStation := ""
+	toStation := "Festival"
+	isRoundTrip := false
+	var returnDepartureID *string
+	returnTo := ""
+
+	for _, ride := range rides {
+		if ride["ride_kind"] == "outbound" {
+			outboundDepartureID = ride["departure_id"]
+			fromStation = ride["from_station"]
+		} else if ride["ride_kind"] == "return" {
+			id := ride["departure_id"]
+			returnDepartureID = &id
+			isRoundTrip = true
+			returnTo = ride["to_station"]
+		}
+	}
+
+	if outboundDepartureID == "" {
+		return fmt.Errorf("ride aller introuvable")
+	}
+
+	tx, err := s.ticketRepo.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("erreur transaction ticket bus: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qrToken, err := s.qrService.GenerateToken()
+	if err != nil {
+		return fmt.Errorf("erreur génération token QR: %w", err)
+	}
+
+	qrPNG, err := s.qrService.GenerateQRCode(qrToken)
+	if err != nil {
+		return fmt.Errorf("erreur génération QR code: %w", err)
+	}
+
+	busLabel := "Navette"
+	if isRoundTrip {
+		busLabel = "Navette Aller-Retour"
+	}
+
+	busType, err := s.ticketRepo.EnsureBusTicketType(ctx, tx, busLabel)
+	if err != nil {
+		return fmt.Errorf("erreur type ticket bus: %w", err)
+	}
+
+	ticket := &models.Ticket{
+		OrderID:           order.ID,
+		TicketTypeID:      busType.ID,
+		QRToken:           qrToken,
+		QRCodeData:        qrPNG,
+		AttendeeFirstName: order.CustomerFirstName,
+		AttendeeLastName:  order.CustomerLastName,
+	}
+
+	if err := s.ticketRepo.CreateTicket(ctx, tx, ticket); err != nil {
+		return fmt.Errorf("erreur création ticket bus: %w", err)
+	}
+
+	if isRoundTrip {
+		toStation = returnTo
+	}
+	if err := s.ticketRepo.SaveBusTicketDetails(ctx, tx, ticket.ID, outboundDepartureID, returnDepartureID, fromStation, toStation, isRoundTrip); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("erreur commit ticket bus: %w", err)
+	}
+
+	if paymentID != "" {
+		if err := s.orderRepo.SetHelloAssoPaymentID(ctx, order.ID, paymentID); err != nil {
+			log.Printf("WARN: erreur enregistrement payment ID bus: %v", err)
+		}
+	}
+
+	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusConfirmed); err != nil {
+		log.Printf("WARN: erreur mise à jour statut confirmed bus: %v", err)
+	}
+
+	customerName := fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName)
+	details := fmt.Sprintf("%s → Festival", fromStation)
+	if isRoundTrip {
+		details += fmt.Sprintf(" · Retour Festival → %s", returnTo)
+	}
+
+	if err := s.emailService.SendTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
+		TicketTypeName: busLabel,
+		AttendeeName:   details,
+		QRToken:        qrToken,
+		QRCodePNG:      qrPNG,
+	}}); err != nil {
+		log.Printf("ERROR: erreur envoi email bus: %v", err)
+	}
+
+	log.Printf("✅ Commande bus %s confirmée — ticket généré", order.OrderNumber)
+	return nil
 }

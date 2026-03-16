@@ -180,6 +180,11 @@ type ValidateQRResponse struct {
 	TicketTypeName     string `json:"ticket_type_name,omitempty"`
 	OrderNumber        string `json:"order_number,omitempty"`
 	AlreadyValidated   bool   `json:"already_validated,omitempty"`
+	RideType           string `json:"ride_type,omitempty"`
+	FromStation        string `json:"from_station,omitempty"`
+	ToStation          string `json:"to_station,omitempty"`
+	DepartureAt        string `json:"departure_at,omitempty"`
+	ReturnDepartureAt  string `json:"return_departure_at,omitempty"`
 }
 
 type SalesStats struct {
@@ -277,4 +282,72 @@ type CategoryForEmail struct {
 	Name              string `json:"name"`
 	QuantityAllocated int    `json:"quantity_allocated"`
 	QuantitySold      int    `json:"quantity_sold"`
+}
+
+type BusStation struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type BusDeparture struct {
+	ID            string    `json:"id"`
+	StationID     string    `json:"station_id"`
+	StationName   string    `json:"station_name,omitempty"`
+	Direction     string    `json:"direction"`
+	DepartureTime time.Time `json:"departure_time"`
+	PriceCents    int       `json:"price_cents"`
+	Capacity      int       `json:"capacity"`
+	Sold          int       `json:"sold"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type BusOptionsResponse struct {
+	Stations          []BusStation   `json:"stations"`
+	OutboundDepartures []BusDeparture `json:"outbound_departures"`
+	ReturnDepartures   []BusDeparture `json:"return_departures"`
+}
+
+type BusCheckoutRequest struct {
+	CustomerEmail      string `json:"customer_email"`
+	CustomerFirstName  string `json:"customer_first_name"`
+	CustomerLastName   string `json:"customer_last_name"`
+	CustomerPhone      string `json:"customer_phone,omitempty"`
+	FromStationID      string `json:"from_station_id"`
+	OutboundDepartureID string `json:"outbound_departure_id"`
+	RoundTrip          bool   `json:"round_trip"`
+	ReturnDepartureID  string `json:"return_departure_id,omitempty"`
+	ReturnStationID    string `json:"return_station_id,omitempty"`
+}
+
+type CreateBusStationRequest struct {
+	Name string `json:"name"`
+}
+
+type CreateBusDepartureRequest struct {
+	StationID     string    `json:"station_id"`
+	Direction     string    `json:"direction"`
+	DepartureTime time.Time `json:"departure_time"`
+	PriceCents    int       `json:"price_cents"`
+	Capacity      int       `json:"capacity"`
+	IsActive      bool      `json:"is_active"`
+}
+
+type BusTicketAdminRow struct {
+	TicketID           string    `json:"ticket_id"`
+	OrderNumber        string    `json:"order_number"`
+	CustomerFirstName  string    `json:"customer_first_name"`
+	CustomerLastName   string    `json:"customer_last_name"`
+	CustomerEmail      string    `json:"customer_email"`
+	FromStation        string    `json:"from_station"`
+	ToStation          string    `json:"to_station"`
+	DepartureTime      time.Time `json:"departure_time"`
+	ReturnDepartureTime *time.Time `json:"return_departure_time,omitempty"`
+	IsRoundTrip        bool      `json:"is_round_trip"`
+	IsValidated        bool      `json:"is_validated"`
+	CreatedAt          time.Time `json:"created_at"`
 }

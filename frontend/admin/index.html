@@ -96,6 +96,7 @@
             <button class="tab active" data-tab="stats" onclick="switchTab('stats')">📊 Statistiques</button>
             <button class="tab" data-tab="orders" onclick="switchTab('orders')">📋 Commandes</button>
             <button class="tab" data-tab="tickets" onclick="switchTab('tickets')">🎟 Tickets</button>
+            <button class="tab" data-tab="bus" onclick="switchTab('bus')">🚌 Navettes</button>
             <button class="tab" data-tab="scanner" onclick="switchTab('scanner')">📱 Scanner QR</button>
         </nav>
 
@@ -221,6 +222,56 @@
                 </div>
                 <button onclick="doReallocate()" class="btn btn-primary">Transférer</button>
                 <span id="realloc-msg" class="form-msg hidden"></span>
+            </div>
+        </section>
+
+        <section id="tab-bus" class="tab-content">
+            <div class="card">
+                <h3>🚌 Gestion des navettes</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nouvelle station</label>
+                        <input type="text" id="bus-station-name" placeholder="Massy Palaiseau">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-primary" onclick="createBusStation()">Ajouter station</button>
+                    </div>
+                </div>
+                <span id="bus-station-msg" class="form-msg hidden"></span>
+            </div>
+
+            <div class="card">
+                <h3>🕒 Ajouter un horaire de navette</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Station</label>
+                        <select id="bus-dep-station"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Direction</label>
+                        <select id="bus-dep-direction">
+                            <option value="to_festival">Aller vers festival</option>
+                            <option value="from_festival">Retour depuis festival</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Date/heure départ</label><input type="datetime-local" id="bus-dep-time"></div>
+                    <div class="form-group"><label>Prix (€)</label><input type="number" id="bus-dep-price" min="0" step="0.01" value="4.00"></div>
+                    <div class="form-group"><label>Capacité</label><input type="number" id="bus-dep-capacity" min="1" value="50"></div>
+                </div>
+                <button class="btn btn-primary" onclick="createBusDeparture()">Ajouter horaire</button>
+                <span id="bus-departure-msg" class="form-msg hidden"></span>
+            </div>
+
+            <div class="card">
+                <h3>📋 Horaires et remplissage</h3>
+                <div id="bus-departures-table" class="table-container"></div>
+            </div>
+
+            <div class="card">
+                <h3>🎫 Tickets navette</h3>
+                <div id="bus-tickets-table" class="table-container"></div>
             </div>
         </section>
 
