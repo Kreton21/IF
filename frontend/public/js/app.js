@@ -566,6 +566,11 @@ function populateBusFormOptions() {
   fromSelect.innerHTML = stationOptions.join('');
   returnStationSelect.innerHTML = stationOptions.join('');
 
+  if (stations.length > 0) {
+    fromSelect.value = stations[0].id;
+    returnStationSelect.value = stations[0].id;
+  }
+
   refreshOutboundDepartureOptions();
   refreshReturnDepartureOptions();
 }
@@ -578,6 +583,10 @@ function refreshOutboundDepartureOptions() {
   let html = '<option value="">Choisir un horaire aller</option>';
   html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
   select.innerHTML = html;
+
+  if (departures.length > 0) {
+    select.value = departures[0].id;
+  }
 }
 
 function refreshReturnDepartureOptions() {
@@ -587,6 +596,10 @@ function refreshReturnDepartureOptions() {
   let html = '<option value="">Choisir un horaire retour</option>';
   html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
   select.innerHTML = html;
+
+  if (departures.length > 0) {
+    select.value = departures[0].id;
+  }
 }
 
 async function submitBusCheckout(e) {
