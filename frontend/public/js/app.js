@@ -613,12 +613,21 @@ async function submitBusCheckout(e) {
   e.preventDefault();
   if (state.busLoading) return;
 
+  const phoneInput = document.getElementById('bus-phone');
+  const normalizedPhone = normalizeFrenchPhone(phoneInput.value);
+  if (!normalizedPhone) {
+    showNotification('Numéro invalide. Utilisez un format FR valide (ex: 06 12 34 56 78 ou +33...).', 'warning');
+    phoneInput.focus();
+    return;
+  }
+  phoneInput.value = normalizedPhone;
+
   const isRoundTrip = document.getElementById('bus-round-trip').checked;
   const body = {
     customer_first_name: document.getElementById('bus-first-name').value.trim(),
     customer_last_name: document.getElementById('bus-last-name').value.trim(),
     customer_email: document.getElementById('bus-email').value.trim(),
-    customer_phone: document.getElementById('bus-phone').value.trim(),
+    customer_phone: normalizedPhone,
     from_station_id: document.getElementById('bus-from-station').value,
     outbound_departure_id: document.getElementById('bus-outbound-time').value,
     round_trip: isRoundTrip,
@@ -777,6 +786,37 @@ function formatDateTime(dateStr) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function normalizeFrenchPhone(raw) {
+  if (!raw) return '';
+  let value = raw.trim();
+  value = value.replace(/[\s().-]/g, '');
+
+  if (value.startsWith('00')) {
+    value = '+' + value.slice(2);
+  }
+
+  if (value.startsWith('+')) {
+    const digits = value.slice(1).replace(/\D/g, '');
+    if (digits.length < 9 || digits.length > 12) return '';
+    if (digits.startsWith('33')) {
+      const rest = digits.slice(2);
+      if (rest.length !== 9) return '';
+      if (rest[0] === '0') return '';
+      return '+33' + rest;
+    }
+    return '+' + digits;
+  }
+
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 10 && digits.startsWith('0')) {
+    return '+33' + digits.slice(1);
+  }
+  if (digits.length === 9 && /^[1-9]/.test(digits)) {
+    return '+33' + digits;
+  }
+  return '';
 }
 
 function showNotification(message, type = 'info') {
