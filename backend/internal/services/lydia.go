@@ -39,6 +39,7 @@ type lydiaRequestDoResponse struct {
 }
 
 var lydiaRefSanitizer = regexp.MustCompile(`[^A-Za-z0-9_-]`)
+var lydiaPhoneSanitizer = regexp.MustCompile(`[^0-9+]`)
 
 func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutIntentRequest) (*CheckoutIntentResponse, error) {
 	if s.cfg.LydiaVendorToken == "" {
@@ -65,62 +66,44 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	}
 
 	message := sanitizeLydiaMessage(req.ItemName)
-
-	form := url.Values{}
-	form.Set("amount", fmt.Sprintf("%.2f", float64(req.TotalAmount)/100.0))
-	form.Set("currency", "EUR")
-	form.Set("vendor_token", s.cfg.LydiaVendorToken)
-	form.Set("type", "email")
-	form.Set("recipient", req.Payer.Email)
-	form.Set("message", message)
-	form.Set("order_ref", orderRef)
-	paymentMethod := normalizeLydiaPaymentMethod(s.cfg.LydiaPaymentMethod)
-	if paymentMethod != "" {
-		form.Set("payment_method", paymentMethod)
-	}
-	form.Set("confirm_url", confirmURL)
-	form.Set("cancel_url", cancelURL)
-	form.Set("expire_url", expireURL)
-	form.Set("browser_success_url", req.ReturnURL)
-	form.Set("browser_fail_url", req.ErrorURL)
-	form.Set("end_mobile_url", req.ReturnURL)
-	form.Set("expire_time", "1800")
-
-	if s.cfg.LydiaDebug {
-		log.Printf("[LYDIA DEBUG] request/do payload order_ref=%s amount=%s currency=%s type=%s recipient=%s payment_method=%s",
-			form.Get("order_ref"),
-			form.Get("amount"),
-			form.Get("currency"),
-			form.Get("type"),
-			maskRecipient(form.Get("recipient")),
-			form.Get("payment_method"),
-		)
-		log.Printf("[LYDIA DEBUG] callbacks confirm=%s cancel=%s expire=%s", confirmURL, cancelURL, expireURL)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL.String(), strings.NewReader(form.Encode()))
-	if err != nil {
-		return nil, fmt.Errorf("erreur création requête Lydia: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := s.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("erreur appel Lydia: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	if s.cfg.LydiaDebug {
-		log.Printf("[LYDIA DEBUG] request/do HTTP=%d body=%s", resp.StatusCode, string(body))
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("erreur Lydia (HTTP %d): %s", resp.StatusCode, string(body))
+	recipientCandidates := buildLydiaRecipientCandidates(req)
+	if len(recipientCandidates) == 0 {
+		return nil, fmt.Errorf("destinataire Lydia invalide (email/téléphone manquant)")
 	}
 
 	var out lydiaRequestDoResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("erreur décodage réponse Lydia: %w", err)
+	var lastErr error
+
+	for idx, cand := range recipientCandidates {
+		out, lastErr = s.callLydiaRequestDo(ctx, apiURL.String(), lydiaRequestInput{
+			amountCents:    req.TotalAmount,
+			vendorToken:    s.cfg.LydiaVendorToken,
+			recipientType:  cand.recipientType,
+			recipient:      cand.recipient,
+			message:        message,
+			orderRef:       orderRef,
+			paymentMethod:  normalizeLydiaPaymentMethod(s.cfg.LydiaPaymentMethod),
+			confirmURL:     confirmURL,
+			cancelURL:      cancelURL,
+			expireURL:      expireURL,
+			browserSuccess: req.ReturnURL,
+			browserFail:    req.ErrorURL,
+		})
+		if lastErr == nil {
+			break
+		}
+		if idx < len(recipientCandidates)-1 {
+			if !isLydiaRecipientTypeError(lastErr) {
+				break
+			}
+			if s.cfg.LydiaDebug {
+				log.Printf("[LYDIA DEBUG] fallback recipient type after error: %v", lastErr)
+			}
+		}
+	}
+
+	if lastErr != nil {
+		return nil, lastErr
 	}
 
 	if out.Error != "0" {
@@ -200,6 +183,163 @@ func normalizeLydiaPaymentMethod(value string) string {
 	default:
 		return ""
 	}
+}
+
+type lydiaRecipientCandidate struct {
+	recipientType string
+	recipient     string
+}
+
+type lydiaRequestInput struct {
+	amountCents    int
+	vendorToken    string
+	recipientType  string
+	recipient      string
+	message        string
+	orderRef       string
+	paymentMethod  string
+	confirmURL     string
+	cancelURL      string
+	expireURL      string
+	browserSuccess string
+	browserFail    string
+}
+
+func buildLydiaRecipientCandidates(req CheckoutIntentRequest) []lydiaRecipientCandidate {
+	candidates := make([]lydiaRecipientCandidate, 0, 2)
+
+	email := strings.ToLower(strings.TrimSpace(req.Payer.Email))
+	if looksLikeEmail(email) {
+		candidates = append(candidates, lydiaRecipientCandidate{recipientType: "email", recipient: email})
+	}
+
+	phone := normalizeLydiaPhone(req.Metadata["payer_phone"])
+	if phone != "" {
+		candidates = append(candidates, lydiaRecipientCandidate{recipientType: "phone", recipient: phone})
+	}
+
+	return candidates
+}
+
+func normalizeLydiaPhone(raw string) string {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return ""
+	}
+	v = lydiaPhoneSanitizer.ReplaceAllString(v, "")
+	if strings.HasPrefix(v, "00") {
+		v = "+" + strings.TrimPrefix(v, "00")
+	}
+	if strings.HasPrefix(v, "0") {
+		v = "+33" + strings.TrimPrefix(v, "0")
+	}
+	if !strings.HasPrefix(v, "+") {
+		return ""
+	}
+	if len(v) < 10 {
+		return ""
+	}
+	return v
+}
+
+func looksLikeEmail(value string) bool {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return false
+	}
+	parts := strings.Split(v, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	if parts[0] == "" || parts[1] == "" {
+		return false
+	}
+	return strings.Contains(parts[1], ".")
+}
+
+func isLydiaRecipientTypeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	v := strings.ToLower(err.Error())
+	if strings.Contains(v, "lydia erreur 3") {
+		return true
+	}
+	if strings.Contains(v, "type de destinataire") {
+		return true
+	}
+	if strings.Contains(v, "recipient") && strings.Contains(v, "type") {
+		return true
+	}
+	return false
+}
+
+func (s *LydiaService) callLydiaRequestDo(ctx context.Context, apiURL string, in lydiaRequestInput) (lydiaRequestDoResponse, error) {
+	form := url.Values{}
+	form.Set("amount", fmt.Sprintf("%.2f", float64(in.amountCents)/100.0))
+	form.Set("currency", "EUR")
+	form.Set("vendor_token", in.vendorToken)
+	form.Set("type", in.recipientType)
+	form.Set("recipient", in.recipient)
+	form.Set("message", in.message)
+	form.Set("order_ref", in.orderRef)
+	if in.paymentMethod != "" {
+		form.Set("payment_method", in.paymentMethod)
+	}
+	form.Set("confirm_url", in.confirmURL)
+	form.Set("cancel_url", in.cancelURL)
+	form.Set("expire_url", in.expireURL)
+	form.Set("browser_success_url", in.browserSuccess)
+	form.Set("browser_fail_url", in.browserFail)
+	form.Set("end_mobile_url", in.browserSuccess)
+	form.Set("expire_time", "1800")
+
+	if s.cfg.LydiaDebug {
+		log.Printf("[LYDIA DEBUG] request/do payload order_ref=%s amount=%s currency=%s type=%s recipient=%s payment_method=%s",
+			form.Get("order_ref"),
+			form.Get("amount"),
+			form.Get("currency"),
+			form.Get("type"),
+			maskRecipient(form.Get("recipient")),
+			form.Get("payment_method"),
+		)
+		log.Printf("[LYDIA DEBUG] callbacks confirm=%s cancel=%s expire=%s", in.confirmURL, in.cancelURL, in.expireURL)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return lydiaRequestDoResponse{}, fmt.Errorf("erreur création requête Lydia: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return lydiaRequestDoResponse{}, fmt.Errorf("erreur appel Lydia: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if s.cfg.LydiaDebug {
+		log.Printf("[LYDIA DEBUG] request/do HTTP=%d body=%s", resp.StatusCode, string(body))
+	}
+	if resp.StatusCode != http.StatusOK {
+		return lydiaRequestDoResponse{}, fmt.Errorf("erreur Lydia (HTTP %d): %s", resp.StatusCode, string(body))
+	}
+
+	var out lydiaRequestDoResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return lydiaRequestDoResponse{}, fmt.Errorf("erreur décodage réponse Lydia: %w", err)
+	}
+
+	if out.Error != "0" {
+		msg := out.Message
+		if msg == "" {
+			msg = "erreur Lydia"
+		}
+		return out, fmt.Errorf("Lydia erreur %s: %s", out.Error, msg)
+	}
+
+	return out, nil
 }
 
 func (s *LydiaService) AutoConfirms() bool {

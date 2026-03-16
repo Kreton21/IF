@@ -536,6 +536,7 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 			"order_id":     order.ID,
 			"order_number": order.OrderNumber,
 			"order_kind":   "bus",
+			"payer_phone":  strings.TrimSpace(req.CustomerPhone),
 		},
 	}
 
