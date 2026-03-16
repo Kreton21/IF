@@ -907,10 +907,12 @@ function renderBusDeparturesTable(departures) {
 
     departures.sort((a, b) => new Date(a.departure_time) - new Date(b.departure_time));
     let html = `<table><thead><tr>
-        <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th>
+        <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th><th>Statut</th><th>Actions</th>
     </tr></thead><tbody>`;
 
     departures.forEach(d => {
+        const status = d.is_active ? 'Visible' : 'Masqué';
+        const maskLabel = d.is_active ? 'Masquer' : 'Démasquer';
         html += `<tr>
             <td>${d.station_name}</td>
             <td>${d.direction === 'to_festival' ? 'Aller' : 'Retour'}</td>
@@ -918,6 +920,12 @@ function renderBusDeparturesTable(departures) {
             <td>${formatPrice(d.price_cents)}</td>
             <td>${d.sold}</td>
             <td>${d.capacity}</td>
+            <td>${status}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
+                <button class="btn btn-sm btn-warning" onclick="toggleBusDepartureMask('${d.id}')">${maskLabel}</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteBusDeparture('${d.id}')">Supprimer</button>
+            </td>
         </tr>`;
     });
 
@@ -1012,6 +1020,73 @@ async function createBusDeparture() {
     } catch (error) {
         msg.textContent = `❌ ${error.message}`;
         msg.className = 'form-msg error-text';
+    }
+}
+
+async function editBusDeparture(departureID) {
+    if (!busOptionsCache) return;
+
+    const departures = [...(busOptionsCache.outbound_departures || []), ...(busOptionsCache.return_departures || [])];
+    const dep = departures.find(d => d.id === departureID);
+    if (!dep) {
+        alert('Départ introuvable');
+        return;
+    }
+
+    const stationID = prompt('ID station (laisser vide pour garder actuelle):', dep.station_id) || dep.station_id;
+    const directionPrompt = prompt('Direction (to_festival ou from_festival):', dep.direction);
+    if (!directionPrompt) return;
+    const direction = directionPrompt.trim();
+
+    const currentDate = new Date(dep.departure_time);
+    const suggestedDateTime = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}T${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
+    const dateTimeRaw = prompt('Date/heure départ (YYYY-MM-DDTHH:mm):', suggestedDateTime);
+    if (!dateTimeRaw) return;
+
+    const priceRaw = prompt('Prix en euros:', (dep.price_cents / 100).toFixed(2));
+    if (!priceRaw) return;
+    const capacityRaw = prompt('Capacité:', String(dep.capacity));
+    if (!capacityRaw) return;
+
+    const payload = {
+        station_id: stationID,
+        direction,
+        departure_time: new Date(dateTimeRaw).toISOString(),
+        price_cents: Math.round(parseFloat(priceRaw) * 100),
+        capacity: parseInt(capacityRaw, 10),
+        is_active: !!dep.is_active,
+    };
+
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures/${departureID}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur modification: ${error.message}`);
+    }
+}
+
+async function toggleBusDepartureMask(departureID) {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures/${departureID}/mask`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur masquage: ${error.message}`);
+    }
+}
+
+async function deleteBusDeparture(departureID) {
+    if (!confirm('Supprimer ce départ navette ?')) return;
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures/${departureID}`, { method: 'DELETE' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur suppression: ${error.message}`);
     }
 }
 

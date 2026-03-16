@@ -797,6 +797,98 @@ func (r *TicketRepository) CreateBusDeparture(ctx context.Context, req models.Cr
 	return &d, nil
 }
 
+func (r *TicketRepository) UpdateBusDeparture(ctx context.Context, id string, req models.UpdateBusDepartureRequest) (*models.BusDeparture, error) {
+	var sold int
+	err := r.pool.QueryRow(ctx, `SELECT sold FROM bus_departures WHERE id = $1`, id).Scan(&sold)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("départ navette introuvable")
+		}
+		return nil, fmt.Errorf("erreur lecture départ navette: %w", err)
+	}
+
+	if req.Capacity < sold {
+		return nil, fmt.Errorf("capacité invalide: %d déjà vendu(s)", sold)
+	}
+
+	var d models.BusDeparture
+	err = r.pool.QueryRow(ctx, `
+		UPDATE bus_departures
+		SET station_id = $2,
+		    direction = $3,
+		    departure_time = $4,
+		    price_cents = $5,
+		    capacity = $6,
+		    is_active = $7,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`,
+		id, req.StationID, req.Direction, req.DepartureTime, req.PriceCents, req.Capacity, req.IsActive,
+	).Scan(
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur mise à jour départ navette: %w", err)
+	}
+
+	_ = r.pool.QueryRow(ctx, `SELECT name FROM bus_stations WHERE id = $1`, d.StationID).Scan(&d.StationName)
+	return &d, nil
+}
+
+func (r *TicketRepository) ToggleBusDepartureMask(ctx context.Context, id string) (*models.BusDeparture, error) {
+	var d models.BusDeparture
+	err := r.pool.QueryRow(ctx, `
+		UPDATE bus_departures
+		SET is_active = NOT is_active,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`, id,
+	).Scan(
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("départ navette introuvable")
+		}
+		return nil, fmt.Errorf("erreur masquage départ navette: %w", err)
+	}
+
+	_ = r.pool.QueryRow(ctx, `SELECT name FROM bus_stations WHERE id = $1`, d.StationID).Scan(&d.StationName)
+	return &d, nil
+}
+
+func (r *TicketRepository) DeleteBusDeparture(ctx context.Context, id string) error {
+	var sold int
+	err := r.pool.QueryRow(ctx, `SELECT sold FROM bus_departures WHERE id = $1`, id).Scan(&sold)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return fmt.Errorf("départ navette introuvable")
+		}
+		return fmt.Errorf("erreur lecture départ navette: %w", err)
+	}
+	if sold > 0 {
+		return fmt.Errorf("impossible de supprimer: %d ticket(s) vendu(s)", sold)
+	}
+
+	var linked int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM bus_order_rides WHERE departure_id = $1`, id).Scan(&linked); err != nil {
+		return fmt.Errorf("erreur vérification rides navette: %w", err)
+	}
+	if linked > 0 {
+		return fmt.Errorf("impossible de supprimer: départ déjà utilisé par des commandes")
+	}
+
+	cmd, err := r.pool.Exec(ctx, `DELETE FROM bus_departures WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("erreur suppression départ navette: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("départ navette introuvable")
+	}
+
+	return nil
+}
+
 func (r *TicketRepository) GetBusDepartureByID(ctx context.Context, id string) (*models.BusDeparture, error) {
 	var d models.BusDeparture
 	err := r.pool.QueryRow(ctx, `

@@ -594,6 +594,39 @@ func (s *TicketService) CreateBusDeparture(ctx context.Context, req models.Creat
 	return s.ticketRepo.CreateBusDeparture(ctx, req)
 }
 
+func (s *TicketService) UpdateBusDeparture(ctx context.Context, id string, req models.UpdateBusDepartureRequest) (*models.BusDeparture, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, fmt.Errorf("id départ navette manquant")
+	}
+	if req.StationID == "" {
+		return nil, fmt.Errorf("station requise")
+	}
+	if req.Direction != "to_festival" && req.Direction != "from_festival" {
+		return nil, fmt.Errorf("direction invalide")
+	}
+	if req.Capacity < 1 {
+		return nil, fmt.Errorf("capacité invalide")
+	}
+	if req.PriceCents < 0 {
+		return nil, fmt.Errorf("prix invalide")
+	}
+	return s.ticketRepo.UpdateBusDeparture(ctx, id, req)
+}
+
+func (s *TicketService) ToggleBusDepartureMask(ctx context.Context, id string) (*models.BusDeparture, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, fmt.Errorf("id départ navette manquant")
+	}
+	return s.ticketRepo.ToggleBusDepartureMask(ctx, id)
+}
+
+func (s *TicketService) DeleteBusDeparture(ctx context.Context, id string) error {
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("id départ navette manquant")
+	}
+	return s.ticketRepo.DeleteBusDeparture(ctx, id)
+}
+
 func (s *TicketService) ListBusTicketsAdmin(ctx context.Context) ([]models.BusTicketAdminRow, error) {
 	return s.ticketRepo.ListBusTickets(ctx, 300)
 }

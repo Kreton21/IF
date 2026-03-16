@@ -417,6 +417,77 @@ func (h *AdminHandler) CreateBusDeparture(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusCreated, dep)
 }
 
+func (h *AdminHandler) UpdateBusDeparture(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	departureID := chi.URLParam(r, "departureID")
+	if departureID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID départ navette manquant"})
+		return
+	}
+
+	var req models.UpdateBusDepartureRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	dep, err := h.ticketService.UpdateBusDeparture(r.Context(), departureID, req)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dep)
+}
+
+func (h *AdminHandler) ToggleBusDepartureMask(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	departureID := chi.URLParam(r, "departureID")
+	if departureID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID départ navette manquant"})
+		return
+	}
+
+	dep, err := h.ticketService.ToggleBusDepartureMask(r.Context(), departureID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dep)
+}
+
+func (h *AdminHandler) DeleteBusDeparture(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	departureID := chi.URLParam(r, "departureID")
+	if departureID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID départ navette manquant"})
+		return
+	}
+
+	if err := h.ticketService.DeleteBusDeparture(r.Context(), departureID); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Départ navette supprimé"})
+}
+
 func (h *AdminHandler) ListBusTickets(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.ticketService.ListBusTicketsAdmin(r.Context())
 	if err != nil {

@@ -337,6 +337,15 @@ type CreateBusDepartureRequest struct {
 	IsActive      bool      `json:"is_active"`
 }
 
+type UpdateBusDepartureRequest struct {
+	StationID     string    `json:"station_id"`
+	Direction     string    `json:"direction"`
+	DepartureTime time.Time `json:"departure_time"`
+	PriceCents    int       `json:"price_cents"`
+	Capacity      int       `json:"capacity"`
+	IsActive      bool      `json:"is_active"`
+}
+
 type BusTicketAdminRow struct {
 	TicketID           string    `json:"ticket_id"`
 	OrderNumber        string    `json:"order_number"`
