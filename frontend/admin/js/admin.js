@@ -905,6 +905,8 @@ function renderBusDeparturesTable(departures) {
         return;
     }
 
+    const stations = (busOptionsCache?.stations || []).filter(s => s.is_active);
+
     departures.sort((a, b) => new Date(a.departure_time) - new Date(b.departure_time));
     let html = `<table><thead><tr>
         <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th><th>Statut</th><th>Actions</th>
@@ -913,6 +915,8 @@ function renderBusDeparturesTable(departures) {
     departures.forEach(d => {
         const status = d.is_active ? 'Visible' : 'Masqué';
         const maskLabel = d.is_active ? 'Masquer' : 'Démasquer';
+        const departureLocalValue = toDateTimeLocalValue(d.departure_time);
+        const stationOptions = stations.map(s => `<option value="${s.id}" ${s.id === d.station_id ? 'selected' : ''}>${s.name}</option>`).join('');
         html += `<tr>
             <td>${d.station_name}</td>
             <td>${d.direction === 'to_festival' ? 'Aller' : 'Retour'}</td>
@@ -925,6 +929,46 @@ function renderBusDeparturesTable(departures) {
                 <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
                 <button class="btn btn-sm btn-warning" onclick="toggleBusDepartureMask('${d.id}')">${maskLabel}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteBusDeparture('${d.id}')">Supprimer</button>
+            </td>
+        </tr>`;
+
+        html += `<tr id="bus-edit-row-${d.id}" class="hidden">
+            <td colspan="8" style="background:#f8fafc;padding:0;">
+                <div style="margin:10px 12px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#f7fafc;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Station</label>
+                            <select id="bus-edit-station-${d.id}">${stationOptions}</select>
+                        </div>
+                        <div class="form-group">
+                            <label>Direction</label>
+                            <select id="bus-edit-direction-${d.id}">
+                                <option value="to_festival" ${d.direction === 'to_festival' ? 'selected' : ''}>Aller vers festival</option>
+                                <option value="from_festival" ${d.direction === 'from_festival' ? 'selected' : ''}>Retour depuis festival</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date/heure départ</label>
+                            <input type="datetime-local" id="bus-edit-time-${d.id}" value="${departureLocalValue}">
+                        </div>
+                        <div class="form-group">
+                            <label>Prix (€)</label>
+                            <input type="number" id="bus-edit-price-${d.id}" min="0" step="0.01" value="${(d.price_cents / 100).toFixed(2)}">
+                        </div>
+                        <div class="form-group">
+                            <label>Capacité</label>
+                            <input type="number" id="bus-edit-capacity-${d.id}" min="1" value="${d.capacity}">
+                        </div>
+                    </div>
+                    <input type="hidden" id="bus-edit-active-${d.id}" value="${d.is_active ? '1' : '0'}">
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button class="btn btn-primary btn-sm" onclick="saveBusDeparture('${d.id}')">Enregistrer</button>
+                        <button class="btn btn-sm" onclick="toggleBusDepartureEditForm('${d.id}')">Annuler</button>
+                        <span id="bus-edit-msg-${d.id}" class="form-msg hidden"></span>
+                    </div>
+                </div>
             </td>
         </tr>`;
     });
@@ -1024,37 +1068,50 @@ async function createBusDeparture() {
 }
 
 async function editBusDeparture(departureID) {
-    if (!busOptionsCache) return;
+    toggleBusDepartureEditForm(departureID);
+}
 
-    const departures = [...(busOptionsCache.outbound_departures || []), ...(busOptionsCache.return_departures || [])];
-    const dep = departures.find(d => d.id === departureID);
-    if (!dep) {
-        alert('Départ introuvable');
+function toggleBusDepartureEditForm(departureID) {
+    const row = document.getElementById(`bus-edit-row-${departureID}`);
+    if (!row) return;
+    row.classList.toggle('hidden');
+}
+
+async function saveBusDeparture(departureID) {
+    const msg = document.getElementById(`bus-edit-msg-${departureID}`);
+    if (msg) msg.classList.add('hidden');
+
+    const stationID = document.getElementById(`bus-edit-station-${departureID}`).value;
+    const direction = document.getElementById(`bus-edit-direction-${departureID}`).value;
+    const departureTimeRaw = document.getElementById(`bus-edit-time-${departureID}`).value;
+    const priceRaw = document.getElementById(`bus-edit-price-${departureID}`).value;
+    const capacityRaw = document.getElementById(`bus-edit-capacity-${departureID}`).value;
+    const activeRaw = document.getElementById(`bus-edit-active-${departureID}`).value;
+
+    if (!stationID || !direction || !departureTimeRaw || !priceRaw || !capacityRaw) {
+        if (msg) {
+            msg.textContent = '❌ Champs incomplets';
+            msg.className = 'form-msg error-text';
+        }
         return;
     }
 
-    const stationID = prompt('ID station (laisser vide pour garder actuelle):', dep.station_id) || dep.station_id;
-    const directionPrompt = prompt('Direction (to_festival ou from_festival):', dep.direction);
-    if (!directionPrompt) return;
-    const direction = directionPrompt.trim();
-
-    const currentDate = new Date(dep.departure_time);
-    const suggestedDateTime = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}T${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
-    const dateTimeRaw = prompt('Date/heure départ (YYYY-MM-DDTHH:mm):', suggestedDateTime);
-    if (!dateTimeRaw) return;
-
-    const priceRaw = prompt('Prix en euros:', (dep.price_cents / 100).toFixed(2));
-    if (!priceRaw) return;
-    const capacityRaw = prompt('Capacité:', String(dep.capacity));
-    if (!capacityRaw) return;
+    const departureDate = new Date(departureTimeRaw);
+    if (Number.isNaN(departureDate.getTime())) {
+        if (msg) {
+            msg.textContent = '❌ Date/heure invalide';
+            msg.className = 'form-msg error-text';
+        }
+        return;
+    }
 
     const payload = {
         station_id: stationID,
         direction,
-        departure_time: new Date(dateTimeRaw).toISOString(),
+        departure_time: departureDate.toISOString(),
         price_cents: Math.round(parseFloat(priceRaw) * 100),
         capacity: parseInt(capacityRaw, 10),
-        is_active: !!dep.is_active,
+        is_active: activeRaw === '1',
     };
 
     try {
@@ -1063,9 +1120,16 @@ async function editBusDeparture(departureID) {
             body: JSON.stringify(payload),
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-        await loadBusAdminData();
+        if (msg) {
+            msg.textContent = '✅ Départ mis à jour';
+            msg.className = 'form-msg success-text';
+        }
+        setTimeout(() => loadBusAdminData(), 300);
     } catch (error) {
-        alert(`Erreur modification: ${error.message}`);
+        if (msg) {
+            msg.textContent = `❌ ${error.message}`;
+            msg.className = 'form-msg error-text';
+        }
     }
 }
 
@@ -1109,6 +1173,18 @@ function formatDateTime(dateStr) {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
     });
+}
+
+function toDateTimeLocalValue(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function statusLabel(status) {
