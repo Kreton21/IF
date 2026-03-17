@@ -252,9 +252,10 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	err = r.pool.QueryRow(ctx, `
 		SELECT 
 			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed')),
-			COUNT(*) FILTER (WHERE t.is_validated = true)
+			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL)
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
 	`).Scan(&stats.TotalTicketsSold, &stats.TotalValidated)
 	if err != nil {
 		return nil, fmt.Errorf("erreur stats tickets: %w", err)
@@ -264,11 +265,12 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	rows, err := r.pool.Query(ctx, `
 		SELECT 
 			tt.id, tt.name, tt.price_cents, tt.quantity_total, tt.quantity_sold,
-			COUNT(t.id) FILTER (WHERE t.is_validated = true) as validated,
+			COUNT(t.id) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL) as validated,
 			COALESCE(SUM(tt.price_cents) FILTER (WHERE o.status IN ('paid', 'confirmed')), 0) as revenue
 		FROM ticket_types tt
 		LEFT JOIN tickets t ON t.ticket_type_id = tt.id
 		LEFT JOIN orders o ON o.id = t.order_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
 		GROUP BY tt.id, tt.name, tt.price_cents, tt.quantity_total, tt.quantity_sold
 		ORDER BY tt.name
 	`)

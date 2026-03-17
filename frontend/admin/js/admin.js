@@ -475,7 +475,9 @@ async function validateQR() {
         resultEl.classList.remove('hidden', 'valid', 'invalid', 'warning');
 
         if (data.valid) {
-            const busDetails = data.ride_type ? `<br>Trajet : ${data.from_station} → ${data.to_station}${data.return_departure_at ? `<br>Retour : ${formatDateTime(data.return_departure_at)}` : ''}` : '';
+            const busDetails = data.ride_type
+                ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
+                : '';
             resultEl.classList.add('valid');
             resultEl.innerHTML = `
                 <div class="result-icon">✅</div>
@@ -489,7 +491,9 @@ async function validateQR() {
             // Son de validation (optionnel)
             playSound('success');
         } else if (data.already_validated) {
-            const busDetails = data.ride_type ? `<br>Trajet : ${data.from_station} → ${data.to_station}` : '';
+            const busDetails = data.ride_type
+                ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
+                : '';
             resultEl.classList.add('warning');
             resultEl.innerHTML = `
                 <div class="result-icon">⚠️</div>

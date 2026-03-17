@@ -457,6 +457,10 @@ function showResult(data) {
 
   flash.className = 'border-flash';
 
+  const busDetails = data.ride_type
+    ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
+    : '';
+
   if (data.valid && !data.already_validated) {
     // ✅ Valid - first scan
     flash.classList.add('success');
@@ -465,7 +469,7 @@ function showResult(data) {
     status.textContent = 'ENTRÉE VALIDÉE';
     status.className = 'result-status valid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
-    detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}`;
+    detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}${busDetails}`;
     btn.className = 'result-btn btn-ok';
   } else if (data.already_validated) {
     // ⚠️ Already scanned
@@ -475,7 +479,7 @@ function showResult(data) {
     status.textContent = 'DÉJÀ SCANNÉ';
     status.className = 'result-status invalid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
-    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}`;
+    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}${busDetails}`;
     btn.className = 'result-btn btn-err';
   } else {
     // ❌ Invalid
@@ -490,6 +494,18 @@ function showResult(data) {
   }
 
   overlay.style.display = 'flex';
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 function dismissResult() {
