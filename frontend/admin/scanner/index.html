@@ -156,8 +156,8 @@ body {
   backdrop-filter: blur(16px);
   gap: 16px;
 }
-.result-overlay.success-bg { background: rgba(56,201,122,.15); }
-.result-overlay.error-bg { background: rgba(229,62,62,.15); }
+.result-overlay.success-bg { background: rgba(251,247,255,.94); }
+.result-overlay.error-bg { background: rgba(251,247,255,.94); }
 
 .result-icon {
   font-size: 5rem; line-height: 1;
@@ -177,11 +177,12 @@ body {
 
 .result-name {
   font-size: 1.5rem; font-weight: 800;
-  color: var(--white);
+  color: var(--night);
 }
 
 .result-detail {
-  font-size: .95rem; color: rgba(255,255,255,.55);
+  font-size: .95rem; color: rgba(30,8,69,.9);
+  font-weight: 600;
   line-height: 1.6;
 }
 
@@ -458,7 +459,7 @@ function showResult(data) {
   flash.className = 'border-flash';
 
   const busDetails = data.ride_type
-    ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
+    ? `<br>Départ : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
     : '';
 
   if (data.valid && !data.already_validated) {
