@@ -308,6 +308,61 @@ async function loadStats() {
     }
 }
 
+async function exportDatabaseCSV() {
+    const button = document.getElementById('btn-export-db-csv');
+    const msg = document.getElementById('export-db-msg');
+    if (!button || !msg) return;
+
+    button.disabled = true;
+    const initialLabel = button.textContent;
+    button.textContent = 'Export en cours...';
+    msg.classList.add('hidden');
+
+    try {
+        const response = await fetch(`${API_BASE}/admin/stats/export-csv`, {
+            method: 'GET',
+            headers: apiHeaders(),
+        });
+
+        if (response.status === 401) {
+            logout();
+            throw new Error('Session expirée');
+        }
+
+        if (!response.ok) {
+            let errMsg = 'Erreur export CSV';
+            try {
+                const data = await response.json();
+                errMsg = data.error || errMsg;
+            } catch (_) {}
+            throw new Error(errMsg);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="?([^";]+)"?/i);
+        const filename = (match && match[1]) ? match[1] : 'database_export.csv';
+
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        msg.textContent = '✅ Export téléchargé';
+        msg.className = 'form-msg success-text';
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    } finally {
+        button.disabled = false;
+        button.textContent = initialLabel;
+    }
+}
+
 function renderTypeStats(types) {
     const container = document.getElementById('stats-by-type');
     if (types.length === 0) {

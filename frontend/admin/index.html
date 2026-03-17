@@ -102,6 +102,17 @@
 
         <!-- Tab: Statistiques -->
         <section id="tab-stats" class="tab-content active">
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <div>
+                    <h3 style="margin:0;">📦 Export base de données</h3>
+                    <p style="margin-top:6px;color:#718096;font-size:.9rem;">Télécharge un CSV contenant toutes les tables de la base.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button id="btn-export-db-csv" class="btn btn-primary" onclick="exportDatabaseCSV()">Exporter CSV</button>
+                    <span id="export-db-msg" class="form-msg hidden"></span>
+                </div>
+            </div>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="stat-orders">-</div>

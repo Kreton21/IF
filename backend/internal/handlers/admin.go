@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kreton/if-festival/internal/middleware"
@@ -117,6 +118,28 @@ func (h *AdminHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, stats)
+}
+
+func (h *AdminHandler) ExportDatabaseCSV(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	csvData, err := h.adminService.ExportDatabaseCSV(r.Context())
+	if err != nil {
+		log.Printf("Erreur export CSV: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur export CSV"})
+		return
+	}
+
+	filename := "database_export_" + time.Now().UTC().Format("20060102_150405") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(csvData)
 }
 
 // ListOrders retourne la liste paginée des commandes

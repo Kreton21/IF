@@ -83,6 +83,10 @@ func (s *AdminService) GetStats(ctx context.Context) (*models.SalesStats, error)
 	return s.orderRepo.GetSalesStats(ctx)
 }
 
+func (s *AdminService) ExportDatabaseCSV(ctx context.Context) ([]byte, error) {
+	return s.adminRepo.ExportDatabaseCSV(ctx)
+}
+
 // ListOrders retourne la liste paginée des commandes
 func (s *AdminService) ListOrders(ctx context.Context, params models.OrderListParams) (*models.OrderListResponse, error) {
 	return s.orderRepo.ListOrders(ctx, params)
