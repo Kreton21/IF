@@ -60,6 +60,12 @@ func (s *LydiaService) CreateCheckoutIntent(ctx context.Context, req CheckoutInt
 	if orderNumber := strings.TrimSpace(req.Metadata["order_number"]); orderNumber != "" {
 		orderRef = orderNumber
 	}
+	orderID := strings.TrimSpace(req.Metadata["order_id"])
+	orderNumber := strings.TrimSpace(req.Metadata["order_number"])
+	confirmURL = appendLydiaCallbackRef(confirmURL, orderID, orderNumber)
+	cancelURL = appendLydiaCallbackRef(cancelURL, orderID, orderNumber)
+	expireURL = appendLydiaCallbackRef(expireURL, orderID, orderNumber)
+
 	orderRef = sanitizeLydiaReference(orderRef)
 	if orderRef == "" {
 		orderRef = fmt.Sprintf("ORD-%d", time.Now().Unix())
@@ -348,6 +354,23 @@ func (s *LydiaService) AutoConfirms() bool {
 
 func (s *LydiaService) Name() string {
 	return "lydia"
+}
+
+func appendLydiaCallbackRef(baseURL, orderID, orderNumber string) string {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return baseURL
+	}
+
+	q := u.Query()
+	if orderID != "" {
+		q.Set("order_id", orderID)
+	}
+	if orderNumber != "" {
+		q.Set("order_number", orderNumber)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 var _ PaymentProvider = (*LydiaService)(nil)
