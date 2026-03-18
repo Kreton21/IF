@@ -192,6 +192,7 @@ type SalesStats struct {
 	TotalRevenueCents  int            `json:"total_revenue_cents"`
 	TotalTicketsSold   int            `json:"total_tickets_sold"`
 	TotalValidated     int            `json:"total_validated"`
+	TestEmailEnabled   bool           `json:"test_email_enabled"`
 	ByTicketType       []TicketTypeStat `json:"by_ticket_type"`
 	RecentOrders       []Order        `json:"recent_orders"`
 	SalesByDay         []DailySales   `json:"sales_by_day"`

@@ -289,6 +289,11 @@ async function loadStats() {
         const response = await apiFetch(`${API_BASE}/admin/stats`);
         const stats = await response.json();
 
+        const testEmailCard = document.getElementById('test-email-card');
+        if (testEmailCard) {
+            testEmailCard.classList.toggle('hidden', !stats.test_email_enabled);
+        }
+
         // KPIs
         document.getElementById('stat-orders').textContent = stats.total_orders || 0;
         document.getElementById('stat-tickets').textContent = stats.total_tickets_sold || 0;

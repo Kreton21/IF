@@ -83,7 +83,12 @@ func (s *AdminService) Login(ctx context.Context, req models.LoginRequest) (*mod
 
 // GetStats retourne les statistiques de vente
 func (s *AdminService) GetStats(ctx context.Context) (*models.SalesStats, error) {
-	return s.orderRepo.GetSalesStats(ctx)
+	stats, err := s.orderRepo.GetSalesStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.TestEmailEnabled = s.cfg.EnableAdminTestEmail
+	return stats, nil
 }
 
 func (s *AdminService) ExportDatabaseCSV(ctx context.Context) ([]byte, error) {
@@ -91,10 +96,17 @@ func (s *AdminService) ExportDatabaseCSV(ctx context.Context) ([]byte, error) {
 }
 
 func (s *AdminService) SendTestEmail(ctx context.Context, to string) error {
+	if !s.cfg.EnableAdminTestEmail {
+		return fmt.Errorf("envoi de test email désactivé")
+	}
 	if s.emailService == nil {
 		return fmt.Errorf("service email indisponible")
 	}
 	return s.emailService.SendAdminTestEmail(to)
+}
+
+func (s *AdminService) IsTestEmailEnabled() bool {
+	return s.cfg.EnableAdminTestEmail
 }
 
 // ListOrders retourne la liste paginée des commandes

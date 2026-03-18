@@ -47,6 +47,7 @@ type Config struct {
 	SMTPPassword string
 	SMTPFrom     string
 	SMTPFromName string
+	EnableAdminTestEmail bool
 
 	// Festival
 	FestivalName string
@@ -58,6 +59,7 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
+	enableAdminTestEmail, _ := strconv.ParseBool(getEnv("ENABLE_ADMIN_TEST_EMAIL", "false"))
 
 	paymentProvider := getEnv("PAYMENT_PROVIDER", "mock")
 	lydiaDebug, _ := strconv.ParseBool(getEnv("LYDIA_DEBUG", "false"))
@@ -94,6 +96,7 @@ func Load() (*Config, error) {
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
 		SMTPFromName: getEnv("SMTP_FROM_NAME", "IF Festival"),
+		EnableAdminTestEmail: enableAdminTestEmail,
 
 		FestivalName: getEnv("FESTIVAL_NAME", "IF Festival"),
 		FestivalDate: getEnv("FESTIVAL_DATE", "2026-07-15"),

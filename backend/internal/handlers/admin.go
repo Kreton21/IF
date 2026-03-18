@@ -143,6 +143,11 @@ func (h *AdminHandler) ExportDatabaseCSV(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AdminHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
+	if !h.adminService.IsTestEmailEnabled() {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "fonction non disponible"})
+		return
+	}
+
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
