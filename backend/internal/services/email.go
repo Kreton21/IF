@@ -142,3 +142,29 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
 }
+
+func (s *EmailService) SendAdminTestEmail(to string) error {
+	if strings.TrimSpace(to) == "" {
+		return fmt.Errorf("destinataire email manquant")
+	}
+	if s.cfg.SMTPHost == "" {
+		return fmt.Errorf("SMTP non configuré")
+	}
+
+	subject := fmt.Sprintf("%s - Test SMTP", s.cfg.FestivalName)
+	body := fmt.Sprintf("Bonjour,\r\n\r\nCeci est un email de test SMTP depuis l'interface admin %s.\r\n\r\nSi vous recevez ce message, la configuration email fonctionne.\r\n", s.cfg.FestivalName)
+
+	var msg strings.Builder
+	msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", s.cfg.SMTPFromName, s.cfg.SMTPFrom))
+	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	msg.WriteString("MIME-Version: 1.0\r\n")
+	msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
+	msg.WriteString("\r\n")
+	msg.WriteString(body)
+
+	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
+	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
+
+	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
+}

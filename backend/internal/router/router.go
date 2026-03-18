@@ -96,6 +96,7 @@ func NewRouter(
 
 			r.Post("/change-password", adminHandler.ChangePassword)
 			r.Post("/staff/change-password", adminHandler.SetStaffPassword)
+			r.Post("/test-email", adminHandler.SendTestEmail)
 			r.Get("/stats", adminHandler.GetStats)
 			r.Get("/stats/export-csv", adminHandler.ExportDatabaseCSV)
 			r.Get("/orders", adminHandler.ListOrders)

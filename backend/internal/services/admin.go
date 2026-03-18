@@ -20,6 +20,7 @@ type AdminService struct {
 	adminRepo  *repository.AdminRepository
 	orderRepo  *repository.OrderRepository
 	ticketRepo *repository.TicketRepository
+	emailService *EmailService
 	redis      *redis.Client
 }
 
@@ -28,6 +29,7 @@ func NewAdminService(
 	adminRepo *repository.AdminRepository,
 	orderRepo *repository.OrderRepository,
 	ticketRepo *repository.TicketRepository,
+	emailService *EmailService,
 	redis *redis.Client,
 ) *AdminService {
 	return &AdminService{
@@ -35,6 +37,7 @@ func NewAdminService(
 		adminRepo:  adminRepo,
 		orderRepo:  orderRepo,
 		ticketRepo: ticketRepo,
+		emailService: emailService,
 		redis:      redis,
 	}
 }
@@ -85,6 +88,13 @@ func (s *AdminService) GetStats(ctx context.Context) (*models.SalesStats, error)
 
 func (s *AdminService) ExportDatabaseCSV(ctx context.Context) ([]byte, error) {
 	return s.adminRepo.ExportDatabaseCSV(ctx)
+}
+
+func (s *AdminService) SendTestEmail(ctx context.Context, to string) error {
+	if s.emailService == nil {
+		return fmt.Errorf("service email indisponible")
+	}
+	return s.emailService.SendAdminTestEmail(to)
 }
 
 // ListOrders retourne la liste paginée des commandes

@@ -102,6 +102,18 @@
 
         <!-- Tab: Statistiques -->
         <section id="tab-stats" class="tab-content active">
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <h3 style="margin:0;">✉️ Test envoi email</h3>
+                    <p style="margin-top:6px;color:#718096;font-size:.9rem;">Envoie un email de test SMTP et écrit le résultat dans les logs backend.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <input id="test-email-to" type="email" placeholder="destinataire@exemple.com" style="padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;min-width:260px;">
+                    <button id="btn-send-test-email" class="btn btn-primary" onclick="sendTestEmail()">Envoyer test</button>
+                    <span id="send-test-email-msg" class="form-msg hidden"></span>
+                </div>
+            </div>
+
             <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
                 <div>
                     <h3 style="margin:0;">📦 Export base de données</h3>

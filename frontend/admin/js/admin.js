@@ -363,6 +363,47 @@ async function exportDatabaseCSV() {
     }
 }
 
+async function sendTestEmail() {
+    const input = document.getElementById('test-email-to');
+    const button = document.getElementById('btn-send-test-email');
+    const msg = document.getElementById('send-test-email-msg');
+    if (!input || !button || !msg) return;
+
+    const to = input.value.trim();
+    msg.classList.add('hidden');
+
+    if (!to) {
+        msg.textContent = '❌ Email destinataire requis';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    button.disabled = true;
+    const initialLabel = button.textContent;
+    button.textContent = 'Envoi...';
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/test-email`, {
+            method: 'POST',
+            body: JSON.stringify({ to }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur envoi email de test');
+        }
+
+        msg.textContent = '✅ Email de test envoyé (voir logs backend)';
+        msg.className = 'form-msg success-text';
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    } finally {
+        button.disabled = false;
+        button.textContent = initialLabel;
+    }
+}
+
 function renderTypeStats(types) {
     const container = document.getElementById('stats-by-type');
     if (types.length === 0) {

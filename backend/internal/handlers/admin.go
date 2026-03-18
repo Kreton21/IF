@@ -142,6 +142,38 @@ func (h *AdminHandler) ExportDatabaseCSV(w http.ResponseWriter, r *http.Request)
 	_, _ = w.Write(csvData)
 }
 
+func (h *AdminHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req struct {
+		To string `json:"to"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+	if req.To == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Adresse email destinataire requise"})
+		return
+	}
+
+	adminName := middleware.GetAdminName(r.Context())
+	log.Printf("📧 [ADMIN TEST EMAIL] Demande envoyée par %s vers %s", adminName, req.To)
+
+	if err := h.adminService.SendTestEmail(r.Context(), req.To); err != nil {
+		log.Printf("❌ [ADMIN TEST EMAIL] Échec envoi vers %s: %v", req.To, err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	log.Printf("✅ [ADMIN TEST EMAIL] Email de test envoyé vers %s", req.To)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Email de test envoyé"})
+}
+
 // ListOrders retourne la liste paginée des commandes
 func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))

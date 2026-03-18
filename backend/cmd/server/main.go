@@ -79,7 +79,7 @@ func main() {
 	emailService := services.NewEmailService(cfg)
 
 	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, paymentProvider, qrService, emailService, redisClient)
-	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, redisClient)
+	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, emailService, redisClient)
 
 	pendingTTLMinutes := 20
 	if raw := os.Getenv("ORDER_PENDING_TTL_MINUTES"); raw != "" {
