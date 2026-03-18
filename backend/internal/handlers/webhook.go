@@ -105,18 +105,19 @@ func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Reque
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	payload := r.Form
 
 	if isLydiaDebugEnabled() {
-		log.Printf("[LYDIA DEBUG] webhook event=%s payload=%v", event, redactFormForLog(r.PostForm))
+		log.Printf("[LYDIA DEBUG] webhook event=%s payload=%v", event, redactFormForLog(payload))
 	}
 
-	formJSON, _ := json.Marshal(r.PostForm)
+	formJSON, _ := json.Marshal(payload)
 	logID, err := h.adminService.SaveWebhookLog(r.Context(), "lydia:"+event, formJSON)
 	if err != nil {
 		log.Printf("Erreur enregistrement webhook Lydia: %v", err)
 	}
 
-	if err := h.ticketService.HandleLydiaWebhook(r.Context(), event, r.PostForm); err != nil {
+	if err := h.ticketService.HandleLydiaWebhook(r.Context(), event, payload); err != nil {
 		log.Printf("Erreur traitement webhook Lydia (%s): %v", event, err)
 		h.adminService.MarkWebhookProcessed(r.Context(), logID, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
