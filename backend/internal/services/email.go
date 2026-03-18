@@ -159,7 +159,7 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 			msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 			msg.WriteString(fmt.Sprintf("Content-Disposition: inline; filename=\"qr_%d.png\"\r\n", i))
 			msg.WriteString("\r\n")
-			msg.WriteString(base64.StdEncoding.EncodeToString(ticket.QRCodePNG))
+			msg.WriteString(encodeBase64RFC2045(ticket.QRCodePNG))
 			msg.WriteString("\r\n")
 		}
 	}
@@ -170,6 +170,25 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
 
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
+}
+
+func encodeBase64RFC2045(data []byte) string {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	if encoded == "" {
+		return ""
+	}
+
+	const lineLen = 76
+	var out strings.Builder
+	for i := 0; i < len(encoded); i += lineLen {
+		end := i + lineLen
+		if end > len(encoded) {
+			end = len(encoded)
+		}
+		out.WriteString(encoded[i:end])
+		out.WriteString("\r\n")
+	}
+	return out.String()
 }
 
 func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) (string, error) {
