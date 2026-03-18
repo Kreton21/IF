@@ -8,6 +8,7 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kreton/if-festival/internal/config"
 )
@@ -79,8 +80,9 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 	if err != nil {
 		return fmt.Errorf("erreur génération email: %w", err)
 	}
+	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, s.cfg.SMTPFrom)
 
-	if err := s.sendMIMEEmail(to, subject, htmlBody, tickets); err != nil {
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, tickets); err != nil {
 		return err
 	}
 
@@ -127,15 +129,27 @@ func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets 
 	return buf.String(), nil
 }
 
-func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []TicketEmailData) error {
+func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, tickets []TicketEmailData) error {
 	boundary := "==FESTIVAL_BOUNDARY=="
+	now := time.Now().UTC().Format(time.RFC1123Z)
+	messageID := fmt.Sprintf("<if-%d@%s>", time.Now().UnixNano(), senderDomain(s.cfg.SMTPFrom))
 
 	var msg strings.Builder
 	msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", s.cfg.SMTPFromName, s.cfg.SMTPFrom))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
+	msg.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
 	msg.WriteString("MIME-Version: 1.0\r\n")
 	msg.WriteString(fmt.Sprintf("Content-Type: multipart/related; boundary=\"%s\"\r\n", boundary))
+	msg.WriteString("\r\n")
+
+	// Plain text part
+	msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
+	msg.WriteString("Content-Transfer-Encoding: 7bit\r\n")
+	msg.WriteString("\r\n")
+	msg.WriteString(plainBody)
 	msg.WriteString("\r\n")
 
 	// HTML part
@@ -170,6 +184,35 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
 
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
+}
+
+func buildPlainTextTicketEmail(festivalName, customerName, orderNumber string, tickets []TicketEmailData, supportEmail string) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("%s\n", festivalName))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("Bonjour %s,\n", customerName))
+	b.WriteString(fmt.Sprintf("Votre commande %s est confirmée.\n", orderNumber))
+	b.WriteString("\nBillets :\n")
+	for _, t := range tickets {
+		line := fmt.Sprintf("- %s", t.TicketTypeName)
+		if strings.TrimSpace(t.AttendeeName) != "" {
+			line += fmt.Sprintf(" (%s)", t.AttendeeName)
+		}
+		b.WriteString(line + "\n")
+	}
+	b.WriteString("\nPrésentez votre QR code à l'entrée.\n")
+	if strings.TrimSpace(supportEmail) != "" {
+		b.WriteString(fmt.Sprintf("Contact: %s\n", supportEmail))
+	}
+	return b.String()
+}
+
+func senderDomain(from string) string {
+	parts := strings.Split(strings.TrimSpace(from), "@")
+	if len(parts) == 2 && parts[1] != "" {
+		return parts[1]
+	}
+	return "localhost"
 }
 
 func encodeBase64RFC2045(data []byte) string {
