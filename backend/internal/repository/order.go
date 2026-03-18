@@ -102,7 +102,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
-		WHERE id = $1 OR order_number = $1
+		WHERE id::text = $1 OR order_number = $1
 		LIMIT 1`
 
 	var o models.Order
