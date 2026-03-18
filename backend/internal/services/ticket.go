@@ -793,15 +793,46 @@ func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) 
 func (s *TicketService) HandleLydiaWebhook(ctx context.Context, event string, form url.Values) error {
 	orderRef := strings.TrimSpace(form.Get("order_ref"))
 	if orderRef == "" {
-		return fmt.Errorf("order_ref manquant")
+		orderRef = strings.TrimSpace(form.Get("order_id"))
+	}
+	if orderRef == "" {
+		orderRef = strings.TrimSpace(form.Get("order_number"))
 	}
 
-	order, err := s.orderRepo.GetOrderByReference(ctx, orderRef)
-	if err != nil {
-		return fmt.Errorf("erreur résolution order_ref: %w", err)
+	var (
+		order *models.Order
+		err   error
+	)
+
+	if orderRef != "" {
+		order, err = s.orderRepo.GetOrderByReference(ctx, orderRef)
+		if err != nil {
+			return fmt.Errorf("erreur résolution order_ref: %w", err)
+		}
 	}
+
 	if order == nil {
-		return fmt.Errorf("commande introuvable pour order_ref=%s", orderRef)
+		checkoutRef := strings.TrimSpace(form.Get("request_uuid"))
+		if checkoutRef == "" {
+			checkoutRef = strings.TrimSpace(form.Get("request_id"))
+		}
+		if checkoutRef == "" {
+			checkoutRef = strings.TrimSpace(form.Get("transaction_identifier"))
+		}
+		if checkoutRef != "" {
+			order, err = s.orderRepo.GetOrderByCheckoutID(ctx, checkoutRef)
+			if err != nil {
+				return fmt.Errorf("erreur résolution checkout Lydia: %w", err)
+			}
+		}
+	}
+
+	if order == nil {
+		return fmt.Errorf("commande introuvable (order_ref=%s request_uuid=%s request_id=%s)",
+			strings.TrimSpace(form.Get("order_ref")),
+			strings.TrimSpace(form.Get("request_uuid")),
+			strings.TrimSpace(form.Get("request_id")),
+		)
 	}
 	orderID := order.ID
 
