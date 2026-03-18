@@ -164,6 +164,22 @@ func (h *TicketHandler) CreateBusCheckout(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+func (h *TicketHandler) ClaimCampingByEmail(w http.ResponseWriter, r *http.Request) {
+	var req models.CampingClaimRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	resp, err := h.ticketService.ClaimCampingByEmail(r.Context(), req.Email)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
 // GetOrderStatus retourne le statut d'une commande
 func (h *TicketHandler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")

@@ -30,13 +30,13 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, tx pgx.Tx, order *mod
 
 	query := `
 		INSERT INTO orders (order_number, customer_email, customer_first_name, customer_last_name,
-		                     customer_phone, total_cents, status, ip_address, user_agent)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8::inet, $9)
+		                     customer_phone, wants_camping, total_cents, status, ip_address, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::inet, $10)
 		RETURNING id, created_at, updated_at`
 
 	return tx.QueryRow(ctx, query,
 		order.OrderNumber, order.CustomerEmail, order.CustomerFirstName, order.CustomerLastName,
-		order.CustomerPhone, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
+		order.CustomerPhone, order.WantsCamping, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
 	).Scan(&order.ID, &order.CreatedAt, &order.UpdatedAt)
 }
 
@@ -69,7 +69,7 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -78,7 +78,7 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*mo
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, orderID).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.WantsCamping, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -108,7 +108,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, ref).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.WantsCamping, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 func (r *OrderRepository) GetOrderByCheckoutID(ctx context.Context, checkoutID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -133,7 +133,7 @@ func (r *OrderRepository) GetOrderByCheckoutID(ctx context.Context, checkoutID s
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, checkoutID).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.WantsCamping, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, params models.OrderLis
 	offset := (params.Page - 1) * params.PageSize
 	dataQuery := fmt.Sprintf(`
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders %s
@@ -217,7 +217,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, params models.OrderLis
 		var o models.Order
 		err := rows.Scan(
 			&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-			&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+			&o.CustomerPhone, &o.WantsCamping, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 			&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 		)
 		if err != nil {
@@ -252,11 +252,12 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	err = r.pool.QueryRow(ctx, `
 		SELECT 
 			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed')),
-			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL)
+			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL),
+			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed') AND t.is_camping = true AND bt.ticket_id IS NULL)
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
 		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
-	`).Scan(&stats.TotalTicketsSold, &stats.TotalValidated)
+	`).Scan(&stats.TotalTicketsSold, &stats.TotalValidated, &stats.TotalCamping)
 	if err != nil {
 		return nil, fmt.Errorf("erreur stats tickets: %w", err)
 	}
@@ -319,7 +320,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	// 10 dernières commandes
 	recentRows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), total_cents, status,
+		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -336,7 +337,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		var o models.Order
 		err := recentRows.Scan(
 			&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-			&o.CustomerPhone, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+			&o.CustomerPhone, &o.WantsCamping, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 			&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 		)
 		if err != nil {

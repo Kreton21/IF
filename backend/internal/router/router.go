@@ -77,6 +77,8 @@ func NewRouter(
 			}
 		})
 
+		r.Post("/camping/claim", ticketHandler.ClaimCampingByEmail)
+
 		// --- Public : Commandes ---
 		r.Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
 

@@ -474,13 +474,13 @@ func (r *TicketRepository) ReleaseTickets(ctx context.Context, items []models.Ch
 
 func (r *TicketRepository) CreateTicket(ctx context.Context, tx pgx.Tx, ticket *models.Ticket) error {
 	query := `
-		INSERT INTO tickets (order_id, ticket_type_id, qr_token, qr_code_data, attendee_first_name, attendee_last_name)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tickets (order_id, ticket_type_id, qr_token, qr_code_data, attendee_first_name, attendee_last_name, is_camping)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at`
 
 	return tx.QueryRow(ctx, query,
 		ticket.OrderID, ticket.TicketTypeID, ticket.QRToken,
-		ticket.QRCodeData, ticket.AttendeeFirstName, ticket.AttendeeLastName,
+		ticket.QRCodeData, ticket.AttendeeFirstName, ticket.AttendeeLastName, ticket.IsCamping,
 	).Scan(&ticket.ID, &ticket.CreatedAt)
 }
 
@@ -533,7 +533,7 @@ func (r *TicketRepository) EnsureBusTicketType(ctx context.Context, tx pgx.Tx, n
 
 func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken string) (*models.Ticket, error) {
 	query := `
-		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated,
+		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated, t.is_camping,
 		       t.validated_at, COALESCE(t.validated_by, ''), t.attendee_first_name, t.attendee_last_name,
 		       t.created_at, tt.name as ticket_type_name
 		FROM tickets t
@@ -542,7 +542,7 @@ func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken strin
 
 	var t models.Ticket
 	err := r.pool.QueryRow(ctx, query, qrToken).Scan(
-		&t.ID, &t.OrderID, &t.TicketTypeID, &t.QRToken, &t.IsValidated,
+		&t.ID, &t.OrderID, &t.TicketTypeID, &t.QRToken, &t.IsValidated, &t.IsCamping,
 		&t.ValidatedAt, &t.ValidatedBy, &t.AttendeeFirstName, &t.AttendeeLastName,
 		&t.CreatedAt, &t.TicketTypeName,
 	)
@@ -565,7 +565,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 
 	// Récupérer le ticket avec lock
 	query := `
-		SELECT t.id, t.order_id, t.is_validated, t.attendee_first_name, t.attendee_last_name,
+		SELECT t.id, t.order_id, t.is_validated, t.is_camping, t.attendee_first_name, t.attendee_last_name,
 		       tt.name as ticket_type_name, o.order_number, o.status,
 		       COALESCE(bt.from_station, ''), COALESCE(bt.to_station, ''),
 		       od.departure_time, rd.departure_time, COALESCE(bt.is_round_trip, false)
@@ -582,6 +582,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		ticketID          string
 		orderID           string
 		isValidated       bool
+		isCamping         bool
 		attendeeFirstName *string
 		attendeeLastName  *string
 		ticketTypeName    string
@@ -595,7 +596,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 	)
 
 	err = tx.QueryRow(ctx, query, qrToken).Scan(
-		&ticketID, &orderID, &isValidated, &attendeeFirstName, &attendeeLastName,
+		&ticketID, &orderID, &isValidated, &isCamping, &attendeeFirstName, &attendeeLastName,
 		&ticketTypeName, &orderNumber, &orderStatus,
 		&fromStation, &toStation, &outboundAt, &returnAt, &isRoundTrip,
 	)
@@ -636,6 +637,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 			TicketTypeName:    ticketTypeName,
 			OrderNumber:       orderNumber,
 			AlreadyValidated:  true,
+			IsCamping:         isCamping,
 			RideType:          busRideType(isRoundTrip, fromStation),
 			FromStation:       fromStation,
 			ToStation:         toStation,
@@ -675,6 +677,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		AttendeeLastName:  lastName,
 		TicketTypeName:    ticketTypeName,
 		OrderNumber:       orderNumber,
+		IsCamping:         isCamping,
 		RideType:          busRideType(isRoundTrip, fromStation),
 		FromStation:       fromStation,
 		ToStation:         toStation,
@@ -702,7 +705,7 @@ func formatTimePtr(t *time.Time) string {
 
 func (r *TicketRepository) GetTicketsByOrderID(ctx context.Context, orderID string) ([]models.Ticket, error) {
 	query := `
-		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated,
+		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated, t.is_camping,
 		       t.validated_at, COALESCE(t.validated_by, ''), t.attendee_first_name, t.attendee_last_name,
 		       t.created_at, tt.name as ticket_type_name
 		FROM tickets t
@@ -720,7 +723,7 @@ func (r *TicketRepository) GetTicketsByOrderID(ctx context.Context, orderID stri
 	for rows.Next() {
 		var t models.Ticket
 		err := rows.Scan(
-			&t.ID, &t.OrderID, &t.TicketTypeID, &t.QRToken, &t.IsValidated,
+			&t.ID, &t.OrderID, &t.TicketTypeID, &t.QRToken, &t.IsValidated, &t.IsCamping,
 			&t.ValidatedAt, &t.ValidatedBy, &t.AttendeeFirstName, &t.AttendeeLastName,
 			&t.CreatedAt, &t.TicketTypeName,
 		)
@@ -742,6 +745,28 @@ func (r *TicketRepository) GetQRCodeDataByToken(ctx context.Context, qrToken str
 		return nil, err
 	}
 	return data, nil
+}
+
+func (r *TicketRepository) ClaimCampingByEmail(ctx context.Context, email string) (int, error) {
+	commandTag, err := r.pool.Exec(ctx, `
+		UPDATE tickets t
+		SET is_camping = true
+		FROM orders o
+		WHERE t.order_id = o.id
+		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND o.status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM bus_tickets bt
+			  WHERE bt.ticket_id = t.id
+		  )
+		  AND t.is_camping = false
+	`, email)
+	if err != nil {
+		return 0, fmt.Errorf("erreur activation camping: %w", err)
+	}
+
+	return int(commandTag.RowsAffected()), nil
 }
 
 func (r *TicketRepository) GetBusStations(ctx context.Context) ([]models.BusStation, error) {

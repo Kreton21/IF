@@ -461,6 +461,7 @@ function showResult(data) {
   const busDetails = data.ride_type
     ? `<br>Départ : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
     : '';
+  const campingDetails = `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}`;
 
   if (data.valid && !data.already_validated) {
     // ✅ Valid - first scan
@@ -470,7 +471,7 @@ function showResult(data) {
     status.textContent = 'ENTRÉE VALIDÉE';
     status.className = 'result-status valid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
-    detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}${busDetails}`;
+    detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}${campingDetails}${busDetails}`;
     btn.className = 'result-btn btn-ok';
   } else if (data.already_validated) {
     // ⚠️ Already scanned
@@ -480,7 +481,7 @@ function showResult(data) {
     status.textContent = 'DÉJÀ SCANNÉ';
     status.className = 'result-status invalid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
-    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}${busDetails}`;
+    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}${campingDetails}${busDetails}`;
     btn.className = 'result-btn btn-err';
   } else {
     // ❌ Invalid

@@ -73,6 +73,7 @@ type Order struct {
 	CustomerFirstName    string      `json:"customer_first_name"`
 	CustomerLastName     string      `json:"customer_last_name"`
 	CustomerPhone        string      `json:"customer_phone,omitempty"`
+	WantsCamping         bool        `json:"wants_camping,omitempty"`
 	TotalCents           int         `json:"total_cents"`
 	Status               OrderStatus `json:"status"`
 	HelloAssoCheckoutID  string      `json:"helloasso_checkout_id,omitempty"`
@@ -98,6 +99,7 @@ type Ticket struct {
 	QRToken            string     `json:"qr_token"`
 	QRCodeData         []byte     `json:"-"`
 	IsValidated        bool       `json:"is_validated"`
+	IsCamping          bool       `json:"is_camping"`
 	ValidatedAt        *time.Time `json:"validated_at,omitempty"`
 	ValidatedBy        string     `json:"validated_by,omitempty"`
 	AttendeeFirstName  string     `json:"attendee_first_name,omitempty"`
@@ -130,6 +132,7 @@ type CheckoutRequest struct {
 	CustomerFirstName string        `json:"customer_first_name"`
 	CustomerLastName  string        `json:"customer_last_name"`
 	CustomerPhone     string        `json:"customer_phone,omitempty"`
+	WantsCamping      bool          `json:"wants_camping,omitempty"`
 	Items             []CheckoutItem `json:"items"`
 }
 
@@ -180,6 +183,7 @@ type ValidateQRResponse struct {
 	TicketTypeName     string `json:"ticket_type_name,omitempty"`
 	OrderNumber        string `json:"order_number,omitempty"`
 	AlreadyValidated   bool   `json:"already_validated,omitempty"`
+	IsCamping          bool   `json:"is_camping,omitempty"`
 	RideType           string `json:"ride_type,omitempty"`
 	FromStation        string `json:"from_station,omitempty"`
 	ToStation          string `json:"to_station,omitempty"`
@@ -192,10 +196,20 @@ type SalesStats struct {
 	TotalRevenueCents  int            `json:"total_revenue_cents"`
 	TotalTicketsSold   int            `json:"total_tickets_sold"`
 	TotalValidated     int            `json:"total_validated"`
+	TotalCamping       int            `json:"total_camping"`
 	TestEmailEnabled   bool           `json:"test_email_enabled"`
 	ByTicketType       []TicketTypeStat `json:"by_ticket_type"`
 	RecentOrders       []Order        `json:"recent_orders"`
 	SalesByDay         []DailySales   `json:"sales_by_day"`
+}
+
+type CampingClaimRequest struct {
+	Email string `json:"email"`
+}
+
+type CampingClaimResponse struct {
+	UpdatedTickets int    `json:"updated_tickets"`
+	Message        string `json:"message"`
 }
 
 type TicketTypeStat struct {

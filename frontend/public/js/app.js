@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEmailGate();
   setupCheckoutForm();
   setupBusForm();
+  setupCampingClaimForm();
 });
 
 // ══════════════════════════════════════
@@ -216,6 +217,8 @@ async function loadTicketTypes(email) {
     // Pre-fill email in checkout form
     const emailField = document.getElementById('email');
     if (emailField) emailField.value = email;
+    const claimEmailField = document.getElementById('camping-claim-email');
+    if (claimEmailField && !claimEmailField.value) claimEmailField.value = email;
 
     renderTickets();
   } catch (error) {
@@ -460,6 +463,7 @@ function setupCheckoutForm() {
       customer_last_name: document.getElementById('lastName').value.trim(),
       customer_email: document.getElementById('email').value.trim(),
       customer_phone: document.getElementById('phone').value.trim(),
+      wants_camping: document.getElementById('wants-camping')?.checked || false,
       items: items,
     };
 
@@ -503,6 +507,47 @@ function setupCheckoutForm() {
       state.loading = false;
       btn.disabled = false;
       btn.textContent = '💳 Procéder au paiement';
+    }
+  });
+}
+
+function setupCampingClaimForm() {
+  const form = document.getElementById('camping-claim-form');
+  const msg = document.getElementById('camping-claim-msg');
+  if (!form || !msg) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('camping-claim-email').value.trim();
+
+    if (!email || !email.includes('@')) {
+      msg.textContent = 'Veuillez entrer une adresse email valide.';
+      msg.style.color = '#e53e3e';
+      msg.classList.remove('hidden');
+      return;
+    }
+
+    msg.classList.add('hidden');
+
+    try {
+      const response = await fetch(`${API_BASE}/camping/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Impossible d\'activer le camping');
+      }
+
+      msg.textContent = `✅ ${data.message} (${data.updated_tickets} billet(s) mis à jour)`;
+      msg.style.color = '#38a169';
+      msg.classList.remove('hidden');
+    } catch (error) {
+      msg.textContent = `❌ ${error.message}`;
+      msg.style.color = '#e53e3e';
+      msg.classList.remove('hidden');
     }
   });
 }

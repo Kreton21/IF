@@ -167,15 +167,32 @@
 
       <!-- Options (static from design) -->
       <div class="opts-grid" id="opts-grid">
-        <div class="opt-card rv">
-          <div><div class="opt-name">🏕 Option Camping</div><div class="opt-desc">Accès zone camping · 1 nuit sur place</div></div>
-          <div class="opt-price">0€</div>
-        </div>
         <div class="opt-card rv2">
           <div><div class="opt-name">🚌 Billet Navette</div><div class="opt-desc">Aller / Retour gare ↔ festival</div></div>
           <div class="opt-price">4€</div>
           <button type="button" class="btn-otl bus-open-btn" onclick="toggleBusSection()">Réserver navette</button>
         </div>
+      </div>
+
+      <div class="camping-section rv" id="camping-section">
+        <h3>🏕 Camping festival</h3>
+        <p>
+          Le camping est <strong>gratuit</strong> pour les détenteurs d'un billet festival.
+          Tu peux l'ajouter directement lors de ta commande, ou l'activer plus tard avec ton email.
+        </p>
+        <ul class="camping-points">
+          <li>Accès à la zone camping sur site</li>
+          <li>Activation sans repayer</li>
+          <li>Visible au scan le jour J</li>
+        </ul>
+        <form id="camping-claim-form" class="camping-claim-form">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label for="camping-claim-email">J'ai déjà mon billet : activer le camping par email</label>
+            <input type="email" id="camping-claim-email" required placeholder="prenom.nom@email.com">
+          </div>
+          <button type="submit" class="btn-otl">Activer mon option camping</button>
+          <p id="camping-claim-msg" class="camping-claim-msg hidden"></p>
+        </form>
       </div>
 
       <div id="bus-section" class="bus-section hidden rv">
@@ -262,6 +279,13 @@
         <div class="form-group">
           <label for="phone">Téléphone (optionnel)</label>
           <input type="tel" id="phone" name="phone" placeholder="06 12 34 56 78">
+        </div>
+
+        <div class="camping-opt-in">
+          <label>
+            <input type="checkbox" id="wants-camping" name="wants-camping">
+            Je souhaite camper (option gratuite)
+          </label>
         </div>
 
         <div class="order-summary" id="order-summary">

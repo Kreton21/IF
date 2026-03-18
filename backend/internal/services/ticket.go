@@ -294,6 +294,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		CustomerFirstName: req.CustomerFirstName,
 		CustomerLastName:  req.CustomerLastName,
 		CustomerPhone:     req.CustomerPhone,
+		WantsCamping:      req.WantsCamping,
 		TotalCents:        totalCents,
 		Status:            models.OrderStatusPending,
 		IPAddress:         ipAddress,
@@ -714,6 +715,7 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 				TicketTypeID:      item.TicketTypeID,
 				QRToken:           qrToken,
 				QRCodeData:        qrPNG,
+				IsCamping:         order.WantsCamping,
 				AttendeeFirstName: order.CustomerFirstName,
 				AttendeeLastName:  order.CustomerLastName,
 			}
@@ -907,6 +909,30 @@ func (s *TicketService) GetOrderStatus(ctx context.Context, orderID string) (*mo
 // GetQRCodeImage returns the QR code PNG data for a given token
 func (s *TicketService) GetQRCodeImage(ctx context.Context, qrToken string) ([]byte, error) {
 	return s.ticketRepo.GetQRCodeDataByToken(ctx, qrToken)
+}
+
+func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (*models.CampingClaimResponse, error) {
+	trimmedEmail := strings.TrimSpace(strings.ToLower(email))
+	if trimmedEmail == "" || !strings.Contains(trimmedEmail, "@") {
+		return nil, fmt.Errorf("email invalide")
+	}
+
+	updated, err := s.ticketRepo.ClaimCampingByEmail(ctx, trimmedEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	if updated == 0 {
+		return &models.CampingClaimResponse{
+			UpdatedTickets: 0,
+			Message:        "Aucun ticket éligible trouvé pour cet email",
+		}, nil
+	}
+
+	return &models.CampingClaimResponse{
+		UpdatedTickets: updated,
+		Message:        "Option camping activée avec succès",
+	}, nil
 }
 
 // CleanupExpiredPendingOrders annule les commandes pending trop anciennes

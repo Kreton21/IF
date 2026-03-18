@@ -299,6 +299,7 @@ async function loadStats() {
         document.getElementById('stat-tickets').textContent = stats.total_tickets_sold || 0;
         document.getElementById('stat-revenue').textContent = formatPrice(stats.total_revenue_cents || 0);
         document.getElementById('stat-validated').textContent = stats.total_validated || 0;
+        document.getElementById('stat-camping').textContent = stats.total_camping || 0;
 
         // Stats par type
         renderTypeStats(stats.by_ticket_type || []);
@@ -579,6 +580,7 @@ async function validateQR() {
             const busDetails = data.ride_type
                 ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
                 : '';
+            const campingDetails = `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}`;
             resultEl.classList.add('valid');
             resultEl.innerHTML = `
                 <div class="result-icon">✅</div>
@@ -587,6 +589,7 @@ async function validateQR() {
                     ${data.attendee_first_name} ${data.attendee_last_name}<br>
                     Ticket : ${data.ticket_type_name}<br>
                     Commande : ${data.order_number}
+                    ${campingDetails}
                     ${busDetails}
                 </div>`;
             // Son de validation (optionnel)
@@ -595,6 +598,7 @@ async function validateQR() {
             const busDetails = data.ride_type
                 ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
                 : '';
+            const campingDetails = `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}`;
             resultEl.classList.add('warning');
             resultEl.innerHTML = `
                 <div class="result-icon">⚠️</div>
@@ -602,6 +606,7 @@ async function validateQR() {
                 <div class="result-details">
                     Ticket : ${data.ticket_type_name}<br>
                     Commande : ${data.order_number}
+                    ${campingDetails}
                     ${busDetails}
                 </div>`;
             playSound('warning');
