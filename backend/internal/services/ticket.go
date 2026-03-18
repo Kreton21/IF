@@ -1037,7 +1037,7 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		details += fmt.Sprintf(" · Retour Festival → %s", returnTo)
 	}
 
-	if err := s.emailService.SendTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
+	if err := s.emailService.SendBusTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
 		TicketTypeName: busLabel,
 		AttendeeName:   details,
 		QRToken:        qrToken,

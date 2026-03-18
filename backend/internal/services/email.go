@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/smtp"
+	"os"
 	"strings"
 
 	"github.com/kreton/if-festival/internal/config"
@@ -22,19 +23,69 @@ func NewEmailService(cfg *config.Config) *EmailService {
 
 // SendTicketEmail envoie les tickets par email avec les QR codes en pièce jointe
 func (s *EmailService) SendTicketEmail(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	return s.SendFestivalTicketEmail(to, customerName, orderNumber, tickets)
+}
+
+func (s *EmailService) SendFestivalTicketEmail(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	return s.sendTicketEmailWithTemplate(
+		to,
+		customerName,
+		orderNumber,
+		tickets,
+		s.cfg.EmailTemplatePath,
+		s.cfg.EmailSubjectTemplate,
+		"festival",
+	)
+}
+
+func (s *EmailService) SendBusTicketEmail(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	return s.sendTicketEmailWithTemplate(
+		to,
+		customerName,
+		orderNumber,
+		tickets,
+		s.cfg.BusEmailTemplatePath,
+		s.cfg.BusEmailSubjectTemplate,
+		"bus",
+	)
+}
+
+func (s *EmailService) sendTicketEmailWithTemplate(
+	to string,
+	customerName string,
+	orderNumber string,
+	tickets []TicketEmailData,
+	templatePath string,
+	subjectTemplate string,
+	emailKind string,
+) error {
 	if s.cfg.SMTPHost == "" {
-		fmt.Printf("📧 [MOCK] Email envoyé à %s pour commande %s (%d tickets)\n", to, orderNumber, len(tickets))
+		fmt.Printf("📧 [MOCK:%s] Email envoyé à %s pour commande %s (%d tickets)\n", emailKind, to, orderNumber, len(tickets))
 		return nil
 	}
 
-	subject := fmt.Sprintf("%s - Vos billets (Commande %s)", s.cfg.FestivalName, orderNumber)
+	for i := range tickets {
+		if strings.TrimSpace(tickets[i].CID) == "" {
+			tickets[i].CID = fmt.Sprintf("qr-%d", i)
+		}
+	}
 
-	htmlBody, err := s.buildEmailHTML(customerName, orderNumber, tickets)
+	subject, err := s.buildSubject(orderNumber, subjectTemplate)
+	if err != nil {
+		return fmt.Errorf("erreur génération sujet email: %w", err)
+	}
+
+	htmlBody, err := s.buildEmailHTML(customerName, orderNumber, tickets, templatePath)
 	if err != nil {
 		return fmt.Errorf("erreur génération email: %w", err)
 	}
 
-	return s.sendMIMEEmail(to, subject, htmlBody, tickets)
+	if err := s.sendMIMEEmail(to, subject, htmlBody, tickets); err != nil {
+		return err
+	}
+
+	fmt.Printf("📧 Email confirmation %s envoyé à %s (commande %s)\n", emailKind, to, orderNumber)
+	return nil
 }
 
 type TicketEmailData struct {
@@ -42,47 +93,20 @@ type TicketEmailData struct {
 	AttendeeName   string
 	QRToken        string
 	QRCodePNG      []byte
+	CID            string
 }
 
-func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets []TicketEmailData) (string, error) {
-	tmpl := `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; color: white; text-align: center;">
-    <h1 style="margin: 0;">🎵 {{.FestivalName}}</h1>
-    <p style="margin: 10px 0 0 0; font-size: 18px;">Vos billets sont prêts !</p>
-  </div>
+func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets []TicketEmailData, templatePath string) (string, error) {
+	templateContent := defaultTicketEmailTemplate
+	if path := strings.TrimSpace(templatePath); path != "" {
+		if data, err := os.ReadFile(path); err == nil {
+			templateContent = string(data)
+		} else {
+			fmt.Printf("WARN: impossible de lire template email=%s, fallback template interne (%v)\n", path, err)
+		}
+	}
 
-  <div style="padding: 20px 0;">
-    <p>Bonjour <strong>{{.CustomerName}}</strong>,</p>
-    <p>Merci pour votre achat ! Voici vos billets pour le <strong>{{.FestivalName}}</strong>.</p>
-    <p style="color: #666;">Commande : <strong>{{.OrderNumber}}</strong></p>
-  </div>
-
-  {{range $i, $ticket := .Tickets}}
-  <div style="border: 2px solid #667eea; border-radius: 10px; padding: 20px; margin: 15px 0; text-align: center;">
-    <h3 style="color: #667eea; margin-top: 0;">🎫 {{$ticket.TicketTypeName}}</h3>
-    {{if $ticket.AttendeeName}}<p>Participant : <strong>{{$ticket.AttendeeName}}</strong></p>{{end}}
-    <p style="font-size: 12px; color: #999;">Présentez ce QR code à l'entrée du festival</p>
-    <img src="cid:qr-{{$i}}" alt="QR Code" style="max-width: 250px;" />
-  </div>
-  {{end}}
-
-  <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
-    <p style="margin: 0; font-size: 13px; color: #666;">
-      <strong>📱 Important :</strong> Présentez ce QR code (imprimé ou sur mobile) à l'entrée du festival.
-      Chaque QR code ne peut être utilisé qu'une seule fois.
-    </p>
-  </div>
-
-  <p style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-    {{.FestivalName}} — {{.FestivalDate}}
-  </p>
-</body>
-</html>`
-
-	t, err := template.New("ticket").Parse(tmpl)
+	t, err := template.New("ticket").Parse(templateContent)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +118,7 @@ func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets 
 		"CustomerName": customerName,
 		"OrderNumber":  orderNumber,
 		"Tickets":      tickets,
+		"SupportEmail": s.cfg.SMTPFrom,
 	})
 	if err != nil {
 		return "", err
@@ -124,9 +149,13 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 	// QR code images inline
 	for i, ticket := range tickets {
 		if len(ticket.QRCodePNG) > 0 {
+			cid := ticket.CID
+			if strings.TrimSpace(cid) == "" {
+				cid = fmt.Sprintf("qr-%d", i)
+			}
 			msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 			msg.WriteString("Content-Type: image/png\r\n")
-			msg.WriteString(fmt.Sprintf("Content-ID: <qr-%d>\r\n", i))
+			msg.WriteString(fmt.Sprintf("Content-ID: <%s>\r\n", cid))
 			msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 			msg.WriteString(fmt.Sprintf("Content-Disposition: inline; filename=\"qr_%d.png\"\r\n", i))
 			msg.WriteString("\r\n")
@@ -142,6 +171,65 @@ func (s *EmailService) sendMIMEEmail(to, subject, htmlBody string, tickets []Tic
 
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
 }
+
+func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) (string, error) {
+	tpl := strings.TrimSpace(subjectTemplate)
+	if tpl == "" {
+		tpl = "{{.FestivalName}} - Vos billets (Commande {{.OrderNumber}})"
+	}
+
+	t, err := template.New("subject").Parse(tpl)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, map[string]string{
+		"FestivalName": s.cfg.FestivalName,
+		"OrderNumber":  orderNumber,
+	}); err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(buf.String()), nil
+}
+
+const defaultTicketEmailTemplate = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+	<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; color: white; text-align: center;">
+		<h1 style="margin: 0;">🎵 {{.FestivalName}}</h1>
+		<p style="margin: 10px 0 0 0; font-size: 18px;">Vos billets sont prêts !</p>
+	</div>
+
+	<div style="padding: 20px 0;">
+		<p>Bonjour <strong>{{.CustomerName}}</strong>,</p>
+		<p>Merci pour votre achat ! Voici vos billets pour le <strong>{{.FestivalName}}</strong>.</p>
+		<p style="color: #666;">Commande : <strong>{{.OrderNumber}}</strong></p>
+	</div>
+
+	{{range $ticket := .Tickets}}
+	<div style="border: 2px solid #667eea; border-radius: 10px; padding: 20px; margin: 15px 0; text-align: center;">
+		<h3 style="color: #667eea; margin-top: 0;">🎫 {{$ticket.TicketTypeName}}</h3>
+		{{if $ticket.AttendeeName}}<p>Participant : <strong>{{$ticket.AttendeeName}}</strong></p>{{end}}
+		<p style="font-size: 12px; color: #999;">Présentez ce QR code à l'entrée du festival</p>
+		<img src="cid:{{$ticket.CID}}" alt="QR Code" style="max-width: 250px;" />
+	</div>
+	{{end}}
+
+	<div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
+		<p style="margin: 0; font-size: 13px; color: #666;">
+			<strong>📱 Important :</strong> Présentez ce QR code (imprimé ou sur mobile) à l'entrée du festival.
+			Chaque QR code ne peut être utilisé qu'une seule fois.
+		</p>
+	</div>
+
+	<p style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
+		{{.FestivalName}} — {{.FestivalDate}} — Contact : {{.SupportEmail}}
+	</p>
+</body>
+</html>`
 
 func (s *EmailService) SendAdminTestEmail(to string) error {
 	if strings.TrimSpace(to) == "" {

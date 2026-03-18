@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirmation ticket navette</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; background:#f8fafc; color:#1f2937;">
+  <div style="background:#0f766e; color:#fff; border-radius:12px; padding:24px; text-align:center;">
+    <h1 style="margin:0; font-size:28px;">🚌 {{.FestivalName}}</h1>
+    <p style="margin:8px 0 0 0; opacity:.95;">Votre ticket navette est confirmé</p>
+  </div>
+
+  <div style="background:#fff; border-radius:12px; padding:22px; margin-top:16px; border:1px solid #e5e7eb;">
+    <p style="margin:0 0 12px 0;">Bonjour <strong>{{.CustomerName}}</strong>,</p>
+    <p style="margin:0 0 8px 0;">Votre commande navette <strong>{{.OrderNumber}}</strong> est confirmée ✅</p>
+    <p style="margin:0; color:#6b7280;">Présentez le QR code ci-dessous au point d’embarquement.</p>
+  </div>
+
+  {{range $ticket := .Tickets}}
+  <div style="background:#fff; border-radius:12px; padding:20px; margin-top:14px; border:1px solid #e5e7eb; text-align:center;">
+    <h3 style="margin:0 0 6px 0; color:#0f766e;">{{$ticket.TicketTypeName}}</h3>
+    {{if $ticket.AttendeeName}}<p style="margin:0 0 10px 0; color:#374151;">{{$ticket.AttendeeName}}</p>{{end}}
+    <p style="margin:0 0 12px 0; color:#6b7280; font-size:13px;">Ticket navette — usage unique</p>
+    <img src="cid:{{$ticket.CID}}" alt="QR Code navette" style="max-width:240px; width:100%; height:auto; border:1px solid #e5e7eb; border-radius:8px;" />
+  </div>
+  {{end}}
+
+  <div style="background:#ecfeff; border:1px solid #a5f3fc; border-radius:10px; padding:14px; margin-top:16px; color:#155e75; font-size:13px; line-height:1.5;">
+    Présentez-vous quelques minutes avant l’horaire de départ.
+    Le QR code est valide une seule fois.
+  </div>
+
+  <p style="margin-top:18px; color:#6b7280; font-size:12px; line-height:1.5;">
+    Besoin d’aide : {{.SupportEmail}}
+  </p>
+
+  <p style="margin-top:8px; color:#9ca3af; font-size:11px; text-align:center;">
+    {{.FestivalName}} — {{.FestivalDate}}
+  </p>
+</body>
+</html>
