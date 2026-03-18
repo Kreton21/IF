@@ -586,7 +586,7 @@
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping gratuit sur réservation</div>
           <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">400 places disponibles · Première arrivée, première servie</p>
         </div>
-        <button class="btn-rose" style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap" onclick="goTickets()">🏕 Réserver le camping</button>
+        <button class="btn-rose" style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap" onclick="goCampingForm()">🏕 Réserver le camping</button>
       </div>
 
       <div class="rv2" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px">
@@ -614,6 +614,55 @@
           <button type="submit" class="btn-otl">Activer mon option camping</button>
           <p id="camping-claim-msg" class="camping-claim-msg hidden"></p>
         </form>
+      </div>
+
+      <div class="rv" style="margin-top:26px;background:var(--offwhite);border:1px solid rgba(30,8,69,.08);border-radius:16px;padding:18px;box-shadow:var(--sh);">
+        <h3 style="margin-bottom:6px;">🏕 Plan du camping</h3>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px;">Domaine de Saint-Jean-de-Beauregard · 400 places · Gratuit sur réservation</p>
+        <svg viewBox="0 0 680 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:12px;box-shadow:0 6px 24px rgba(30,8,69,.15)">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+            <pattern id="grass" x="0" y="0" width="9" height="9" patternUnits="userSpaceOnUse">
+              <rect width="9" height="9" fill="#3d8c42"/>
+              <line x1="0" y1="9" x2="5" y2="2" stroke="#4fa354" stroke-width="0.5" opacity=".55"/>
+              <line x1="5" y1="9" x2="9" y2="3" stroke="#4fa354" stroke-width="0.5" opacity=".45"/>
+            </pattern>
+            <pattern id="tents" x="0" y="0" width="40" height="36" patternUnits="userSpaceOnUse">
+              <rect width="40" height="36" fill="#3d8c42"/>
+              <line x1="0" y1="0" x2="0" y2="36" stroke="#2a6e2e" stroke-width="1"/>
+              <line x1="0" y1="36" x2="40" y2="36" stroke="#2a6e2e" stroke-width="1"/>
+              <rect x="3" y="4" width="16" height="13" rx="2" fill="#52a857" stroke="#1a3d1c" stroke-width="1.2"/>
+              <rect x="22" y="4" width="16" height="13" rx="2" fill="#52a857" stroke="#1a3d1c" stroke-width="1.2"/>
+              <rect x="3" y="22" width="16" height="11" rx="2" fill="#52a857" stroke="#1a3d1c" stroke-width="1.2"/>
+              <rect x="22" y="22" width="16" height="11" rx="2" fill="#52a857" stroke="#1a3d1c" stroke-width="1.2"/>
+            </pattern>
+            <linearGradient id="djGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fce4ec"/>
+              <stop offset="100%" stop-color="#f8bbd0"/>
+            </linearGradient>
+            <clipPath id="clip-l"><polygon points="82,56 295,50 300,422 110,428 78,320 78,165"/></clipPath>
+            <clipPath id="clip-dr"><polygon points="302,52 490,42 552,68 548,202 525,252 495,272 488,382 418,432 302,424"/></clipPath>
+          </defs>
+          <rect width="680" height="480" fill="#1e4a20"/>
+          <polygon points="558,0 600,0 680,148 680,188 636,188 556,20" fill="#c62828" opacity=".88"/>
+          <polygon points="95,54 490,40 552,68 548,200 525,250 495,270 488,380 418,430 200,432 110,402 78,312 78,162" fill="url(#grass)" stroke="#2d6e30" stroke-width="2"/>
+          <rect x="78" y="50" width="228" height="386" fill="url(#tents)" clip-path="url(#clip-l)"/>
+          <rect x="298" y="46" width="260" height="390" fill="url(#tents)" clip-path="url(#clip-dr)"/>
+          <rect x="294" y="48" width="14" height="386" rx="3" fill="#225a26" opacity=".75"/>
+          <rect x="78" y="242" width="474" height="12" rx="3" fill="#225a26" opacity=".75"/>
+          <ellipse cx="346" cy="248" rx="58" ry="46" fill="#2a7a2e"/>
+          <rect x="298" y="54" width="176" height="112" rx="9" fill="url(#djGrad)" stroke="#c2185b" stroke-width="1.8" opacity=".97"/>
+          <text x="386" y="156" font-family="Montserrat,sans-serif" font-size="10" font-weight="800" text-anchor="middle" fill="#880e4f">Scène DJ + Bar</text>
+          <rect x="302" y="312" width="68" height="56" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5" opacity=".98"/>
+          <text x="336" y="330" font-family="Montserrat,sans-serif" font-size="9.5" font-weight="800" text-anchor="middle" fill="#0d47a1">WC</text>
+          <rect x="426" y="238" width="64" height="54" rx="8" fill="#fff8e1" stroke="#e65100" stroke-width="1.8" opacity=".98"/>
+          <text x="458" y="286" font-family="Montserrat,sans-serif" font-size="8" font-weight="700" text-anchor="middle" fill="#bf360c">SECOURS</text>
+          <path d="M552,72 L516,82" stroke="#5e35b1" stroke-width="2.5" marker-end="url(#arr)" fill="none"/>
+          <rect x="476" y="52" width="122" height="38" rx="7" fill="#ede7f6" stroke="#6200ea" stroke-width="1.5" opacity=".98"/>
+          <text x="537" y="68" font-family="Montserrat,sans-serif" font-size="10" font-weight="800" text-anchor="middle" fill="#4a148c">ENTRÉE</text>
+        </svg>
       </div>
     </div>
   </section>
@@ -652,7 +701,7 @@
         <h2 class="title on-dark" style="margin-bottom:12px">Prêt(e) pour la nuit ?</h2>
         <p style="color:rgba(255,255,255,.68);margin-bottom:28px;font-size:.9rem">400 places · Gratuit · Nuit du 30 au 31 mai 2026</p>
         <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-          <button class="btn-rose" style="font-size:.95rem;padding:16px 36px" onclick="goTickets()">🏕 Réserver le camping</button>
+          <button class="btn-rose" style="font-size:.95rem;padding:16px 36px" onclick="goCampingForm()">🏕 Réserver le camping</button>
           <button class="btn-white-ghost" onclick="goTickets()" style="font-size:.95rem;padding:14px 28px">🎟 Prendre ma place festival</button>
         </div>
       </div>

@@ -917,6 +917,25 @@ func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (
 		return nil, fmt.Errorf("email invalide")
 	}
 
+	totalTickets, alreadyCamping, updatable, err := s.ticketRepo.GetCampingClaimStats(ctx, trimmedEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	if totalTickets == 0 {
+		return &models.CampingClaimResponse{
+			UpdatedTickets: 0,
+			Message:        "Pas de ticket acheté avec ce mail, veuillez acheter un ticket auparavant.",
+		}, nil
+	}
+
+	if updatable == 0 && alreadyCamping > 0 {
+		return &models.CampingClaimResponse{
+			UpdatedTickets: 0,
+			Message:        "Le ticket possède déjà l'option camping",
+		}, nil
+	}
+
 	updated, err := s.ticketRepo.ClaimCampingByEmail(ctx, trimmedEmail)
 	if err != nil {
 		return nil, err
@@ -925,13 +944,13 @@ func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (
 	if updated == 0 {
 		return &models.CampingClaimResponse{
 			UpdatedTickets: 0,
-			Message:        "Aucun ticket éligible trouvé pour cet email",
+			Message:        "Le ticket possède déjà l'option camping",
 		}, nil
 	}
 
 	return &models.CampingClaimResponse{
 		UpdatedTickets: updated,
-		Message:        "Option camping activée avec succès",
+		Message:        "Option camping ajoutée à votre ticket",
 	}, nil
 }
 

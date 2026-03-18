@@ -769,6 +769,32 @@ func (r *TicketRepository) ClaimCampingByEmail(ctx context.Context, email string
 	return int(commandTag.RowsAffected()), nil
 }
 
+func (r *TicketRepository) GetCampingClaimStats(ctx context.Context, email string) (int, int, int, error) {
+	var (
+		totalTickets   int
+		alreadyCamping int
+		updatable      int
+	)
+
+	err := r.pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*)::int,
+			COUNT(*) FILTER (WHERE t.is_camping = true)::int,
+			COUNT(*) FILTER (WHERE t.is_camping = false)::int
+		FROM tickets t
+		JOIN orders o ON o.id = t.order_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE LOWER(o.customer_email) = LOWER($1)
+		  AND o.status IN ('paid', 'confirmed')
+		  AND bt.ticket_id IS NULL
+	`, email).Scan(&totalTickets, &alreadyCamping, &updatable)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("erreur lecture statut camping: %w", err)
+	}
+
+	return totalTickets, alreadyCamping, updatable, nil
+}
+
 func (r *TicketRepository) GetBusStations(ctx context.Context) ([]models.BusStation, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, name, is_active, created_at, updated_at

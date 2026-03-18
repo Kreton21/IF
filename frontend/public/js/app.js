@@ -64,6 +64,14 @@ function goTickets() {
   }, 130);
 }
 
+function goCampingForm() {
+  go('camping');
+  setTimeout(() => {
+    const el = document.getElementById('camping-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 130);
+}
+
 // ══════════════════════════════════════
 // NAV SCROLL EFFECT
 // ══════════════════════════════════════
@@ -541,8 +549,8 @@ function setupCampingClaimForm() {
         throw new Error(data.error || 'Impossible d\'activer le camping');
       }
 
-      msg.textContent = `✅ ${data.message} (${data.updated_tickets} billet(s) mis à jour)`;
-      msg.style.color = '#38a169';
+      msg.textContent = data.message || '';
+      msg.style.color = (data.updated_tickets || 0) > 0 ? '#38a169' : '#dd6b20';
       msg.classList.remove('hidden');
     } catch (error) {
       msg.textContent = `❌ ${error.message}`;
