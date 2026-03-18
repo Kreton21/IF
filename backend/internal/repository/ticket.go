@@ -27,7 +27,14 @@ func (r *TicketRepository) GetActiveTicketTypes(ctx context.Context) ([]models.T
 		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
 		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_types
-		WHERE is_active = true AND is_masked = false
+		WHERE is_active = true
+		  AND is_masked = false
+		  AND COALESCE(description, '') <> 'Ticket navette festival'
+		  AND id NOT IN (
+			SELECT DISTINCT t.ticket_type_id
+			FROM tickets t
+			JOIN bus_tickets bt ON bt.ticket_id = t.id
+		  )
 		ORDER BY price_cents ASC`
 
 	rows, err := r.pool.Query(ctx, query)
@@ -59,6 +66,12 @@ func (r *TicketRepository) GetAllTicketTypes(ctx context.Context) ([]models.Tick
 		SELECT id, name, description, price_cents, quantity_total, quantity_sold,
 		       sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_types
+		WHERE COALESCE(description, '') <> 'Ticket navette festival'
+		  AND id NOT IN (
+			SELECT DISTINCT t.ticket_type_id
+			FROM tickets t
+			JOIN bus_tickets bt ON bt.ticket_id = t.id
+		  )
 		ORDER BY created_at DESC`
 
 	rows, err := r.pool.Query(ctx, query)
@@ -485,6 +498,16 @@ func (r *TicketRepository) EnsureBusTicketType(ctx context.Context, tx pgx.Tx, n
 		&tt.SaleStart, &tt.SaleEnd, &tt.IsActive, &tt.IsMasked, &tt.MaxPerOrder, &tt.AllowedDomains, &tt.CreatedAt, &tt.UpdatedAt,
 	)
 	if err == nil {
+		if !tt.IsMasked || tt.Description != "Ticket navette festival" {
+			if _, updateErr := tx.Exec(ctx, `
+				UPDATE ticket_types
+				SET description = 'Ticket navette festival', is_masked = true
+				WHERE id = $1`, tt.ID); updateErr != nil {
+				return nil, fmt.Errorf("erreur normalisation ticket type bus: %w", updateErr)
+			}
+			tt.Description = "Ticket navette festival"
+			tt.IsMasked = true
+		}
 		return &tt, nil
 	}
 	if err != pgx.ErrNoRows {
@@ -493,7 +516,7 @@ func (r *TicketRepository) EnsureBusTicketType(ctx context.Context, tx pgx.Tx, n
 
 	err = tx.QueryRow(ctx, `
 		INSERT INTO ticket_types (name, description, price_cents, quantity_total, quantity_sold, sale_start, sale_end, is_active, is_masked, max_per_order, allowed_domains)
-		VALUES ($1, $2, 0, 999999, 0, NOW() - INTERVAL '1 day', NOW() + INTERVAL '10 years', true, false, 1, '{}')
+		VALUES ($1, $2, 0, 999999, 0, NOW() - INTERVAL '1 day', NOW() + INTERVAL '10 years', true, true, 1, '{}')
 		RETURNING id, name, description, price_cents, quantity_total, quantity_sold,
 		          sale_start, sale_end, is_active, is_masked, max_per_order, COALESCE(allowed_domains, '{}'), created_at, updated_at`,
 		name, "Ticket navette festival",
