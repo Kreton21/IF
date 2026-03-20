@@ -607,14 +607,15 @@ function setupBusForm() {
   const form = document.getElementById('bus-form');
   if (!form) return;
 
-  const roundTrip = document.getElementById('bus-round-trip');
-  roundTrip.addEventListener('change', () => {
-    const wrap = document.getElementById('bus-return-fields');
-    wrap.classList.toggle('hidden', !roundTrip.checked);
-  });
+  const tripType = document.getElementById('bus-trip-type');
+  if (tripType) {
+    tripType.addEventListener('change', refreshBusTripFields);
+  }
 
   const fromStation = document.getElementById('bus-from-station');
-  fromStation.addEventListener('change', refreshOutboundDepartureOptions);
+  if (fromStation) {
+    fromStation.addEventListener('change', refreshOutboundDepartureOptions);
+  }
 
   form.addEventListener('submit', submitBusCheckout);
 }
@@ -655,23 +656,34 @@ function populateBusFormOptions() {
   const stations = (state.busOptions.stations || []).filter(s => s.is_active);
   const outbound = (state.busOptions.outbound_departures || []).filter(d => d.is_active);
   const fromSelect = document.getElementById('bus-from-station');
-  const returnStationSelect = document.getElementById('bus-return-station');
 
   const stationOptions = ['<option value="">Choisir une station</option>']
     .concat(stations.map(s => `<option value="${s.id}">${s.name}</option>`));
 
   fromSelect.innerHTML = stationOptions.join('');
-  returnStationSelect.innerHTML = stationOptions.join('');
 
   if (stations.length > 0) {
     const stationWithOutbound = stations.find(s => outbound.some(d => d.station_id === s.id));
     const defaultStationID = stationWithOutbound ? stationWithOutbound.id : stations[0].id;
     fromSelect.value = defaultStationID;
-    returnStationSelect.value = defaultStationID;
   }
 
   refreshOutboundDepartureOptions();
   refreshReturnDepartureOptions();
+  refreshBusTripFields();
+}
+
+function refreshBusTripFields() {
+  const tripType = document.getElementById('bus-trip-type')?.value || 'outbound';
+  const outboundWrap = document.getElementById('bus-outbound-fields');
+  const returnWrap = document.getElementById('bus-return-fields');
+
+  if (outboundWrap) {
+    outboundWrap.classList.toggle('hidden', tripType === 'return');
+  }
+  if (returnWrap) {
+    returnWrap.classList.toggle('hidden', tripType === 'outbound');
+  }
 }
 
 function refreshOutboundDepartureOptions() {
@@ -709,6 +721,10 @@ async function submitBusCheckout(e) {
   e.preventDefault();
   if (state.busLoading) return;
 
+  const tripType = document.getElementById('bus-trip-type')?.value || 'outbound';
+  const needsOutbound = tripType === 'outbound' || tripType === 'round_trip';
+  const needsReturn = tripType === 'return' || tripType === 'round_trip';
+
   const phoneInput = document.getElementById('bus-phone');
   const normalizedPhone = normalizeFrenchPhone(phoneInput.value);
   if (!normalizedPhone) {
@@ -718,28 +734,35 @@ async function submitBusCheckout(e) {
   }
   phoneInput.value = normalizedPhone;
 
-  const isRoundTrip = document.getElementById('bus-round-trip').checked;
   const body = {
     customer_first_name: document.getElementById('bus-first-name').value.trim(),
     customer_last_name: document.getElementById('bus-last-name').value.trim(),
     customer_email: document.getElementById('bus-email').value.trim(),
     customer_phone: normalizedPhone,
-    from_station_id: document.getElementById('bus-from-station').value,
-    outbound_departure_id: document.getElementById('bus-outbound-time').value,
-    round_trip: isRoundTrip,
+    trip_type: tripType,
   };
 
-  if (isRoundTrip) {
-    body.return_departure_id = document.getElementById('bus-return-time').value;
-    body.return_station_id = document.getElementById('bus-return-station').value;
+  if (needsOutbound) {
+    body.from_station_id = document.getElementById('bus-from-station').value;
+    body.outbound_departure_id = document.getElementById('bus-outbound-time').value;
   }
 
-  if (!body.customer_first_name || !body.customer_last_name || !body.customer_email || !body.customer_phone || !body.from_station_id || !body.outbound_departure_id) {
+  if (needsReturn) {
+    body.return_departure_id = document.getElementById('bus-return-time').value;
+  }
+
+  if (!body.customer_first_name || !body.customer_last_name || !body.customer_email || !body.customer_phone) {
     showNotification('Veuillez remplir tous les champs obligatoires de la navette', 'warning');
     return;
   }
-  if (isRoundTrip && (!body.return_departure_id || !body.return_station_id)) {
-    showNotification('Veuillez renseigner les champs retour', 'warning');
+
+  if (needsOutbound && (!body.from_station_id || !body.outbound_departure_id)) {
+    showNotification('Veuillez renseigner les informations d\'aller', 'warning');
+    return;
+  }
+
+  if (needsReturn && !body.return_departure_id) {
+    showNotification('Veuillez renseigner l\'horaire retour', 'warning');
     return;
   }
 

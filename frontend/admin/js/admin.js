@@ -286,8 +286,12 @@ function switchTab(tabName) {
 
 async function loadStats() {
     try {
-        const response = await apiFetch(`${API_BASE}/admin/stats`);
-        const stats = await response.json();
+        const [statsResponse, busTicketsResponse] = await Promise.all([
+            apiFetch(`${API_BASE}/admin/stats`),
+            apiFetch(`${API_BASE}/admin/bus/tickets`),
+        ]);
+        const stats = await statsResponse.json();
+        const busTickets = await busTicketsResponse.json();
 
         const testEmailCard = document.getElementById('test-email-card');
         if (testEmailCard) {
@@ -309,9 +313,44 @@ async function loadStats() {
 
         // Commandes récentes
         renderRecentOrders(stats.recent_orders || []);
+
+        renderBusStats(busTickets || []);
     } catch (error) {
         console.error('Erreur chargement stats:', error);
     }
+}
+
+function switchStatsView(kind) {
+    const festivalPanel = document.getElementById('stats-festival-panel');
+    const busPanel = document.getElementById('stats-bus-panel');
+    const festivalBtn = document.getElementById('stats-tab-festival');
+    const busBtn = document.getElementById('stats-tab-bus');
+    if (!festivalPanel || !busPanel || !festivalBtn || !busBtn) return;
+
+    const showBus = kind === 'bus';
+    festivalPanel.classList.toggle('hidden', showBus);
+    busPanel.classList.toggle('hidden', !showBus);
+    festivalBtn.classList.toggle('btn-primary', !showBus);
+    busBtn.classList.toggle('btn-primary', showBus);
+}
+
+function renderBusStats(rows) {
+    const tickets = rows.length;
+    const validated = rows.filter(r => r.is_validated).length;
+    const roundTrip = rows.filter(r => r.is_round_trip).length;
+    const revenue = rows.reduce((sum, r) => sum + (r.order_total_cents || 0), 0);
+
+    const ticketsEl = document.getElementById('bus-stat-tickets');
+    const validatedEl = document.getElementById('bus-stat-validated');
+    const revenueEl = document.getElementById('bus-stat-revenue');
+    const roundTripEl = document.getElementById('bus-stat-roundtrip');
+
+    if (ticketsEl) ticketsEl.textContent = tickets;
+    if (validatedEl) validatedEl.textContent = validated;
+    if (revenueEl) revenueEl.textContent = formatPrice(revenue);
+    if (roundTripEl) roundTripEl.textContent = roundTrip;
+
+    renderBusTicketsTable(rows, 'stats-bus-tickets');
 }
 
 async function exportDatabaseCSV() {
@@ -1086,8 +1125,8 @@ function renderBusDeparturesTable(departures) {
     container.innerHTML = html + '</tbody></table>';
 }
 
-function renderBusTicketsTable(rows) {
-    const container = document.getElementById('bus-tickets-table');
+function renderBusTicketsTable(rows, containerId = 'bus-tickets-table') {
+    const container = document.getElementById(containerId);
     if (!container) return;
     if (!rows.length) {
         container.innerHTML = '<p style="color:#718096;">Aucun ticket navette</p>';
@@ -1095,7 +1134,7 @@ function renderBusTicketsTable(rows) {
     }
 
     let html = `<table><thead><tr>
-        <th>Commande</th><th>Client</th><th>Trajet</th><th>Départ</th><th>Retour</th><th>Scan</th>
+        <th>Commande</th><th>Client</th><th>Trajet</th><th>Départ</th><th>Retour</th><th>Total</th><th>Scan</th>
     </tr></thead><tbody>`;
 
     rows.forEach(r => {
@@ -1105,6 +1144,7 @@ function renderBusTicketsTable(rows) {
             <td>${r.from_station} → ${r.to_station}</td>
             <td>${formatDateTime(r.departure_time)}</td>
             <td>${r.return_departure_time ? formatDateTime(r.return_departure_time) : '-'}</td>
+            <td>${formatPrice(r.order_total_cents || 0)}</td>
             <td>${r.is_validated ? '✅' : '⏳'}</td>
         </tr>`;
     });

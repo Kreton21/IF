@@ -114,6 +114,13 @@
                 </div>
             </div>
 
+            <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button id="stats-tab-festival" class="btn btn-primary btn-sm" onclick="switchStatsView('festival')">🎟 Stats festival</button>
+                <button id="stats-tab-bus" class="btn btn-sm" onclick="switchStatsView('bus')">🚌 Stats bus</button>
+            </div>
+
+            <div id="stats-festival-panel">
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="stat-orders">-</div>
@@ -163,6 +170,33 @@
                 <div style="display:flex;align-items:center;gap:8px;">
                     <button id="btn-export-db-csv" class="btn btn-primary" onclick="exportDatabaseCSV()">Exporter CSV</button>
                     <span id="export-db-msg" class="form-msg hidden"></span>
+                </div>
+            </div>
+            </div>
+
+            <div id="stats-bus-panel" class="hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="bus-stat-tickets">-</div>
+                        <div class="stat-label">Tickets bus vendus</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bus-stat-validated">-</div>
+                        <div class="stat-label">Tickets bus validés</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bus-stat-revenue">-</div>
+                        <div class="stat-label">Chiffre d'affaires bus</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bus-stat-roundtrip">-</div>
+                        <div class="stat-label">Aller-retour</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🎫 Tickets bus vendus</h3>
+                    <div id="stats-bus-tickets" class="table-container"></div>
                 </div>
             </div>
         </section>

@@ -333,9 +333,10 @@ type BusCheckoutRequest struct {
 	CustomerFirstName  string `json:"customer_first_name"`
 	CustomerLastName   string `json:"customer_last_name"`
 	CustomerPhone      string `json:"customer_phone,omitempty"`
-	FromStationID      string `json:"from_station_id"`
-	OutboundDepartureID string `json:"outbound_departure_id"`
-	RoundTrip          bool   `json:"round_trip"`
+	TripType           string `json:"trip_type,omitempty"` // outbound | return | round_trip
+	FromStationID      string `json:"from_station_id,omitempty"`
+	OutboundDepartureID string `json:"outbound_departure_id,omitempty"`
+	RoundTrip          bool   `json:"round_trip,omitempty"` // rétrocompat
 	ReturnDepartureID  string `json:"return_departure_id,omitempty"`
 	ReturnStationID    string `json:"return_station_id,omitempty"`
 }
@@ -365,6 +366,7 @@ type UpdateBusDepartureRequest struct {
 type BusTicketAdminRow struct {
 	TicketID           string    `json:"ticket_id"`
 	OrderNumber        string    `json:"order_number"`
+	OrderTotalCents    int       `json:"order_total_cents"`
 	CustomerFirstName  string    `json:"customer_first_name"`
 	CustomerLastName   string    `json:"customer_last_name"`
 	CustomerEmail      string    `json:"customer_email"`

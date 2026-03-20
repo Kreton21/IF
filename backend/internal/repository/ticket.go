@@ -1080,7 +1080,7 @@ func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]mod
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT t.id, o.order_number, o.customer_first_name, o.customer_last_name, o.customer_email,
+		SELECT t.id, o.order_number, o.total_cents, o.customer_first_name, o.customer_last_name, o.customer_email,
 		       bt.from_station, bt.to_station, od.departure_time, rd.departure_time,
 		       bt.is_round_trip, t.is_validated, t.created_at
 		FROM bus_tickets bt
@@ -1100,7 +1100,7 @@ func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]mod
 		var row models.BusTicketAdminRow
 		var returnDeparture *time.Time
 		if err := rows.Scan(
-			&row.TicketID, &row.OrderNumber, &row.CustomerFirstName, &row.CustomerLastName, &row.CustomerEmail,
+			&row.TicketID, &row.OrderNumber, &row.OrderTotalCents, &row.CustomerFirstName, &row.CustomerLastName, &row.CustomerEmail,
 			&row.FromStation, &row.ToStation, &row.DepartureTime, &returnDeparture,
 			&row.IsRoundTrip, &row.IsValidated, &row.CreatedAt,
 		); err != nil {

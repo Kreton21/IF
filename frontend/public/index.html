@@ -175,10 +175,20 @@
         </div>
       </div>
 
-      <div id="bus-section" class="bus-section hidden rv">
-        <h3>🚌 Réserver une navette</h3>
-        <p>Destination aller : <strong>Festival</strong></p>
-        <form id="bus-form" class="bus-form">
+      <div id="bus-section" class="bus-section checkout-sec hidden rv" style="margin-top:18px;">
+        <div class="checkout-card">
+          <h3>🚌 Réserver une navette</h3>
+          <p class="sub">Choisissez votre trajet : aller, retour, ou aller-retour.</p>
+          <form id="bus-form" class="bus-form">
+            <div class="form-group">
+              <label for="bus-trip-type">Type de trajet *</label>
+              <select id="bus-trip-type" required>
+                <option value="outbound">Aller vers le festival</option>
+                <option value="return">Retour depuis le festival</option>
+                <option value="round_trip">Aller-retour</option>
+              </select>
+            </div>
+
           <div class="form-row">
             <div class="form-group">
               <label for="bus-first-name">Prénom *</label>
@@ -201,36 +211,32 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="bus-from-station">Station de départ *</label>
-              <select id="bus-from-station" required></select>
+            <div id="bus-outbound-fields">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="bus-from-station">Station de départ *</label>
+                  <select id="bus-from-station"></select>
+                </div>
+                <div class="form-group">
+                  <label for="bus-outbound-time">Horaire aller *</label>
+                  <select id="bus-outbound-time"></select>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="bus-outbound-time">Horaire aller *</label>
-              <select id="bus-outbound-time" required></select>
-            </div>
-          </div>
 
-          <div class="form-group bus-checkbox-wrap">
-            <label><input type="checkbox" id="bus-round-trip"> Aller-retour</label>
-          </div>
-
-          <div id="bus-return-fields" class="hidden">
-            <div class="form-row">
+            <div id="bus-return-fields" class="hidden">
+              <div class="form-row">
               <div class="form-group">
                 <label for="bus-return-time">Horaire retour *</label>
                 <select id="bus-return-time"></select>
               </div>
-              <div class="form-group">
-                <label for="bus-return-station">Dropoff (station retour) *</label>
-                <select id="bus-return-station"></select>
               </div>
             </div>
-          </div>
 
-          <button type="submit" id="bus-checkout-btn" class="btn-full">💳 Payer la navette</button>
-        </form>
+            <button type="submit" id="bus-checkout-btn" class="btn-full">💳 Payer la navette</button>
+          </form>
+        </div>
+
       </div>
     </div>
   </section>

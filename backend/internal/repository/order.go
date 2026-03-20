@@ -240,9 +240,25 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	// Totaux globaux
 	err := r.pool.QueryRow(ctx, `
 		SELECT 
-			COUNT(*) FILTER (WHERE status IN ('paid', 'confirmed')),
-			COALESCE(SUM(total_cents) FILTER (WHERE status IN ('paid', 'confirmed')), 0)
-		FROM orders
+			COUNT(*) FILTER (
+				WHERE o.status IN ('paid', 'confirmed')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM tickets t
+					JOIN bus_tickets bt ON bt.ticket_id = t.id
+					WHERE t.order_id = o.id
+				)
+			),
+			COALESCE(SUM(o.total_cents) FILTER (
+				WHERE o.status IN ('paid', 'confirmed')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM tickets t
+					JOIN bus_tickets bt ON bt.ticket_id = t.id
+					WHERE t.order_id = o.id
+				)
+			), 0)
+		FROM orders o
 	`).Scan(&stats.TotalOrders, &stats.TotalRevenueCents)
 	if err != nil {
 		return nil, fmt.Errorf("erreur stats globales: %w", err)
@@ -272,6 +288,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		LEFT JOIN tickets t ON t.ticket_type_id = tt.id
 		LEFT JOIN orders o ON o.id = t.order_id
 		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE tt.description IS DISTINCT FROM 'Ticket navette festival'
 		GROUP BY tt.id, tt.name, tt.price_cents, tt.quantity_total, tt.quantity_sold
 		ORDER BY tt.name
 	`)
@@ -295,10 +312,21 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		SELECT 
 			DATE(o.created_at)::text as sale_date,
 			COUNT(DISTINCT o.id) as order_count,
-			COALESCE(SUM((SELECT COUNT(*) FROM tickets t2 WHERE t2.order_id = o.id)), 0) as ticket_count,
+			COALESCE(SUM((
+				SELECT COUNT(*)
+				FROM tickets t2
+				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
+				WHERE t2.order_id = o.id AND bt2.ticket_id IS NULL
+			)), 0) as ticket_count,
 			COALESCE(SUM(o.total_cents), 0) as revenue
 		FROM orders o
 		WHERE o.status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
 		GROUP BY DATE(o.created_at)
 		ORDER BY DATE(o.created_at) DESC
 		LIMIT 30
@@ -323,8 +351,14 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		       COALESCE(customer_phone, ''), wants_camping, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
-		FROM orders
+		FROM orders o
 		WHERE status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
 		ORDER BY created_at DESC
 		LIMIT 10
 	`)

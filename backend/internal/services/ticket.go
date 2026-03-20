@@ -419,8 +419,29 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 	if req.CustomerEmail == "" || req.CustomerFirstName == "" || req.CustomerLastName == "" {
 		return nil, fmt.Errorf("email, prénom et nom sont requis")
 	}
-	if req.FromStationID == "" || req.OutboundDepartureID == "" {
-		return nil, fmt.Errorf("station de départ et horaire aller requis")
+
+	tripType := strings.TrimSpace(strings.ToLower(req.TripType))
+	if tripType == "" {
+		if req.RoundTrip {
+			tripType = "round_trip"
+		} else if req.OutboundDepartureID != "" {
+			tripType = "outbound"
+		} else if req.ReturnDepartureID != "" {
+			tripType = "return"
+		}
+	}
+	if tripType != "outbound" && tripType != "return" && tripType != "round_trip" {
+		return nil, fmt.Errorf("type de trajet invalide")
+	}
+
+	requireOutbound := tripType == "outbound" || tripType == "round_trip"
+	requireReturn := tripType == "return" || tripType == "round_trip"
+
+	if requireOutbound && req.OutboundDepartureID == "" {
+		return nil, fmt.Errorf("horaire aller requis")
+	}
+	if requireReturn && req.ReturnDepartureID == "" {
+		return nil, fmt.Errorf("horaire retour requis")
 	}
 
 	stations, err := s.ticketRepo.GetBusStations(ctx)
@@ -432,46 +453,50 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		stationByID[st.ID] = st
 	}
 
-	fromStation, ok := stationByID[req.FromStationID]
-	if !ok || !fromStation.IsActive {
-		return nil, fmt.Errorf("station de départ invalide")
-	}
+	totalCents := 0
 
-	outbound, err := s.ticketRepo.GetBusDepartureByID(ctx, req.OutboundDepartureID)
-	if err != nil {
-		return nil, fmt.Errorf("erreur récupération horaire aller: %w", err)
+	var outbound *models.BusDeparture
+	var outboundStation models.BusStation
+	if requireOutbound {
+		dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, req.OutboundDepartureID)
+		if depErr != nil {
+			return nil, fmt.Errorf("erreur récupération horaire aller: %w", depErr)
+		}
+		if dep == nil || dep.Direction != "to_festival" || !dep.IsActive {
+			return nil, fmt.Errorf("horaire aller invalide")
+		}
+		st, ok := stationByID[dep.StationID]
+		if !ok || !st.IsActive {
+			return nil, fmt.Errorf("station de départ invalide")
+		}
+		if req.FromStationID != "" && req.FromStationID != dep.StationID {
+			return nil, fmt.Errorf("l'horaire aller ne correspond pas à la station sélectionnée")
+		}
+		outbound = dep
+		outboundStation = st
+		totalCents += dep.PriceCents
 	}
-	if outbound == nil || outbound.Direction != "to_festival" || !outbound.IsActive {
-		return nil, fmt.Errorf("horaire aller invalide")
-	}
-	if outbound.StationID != req.FromStationID {
-		return nil, fmt.Errorf("l'horaire aller ne correspond pas à la station sélectionnée")
-	}
-
-	totalCents := outbound.PriceCents
 
 	var returnDeparture *models.BusDeparture
 	var returnStation models.BusStation
-	if req.RoundTrip {
-		if req.ReturnDepartureID == "" || req.ReturnStationID == "" {
-			return nil, fmt.Errorf("horaire retour et station de dépose requis")
+	if requireReturn {
+		dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, req.ReturnDepartureID)
+		if depErr != nil {
+			return nil, fmt.Errorf("erreur récupération horaire retour: %w", depErr)
 		}
-		ret, err := s.ticketRepo.GetBusDepartureByID(ctx, req.ReturnDepartureID)
-		if err != nil {
-			return nil, fmt.Errorf("erreur récupération horaire retour: %w", err)
-		}
-		if ret == nil || ret.Direction != "from_festival" || !ret.IsActive {
+		if dep == nil || dep.Direction != "from_festival" || !dep.IsActive {
 			return nil, fmt.Errorf("horaire retour invalide")
 		}
-		returnDeparture = ret
-
-		st, ok := stationByID[req.ReturnStationID]
+		st, ok := stationByID[dep.StationID]
 		if !ok || !st.IsActive {
-			return nil, fmt.Errorf("station de dépose invalide")
+			return nil, fmt.Errorf("station de retour invalide")
 		}
+		if req.ReturnStationID != "" && req.ReturnStationID != dep.StationID {
+			return nil, fmt.Errorf("l'horaire retour ne correspond pas à la station sélectionnée")
+		}
+		returnDeparture = dep
 		returnStation = st
-
-		totalCents += returnDeparture.PriceCents
+		totalCents += dep.PriceCents
 	}
 
 	tx, err := s.orderRepo.BeginTx(ctx)
@@ -480,8 +505,10 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 	}
 	defer tx.Rollback(ctx)
 
-	if err := s.ticketRepo.ReserveBusDepartureSeat(ctx, tx, outbound.ID); err != nil {
-		return nil, err
+	if outbound != nil {
+		if err := s.ticketRepo.ReserveBusDepartureSeat(ctx, tx, outbound.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	if returnDeparture != nil {
@@ -505,8 +532,10 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		return nil, fmt.Errorf("erreur création commande bus: %w", err)
 	}
 
-	if err := s.ticketRepo.SaveBusOrderRide(ctx, tx, order.ID, outbound.ID, "outbound", fromStation.Name, "Festival"); err != nil {
-		return nil, err
+	if outbound != nil {
+		if err := s.ticketRepo.SaveBusOrderRide(ctx, tx, order.ID, outbound.ID, "outbound", outboundStation.Name, "Festival"); err != nil {
+			return nil, err
+		}
 	}
 
 	if returnDeparture != nil {
@@ -519,9 +548,14 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		return nil, fmt.Errorf("erreur commit commande bus: %w", err)
 	}
 
-	rideLabel := fmt.Sprintf("Navette %s → Festival", fromStation.Name)
-	if returnDeparture != nil {
-		rideLabel += fmt.Sprintf(" + Retour Festival → %s", returnStation.Name)
+	rideLabel := "Navette"
+	switch tripType {
+	case "outbound":
+		rideLabel = fmt.Sprintf("Navette %s → Festival", outboundStation.Name)
+	case "return":
+		rideLabel = fmt.Sprintf("Navette Festival → %s", returnStation.Name)
+	case "round_trip":
+		rideLabel = fmt.Sprintf("Navette %s → Festival + Retour Festival → %s", outboundStation.Name, returnStation.Name)
 	}
 
 	payReq := CheckoutIntentRequest{
@@ -541,6 +575,7 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 			"order_id":     order.ID,
 			"order_number": order.OrderNumber,
 			"order_kind":   "bus",
+			"trip_type":    tripType,
 			"payer_phone":  strings.TrimSpace(req.CustomerPhone),
 		},
 	}
@@ -1062,26 +1097,36 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 	}
 
 	outboundDepartureID := ""
+	hasOutbound := false
+	hasReturn := false
 	fromStation := ""
-	toStation := "Festival"
+	toStation := ""
 	isRoundTrip := false
 	var returnDepartureID *string
-	returnTo := ""
 
 	for _, ride := range rides {
 		if ride["ride_kind"] == "outbound" {
 			outboundDepartureID = ride["departure_id"]
+			hasOutbound = true
 			fromStation = ride["from_station"]
+			toStation = ride["to_station"]
 		} else if ride["ride_kind"] == "return" {
+			hasReturn = true
 			id := ride["departure_id"]
-			returnDepartureID = &id
-			isRoundTrip = true
-			returnTo = ride["to_station"]
+			if hasOutbound {
+				returnDepartureID = &id
+				isRoundTrip = true
+				toStation = ride["to_station"]
+			} else {
+				outboundDepartureID = id
+				fromStation = ride["from_station"]
+				toStation = ride["to_station"]
+			}
 		}
 	}
 
 	if outboundDepartureID == "" {
-		return fmt.Errorf("ride aller introuvable")
+		return fmt.Errorf("trajet navette introuvable")
 	}
 
 	tx, err := s.ticketRepo.BeginTx(ctx)
@@ -1103,6 +1148,10 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 	busLabel := "Navette"
 	if isRoundTrip {
 		busLabel = "Navette Aller-Retour"
+	} else if hasReturn && !hasOutbound {
+		busLabel = "Navette Retour"
+	} else if hasOutbound {
+		busLabel = "Navette Aller"
 	}
 
 	busType, err := s.ticketRepo.EnsureBusTicketType(ctx, tx, busLabel)
@@ -1123,8 +1172,8 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		return fmt.Errorf("erreur création ticket bus: %w", err)
 	}
 
-	if isRoundTrip {
-		toStation = returnTo
+	if toStation == "" {
+		toStation = "Festival"
 	}
 	if err := s.ticketRepo.SaveBusTicketDetails(ctx, tx, ticket.ID, outboundDepartureID, returnDepartureID, fromStation, toStation, isRoundTrip); err != nil {
 		return err
@@ -1145,9 +1194,9 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 	}
 
 	customerName := fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName)
-	details := fmt.Sprintf("%s → Festival", fromStation)
+	details := fmt.Sprintf("%s → %s", fromStation, toStation)
 	if isRoundTrip {
-		details += fmt.Sprintf(" · Retour Festival → %s", returnTo)
+		details += " · Aller-retour"
 	}
 
 	if err := s.emailService.SendBusTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
