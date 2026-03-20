@@ -253,13 +253,11 @@ function renderTickets() {
     const selectedCat = categories.find(c => c.id === selectedCatId);
 
     // Calculate remaining based on selected category or ticket type total
-    let remaining, totalQty;
+    let remaining;
     if (selectedCat) {
       remaining = selectedCat.quantity_allocated - selectedCat.quantity_sold;
-      totalQty = selectedCat.quantity_allocated;
     } else {
       remaining = (tt.quantity_total || 0) - (tt.quantity_sold || 0);
-      totalQty = tt.quantity_total || 0;
     }
 
     const now = new Date();
@@ -268,7 +266,6 @@ function renderTickets() {
     const isActive = tt.is_active !== undefined ? tt.is_active : true;
     const isOnSale = isActive && (!saleStart || now >= saleStart) && (!saleEnd || now <= saleEnd) && remaining > 0;
     const isSoldOut = remaining <= 0;
-    const isLow = remaining > 0 && remaining <= 20;
     const notYet = isActive && saleStart && now < saleStart;
     const isBest = idx === 0 && !isSoldOut;
     const inCart = (state.cart[tt.id] || 0) > 0;
@@ -280,10 +277,8 @@ function renderTickets() {
     if (selectedCat) {
       if (isSoldOut) {
         availHtml = '<div class="tkt-avail sold-out">❌ Complet pour cette catégorie</div>';
-      } else if (isLow) {
-        availHtml = `<div class="tkt-avail low">⚡ Plus que ${remaining} places !</div>`;
       } else if (isOnSale) {
-        availHtml = `<div class="tkt-avail available">${remaining} places disponibles</div>`;
+        availHtml = '<div class="tkt-avail available">✅ Catégorie disponible</div>';
       }
     } else if (notYet) {
       availHtml = '<div class="tkt-avail not-yet">🕐 Vente pas encore ouverte</div>';
@@ -297,10 +292,8 @@ function renderTickets() {
         <select onchange="selectCategory('${tt.id}', this.value)">
           <option value="">— Sélectionner —</option>
           ${categories.map(c => {
-            const cRemaining = c.quantity_allocated - c.quantity_sold;
-            const disabled = cRemaining <= 0 ? 'disabled' : '';
             const sel = (selectedCatId === c.id) ? 'selected' : '';
-            return `<option value="${c.id}" ${disabled} ${sel}>${c.name} (${cRemaining} places)</option>`;
+            return `<option value="${c.id}" ${sel}>${c.name}</option>`;
           }).join('')}
         </select>
       </div>`;
@@ -352,6 +345,20 @@ function renderTickets() {
 }
 
 function selectCategory(ticketTypeId, categoryId) {
+  const ticketType = state.ticketTypes.find(t => t.id === ticketTypeId);
+  const selectedCategory = (ticketType?.categories || []).find(c => c.id === categoryId);
+
+  if (selectedCategory) {
+    const remaining = selectedCategory.quantity_allocated - selectedCategory.quantity_sold;
+    if (remaining <= 0) {
+      delete state.selectedCategories[ticketTypeId];
+      delete state.cart[ticketTypeId];
+      renderTickets();
+      alert('Plus de places, veuillez réesayer ultérieurement.');
+      return;
+    }
+  }
+
   if (categoryId) {
     state.selectedCategories[ticketTypeId] = categoryId;
   } else {
@@ -471,12 +478,23 @@ function setupCheckoutForm() {
       customer_last_name: document.getElementById('lastName').value.trim(),
       customer_email: document.getElementById('email').value.trim(),
       customer_phone: document.getElementById('phone').value.trim(),
+      date_of_birth: document.getElementById('dateOfBirth').value,
       wants_camping: document.getElementById('wants-camping')?.checked || false,
       items: items,
     };
 
     if (!body.customer_first_name || !body.customer_last_name || !body.customer_email) {
       showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+      return;
+    }
+
+    if (!body.date_of_birth) {
+      showNotification('Veuillez renseigner votre date de naissance', 'warning');
+      return;
+    }
+
+    if (!isAtLeast18(body.date_of_birth)) {
+      showNotification('Accès réservé aux personnes de 18 ans et plus', 'error');
       return;
     }
 
@@ -839,6 +857,20 @@ function formatDateTime(dateStr) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function isAtLeast18(dateOfBirth) {
+  if (!dateOfBirth) return false;
+  const dob = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(dob.getTime())) return false;
+
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDiff = now.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+    age -= 1;
+  }
+  return age >= 18;
 }
 
 function normalizeFrenchPhone(raw) {

@@ -132,6 +132,7 @@ type CheckoutRequest struct {
 	CustomerFirstName string        `json:"customer_first_name"`
 	CustomerLastName  string        `json:"customer_last_name"`
 	CustomerPhone     string        `json:"customer_phone,omitempty"`
+	DateOfBirth       string        `json:"date_of_birth,omitempty"`
 	WantsCamping      bool          `json:"wants_camping,omitempty"`
 	Items             []CheckoutItem `json:"items"`
 }

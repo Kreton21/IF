@@ -242,6 +242,10 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 
 // CreateCheckout crée une commande et redirige vers HelloAsso
 func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutRequest, ipAddress, userAgent string) (*models.CheckoutResponse, error) {
+	if !isAdultFromDate(req.DateOfBirth) {
+		return nil, fmt.Errorf("réservé aux personnes de 18 ans et plus")
+	}
+
 	// 1. Valider les items et calculer le total
 	totalCents := 0
 	var validatedItems []struct {
@@ -1013,6 +1017,26 @@ func joinStrings(ss []string) string {
 		result += s
 	}
 	return result
+}
+
+func isAdultFromDate(dateOfBirth string) bool {
+	dob, err := time.Parse("2006-01-02", strings.TrimSpace(dateOfBirth))
+	if err != nil {
+		return false
+	}
+
+	now := time.Now()
+	if dob.After(now) {
+		return false
+	}
+
+	age := now.Year() - dob.Year()
+	birthdayThisYear := time.Date(now.Year(), dob.Month(), dob.Day(), 0, 0, 0, 0, now.Location())
+	if now.Before(birthdayThisYear) {
+		age--
+	}
+
+	return age >= 18
 }
 
 func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, order *models.Order, paymentID string) error {

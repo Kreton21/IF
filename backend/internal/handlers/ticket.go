@@ -60,6 +60,10 @@ func (h *TicketHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Email, prénom et nom sont requis"})
 		return
 	}
+	if strings.TrimSpace(req.DateOfBirth) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Date de naissance requise"})
+		return
+	}
 	if len(req.Items) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Aucun ticket sélectionné"})
 		return
