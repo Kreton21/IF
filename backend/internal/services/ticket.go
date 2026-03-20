@@ -443,6 +443,9 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 	if requireReturn && req.ReturnDepartureID == "" {
 		return nil, fmt.Errorf("horaire retour requis")
 	}
+	if requireReturn && req.ReturnStationID == "" {
+		return nil, fmt.Errorf("station de retour requise")
+	}
 
 	stations, err := s.ticketRepo.GetBusStations(ctx)
 	if err != nil {
@@ -491,7 +494,7 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		if !ok || !st.IsActive {
 			return nil, fmt.Errorf("station de retour invalide")
 		}
-		if req.ReturnStationID != "" && req.ReturnStationID != dep.StationID {
+		if req.ReturnStationID != dep.StationID {
 			return nil, fmt.Errorf("l'horaire retour ne correspond pas à la station sélectionnée")
 		}
 		returnDeparture = dep

@@ -305,28 +305,34 @@ a { text-decoration:none; color:inherit; }
 }
 
 .bus-section {
-  margin-top:22px;
-  background:#fff;
-  border-radius:16px;
-  padding:22px;
-  box-shadow:var(--sh);
+  margin-top:20px;
+  background:transparent;
+  padding:0;
+  box-shadow:none;
+}
+
+.bus-section .checkout-card {
+  max-width:760px;
+  border:1px solid rgba(123,63,168,.12);
 }
 
 .bus-section h3 {
-  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 
-.bus-section p {
-  color:var(--muted);
-  margin-bottom:14px;
+.bus-form {
+  margin-top:10px;
 }
 
 .bus-form .form-row {
-  margin-bottom:10px;
+  margin-bottom:4px;
 }
 
-.bus-checkbox-wrap {
-  margin:8px 0 14px;
+.bus-form #bus-outbound-fields,
+.bus-form #bus-return-fields {
+  margin-top:2px;
 }
 
 .camping-section {
@@ -463,18 +469,32 @@ a { text-decoration:none; color:inherit; }
   display:block; font-weight:700; margin-bottom:6px;
   font-size:.82rem; letter-spacing:.5px; color:var(--text);
 }
-.form-group input {
+.form-group input,
+.form-group select {
   width:100%; padding:13px 18px;
   border:2px solid #e8e0f0; border-radius:12px;
   font-family:'Montserrat',sans-serif; font-size:.9rem;
   color:var(--text); transition:border-color .2s;
   background:var(--offwhite);
 }
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline:none; border-color:var(--rose);
   background:#fff;
 }
 .form-group input::placeholder { color:var(--muted); }
+.form-group select {
+  appearance:none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size:6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+  padding-right:40px;
+}
 .form-group small { font-size:.72rem; color:var(--muted); margin-top:3px; display:block; }
 
 /* Order summary in checkout */

@@ -616,6 +616,10 @@ function setupBusForm() {
   if (fromStation) {
     fromStation.addEventListener('change', refreshOutboundDepartureOptions);
   }
+  const returnStation = document.getElementById('bus-return-station');
+  if (returnStation) {
+    returnStation.addEventListener('change', refreshReturnDepartureOptions);
+  }
 
   form.addEventListener('submit', submitBusCheckout);
 }
@@ -656,16 +660,26 @@ function populateBusFormOptions() {
   const stations = (state.busOptions.stations || []).filter(s => s.is_active);
   const outbound = (state.busOptions.outbound_departures || []).filter(d => d.is_active);
   const fromSelect = document.getElementById('bus-from-station');
+  const returnStationSelect = document.getElementById('bus-return-station');
 
   const stationOptions = ['<option value="">Choisir une station</option>']
     .concat(stations.map(s => `<option value="${s.id}">${s.name}</option>`));
 
   fromSelect.innerHTML = stationOptions.join('');
+  if (returnStationSelect) {
+    returnStationSelect.innerHTML = stationOptions.join('');
+  }
 
   if (stations.length > 0) {
     const stationWithOutbound = stations.find(s => outbound.some(d => d.station_id === s.id));
     const defaultStationID = stationWithOutbound ? stationWithOutbound.id : stations[0].id;
     fromSelect.value = defaultStationID;
+    if (returnStationSelect) {
+      const returnDepartures = (state.busOptions.return_departures || []).filter(d => d.is_active);
+      const stationWithReturn = stations.find(s => returnDepartures.some(d => d.station_id === s.id));
+      const defaultReturnStationID = stationWithReturn ? stationWithReturn.id : stations[0].id;
+      returnStationSelect.value = defaultReturnStationID;
+    }
   }
 
   refreshOutboundDepartureOptions();
@@ -706,7 +720,8 @@ function refreshOutboundDepartureOptions() {
 
 function refreshReturnDepartureOptions() {
   const select = document.getElementById('bus-return-time');
-  const departures = (state.busOptions?.return_departures || []).filter(d => d.is_active);
+  const selectedStation = document.getElementById('bus-return-station')?.value;
+  const departures = (state.busOptions?.return_departures || []).filter(d => d.is_active && (!selectedStation || d.station_id === selectedStation));
 
   let html = '<option value="">Choisir un horaire retour</option>';
   html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
@@ -748,6 +763,7 @@ async function submitBusCheckout(e) {
   }
 
   if (needsReturn) {
+    body.return_station_id = document.getElementById('bus-return-station').value;
     body.return_departure_id = document.getElementById('bus-return-time').value;
   }
 
@@ -761,8 +777,8 @@ async function submitBusCheckout(e) {
     return;
   }
 
-  if (needsReturn && !body.return_departure_id) {
-    showNotification('Veuillez renseigner l\'horaire retour', 'warning');
+  if (needsReturn && (!body.return_station_id || !body.return_departure_id)) {
+    showNotification('Veuillez renseigner la gare et l\'horaire retour', 'warning');
     return;
   }
 
