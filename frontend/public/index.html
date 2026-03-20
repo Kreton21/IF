@@ -253,7 +253,7 @@
         </div>
         <div class="form-group">
           <label for="email">Email *</label>
-          <input type="email" id="email" name="email" required placeholder="jean.dupont@email.com">
+          <input type="email" id="email" name="email" required readonly placeholder="jean.dupont@email.com">
           <small>Vos billets avec QR code seront envoyés à cette adresse</small>
         </div>
         <div class="form-group">
@@ -263,7 +263,7 @@
 
         <div class="form-group">
           <label for="dateOfBirth">Date de naissance *</label>
-          <input type="date" id="dateOfBirth" name="dateOfBirth" required>
+          <input type="text" id="dateOfBirth" name="dateOfBirth" required inputmode="numeric" placeholder="jj/mm/aaaa" pattern="^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$">
           <small>Accès réservé aux personnes de 18 ans et plus</small>
         </div>
 
@@ -617,7 +617,7 @@
             <label for="camping-claim-email">Email de la commande</label>
             <input type="email" id="camping-claim-email" required placeholder="prenom.nom@email.com">
           </div>
-          <button type="submit" class="btn-otl">Activer mon option camping</button>
+          <button id="camping-claim-btn" type="button" class="btn-otl">Activer mon option camping</button>
           <p id="camping-claim-msg" class="camping-claim-msg hidden"></p>
         </form>
       </div>

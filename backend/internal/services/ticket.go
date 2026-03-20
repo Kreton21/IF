@@ -1020,7 +1020,20 @@ func joinStrings(ss []string) string {
 }
 
 func isAdultFromDate(dateOfBirth string) bool {
-	dob, err := time.Parse("2006-01-02", strings.TrimSpace(dateOfBirth))
+	trimmed := strings.TrimSpace(dateOfBirth)
+	if trimmed == "" {
+		return false
+	}
+
+	var dob time.Time
+	var err error
+
+	if strings.Contains(trimmed, "/") {
+		dob, err = time.Parse("02/01/2006", trimmed)
+	} else {
+		dob, err = time.Parse("2006-01-02", trimmed)
+	}
+
 	if err != nil {
 		return false
 	}

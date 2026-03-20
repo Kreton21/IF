@@ -190,6 +190,11 @@ function resetEmailGate() {
   document.getElementById('tkt-step2').classList.add('hidden');
   document.getElementById('checkout-section').classList.add('hidden');
   document.getElementById('gate-email').value = '';
+  const emailField = document.getElementById('email');
+  if (emailField) {
+    emailField.value = '';
+    emailField.readOnly = false;
+  }
 }
 
 // ══════════════════════════════════════
@@ -224,7 +229,10 @@ async function loadTicketTypes(email) {
 
     // Pre-fill email in checkout form
     const emailField = document.getElementById('email');
-    if (emailField) emailField.value = email;
+    if (emailField) {
+      emailField.value = email;
+      emailField.readOnly = true;
+    }
     const claimEmailField = document.getElementById('camping-claim-email');
     if (claimEmailField && !claimEmailField.value) claimEmailField.value = email;
 
@@ -476,15 +484,20 @@ function setupCheckoutForm() {
     const body = {
       customer_first_name: document.getElementById('firstName').value.trim(),
       customer_last_name: document.getElementById('lastName').value.trim(),
-      customer_email: document.getElementById('email').value.trim(),
+      customer_email: (state.customerEmail || document.getElementById('email').value).trim(),
       customer_phone: document.getElementById('phone').value.trim(),
-      date_of_birth: document.getElementById('dateOfBirth').value,
+      date_of_birth: normalizeDateOfBirth(document.getElementById('dateOfBirth').value),
       wants_camping: document.getElementById('wants-camping')?.checked || false,
       items: items,
     };
 
     if (!body.customer_first_name || !body.customer_last_name || !body.customer_email) {
       showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+      return;
+    }
+
+    if (state.customerEmail && body.customer_email.toLowerCase() !== state.customerEmail.toLowerCase()) {
+      showNotification('L\'email utilisé pour les billets doit rester celui validé au début', 'warning');
       return;
     }
 
@@ -539,11 +552,11 @@ function setupCheckoutForm() {
 
 function setupCampingClaimForm() {
   const form = document.getElementById('camping-claim-form');
+  const submitBtn = document.getElementById('camping-claim-btn');
   const msg = document.getElementById('camping-claim-msg');
   if (!form || !msg) return;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  const submitClaim = async () => {
     const email = document.getElementById('camping-claim-email').value.trim();
 
     if (!email || !email.includes('@')) {
@@ -575,7 +588,19 @@ function setupCampingClaimForm() {
       msg.style.color = '#e53e3e';
       msg.classList.remove('hidden');
     }
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitClaim();
   });
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      submitClaim();
+    });
+  }
 }
 
 function setupBusForm() {
@@ -860,8 +885,7 @@ function formatDateTime(dateStr) {
 }
 
 function isAtLeast18(dateOfBirth) {
-  if (!dateOfBirth) return false;
-  const dob = new Date(`${dateOfBirth}T00:00:00`);
+  const dob = parseDateOfBirth(dateOfBirth);
   if (Number.isNaN(dob.getTime())) return false;
 
   const now = new Date();
@@ -871,6 +895,44 @@ function isAtLeast18(dateOfBirth) {
     age -= 1;
   }
   return age >= 18;
+}
+
+function normalizeDateOfBirth(input) {
+  const trimmed = (input || '').trim();
+  if (!trimmed) return '';
+
+  const slashMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, dd, mm, yyyy] = slashMatch;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return trimmed;
+}
+
+function parseDateOfBirth(input) {
+  const normalized = normalizeDateOfBirth(input);
+  if (!normalized) return new Date('invalid');
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!isoMatch) return new Date('invalid');
+
+  const [, yyyy, mm, dd] = isoMatch;
+  const year = Number(yyyy);
+  const month = Number(mm);
+  const day = Number(dd);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return new Date('invalid');
+  }
+
+  return date;
 }
 
 function normalizeFrenchPhone(raw) {
