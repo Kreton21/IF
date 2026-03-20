@@ -94,7 +94,7 @@ function initHamburger() {
 // COUNTDOWN
 // ══════════════════════════════════════
 function initCountdown() {
-  const cdTarget = new Date('2026-03-05T10:00:00');
+  const cdTarget = new Date('2026-05-30T15:00:00');
   function updateCD() {
     const diff = cdTarget - new Date();
     if (diff <= 0) {
