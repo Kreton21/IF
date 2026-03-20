@@ -486,7 +486,7 @@ function setupCheckoutForm() {
       customer_last_name: document.getElementById('lastName').value.trim(),
       customer_email: (state.customerEmail || document.getElementById('email').value).trim(),
       customer_phone: document.getElementById('phone').value.trim(),
-      date_of_birth: normalizeDateOfBirth(document.getElementById('dateOfBirth').value),
+      date_of_birth: document.getElementById('dateOfBirth').value,
       wants_camping: document.getElementById('wants-camping')?.checked || false,
       items: items,
     };
@@ -885,7 +885,8 @@ function formatDateTime(dateStr) {
 }
 
 function isAtLeast18(dateOfBirth) {
-  const dob = parseDateOfBirth(dateOfBirth);
+  if (!dateOfBirth) return false;
+  const dob = new Date(`${dateOfBirth}T00:00:00`);
   if (Number.isNaN(dob.getTime())) return false;
 
   const now = new Date();
@@ -895,44 +896,6 @@ function isAtLeast18(dateOfBirth) {
     age -= 1;
   }
   return age >= 18;
-}
-
-function normalizeDateOfBirth(input) {
-  const trimmed = (input || '').trim();
-  if (!trimmed) return '';
-
-  const slashMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, dd, mm, yyyy] = slashMatch;
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  return trimmed;
-}
-
-function parseDateOfBirth(input) {
-  const normalized = normalizeDateOfBirth(input);
-  if (!normalized) return new Date('invalid');
-
-  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!isoMatch) return new Date('invalid');
-
-  const [, yyyy, mm, dd] = isoMatch;
-  const year = Number(yyyy);
-  const month = Number(mm);
-  const day = Number(dd);
-  const date = new Date(year, month - 1, day);
-
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return new Date('invalid');
-  }
-
-  return date;
 }
 
 function normalizeFrenchPhone(raw) {
