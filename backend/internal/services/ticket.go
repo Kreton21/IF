@@ -290,7 +290,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	// 2. Réserver les tickets (avec lock pessimiste)
-	err := s.ticketRepo.ReserveTickets(ctx, req.Items)
+	err = s.ticketRepo.ReserveTickets(ctx, req.Items)
 	if err != nil {
 		return nil, fmt.Errorf("erreur réservation: %w", err)
 	}
