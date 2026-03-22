@@ -104,7 +104,7 @@ function showDashboard() {
     if (passwordPanel) {
         passwordPanel.classList.add('hidden');
     }
-    document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"], .tab[data-tab="bus"]').forEach(tab => {
+    document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"], .tab[data-tab="bus"], .tab[data-tab="referral"]').forEach(tab => {
         tab.style.display = isStaff ? 'none' : '';
     });
 
@@ -273,10 +273,94 @@ function switchTab(tabName) {
         case 'orders': loadOrders(); break;
         case 'tickets': loadTicketTypesAdmin(); break;
         case 'bus': loadBusAdminData(); break;
+        case 'referral': loadReferralLinks(); break;
         case 'scanner':
             document.getElementById('qr-input').focus();
             loadValidationStats();
             break;
+    }
+}
+
+async function loadReferralLinks() {
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/referrals`);
+        const rows = await response.json();
+        renderReferralLinks(rows || []);
+    } catch (error) {
+        console.error('Erreur chargement parrainage:', error);
+    }
+}
+
+async function createReferralLink() {
+    const input = document.getElementById('referral-name');
+    const msg = document.getElementById('referral-msg');
+    if (!input || !msg) return;
+
+    const name = input.value.trim();
+    msg.classList.add('hidden');
+
+    if (!name) {
+        msg.textContent = '❌ Nom de lien requis';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/referrals`, {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur création lien parrainage');
+        }
+
+        msg.textContent = '✅ Lien de parrainage créé';
+        msg.className = 'form-msg success-text';
+        input.value = '';
+        await loadReferralLinks();
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+function renderReferralLinks(rows) {
+    const container = document.getElementById('referral-links-table');
+    if (!container) return;
+
+    if (!rows.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucun lien de parrainage</p>';
+        return;
+    }
+
+    let html = `<table>
+        <thead><tr>
+            <th>Nom</th><th>Lien</th><th>Clics</th><th>Visiteurs uniques</th><th>Commandes converties</th><th>Tickets convertis</th><th>CA converti</th><th>Action</th>
+        </tr></thead><tbody>`;
+
+    rows.forEach(row => {
+        html += `<tr>
+            <td><strong>${row.name}</strong><br><small>${formatDateTime(row.created_at)}</small></td>
+            <td><a href="${row.share_url}" target="_blank" rel="noopener noreferrer">${row.share_url}</a></td>
+            <td>${row.click_count}</td>
+            <td>${row.unique_visitors}</td>
+            <td>${row.converted_orders}</td>
+            <td>${row.converted_tickets}</td>
+            <td><strong>${formatPrice(row.converted_revenue_cents || 0)}</strong></td>
+            <td><button class="btn btn-sm btn-primary" onclick="copyReferralLink('${escapeAttr(row.share_url)}')">Copier</button></td>
+        </tr>`;
+    });
+
+    container.innerHTML = html + '</tbody></table>';
+}
+
+async function copyReferralLink(url) {
+    try {
+        await navigator.clipboard.writeText(url);
+        alert('Lien copié');
+    } catch (_) {
+        prompt('Copiez ce lien :', url);
     }
 }
 

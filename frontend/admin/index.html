@@ -97,6 +97,7 @@
             <button class="tab" data-tab="orders" onclick="switchTab('orders')">📋 Commandes</button>
             <button class="tab" data-tab="tickets" onclick="switchTab('tickets')">🎟 Tickets</button>
             <button class="tab" data-tab="bus" onclick="switchTab('bus')">🚌 Navettes</button>
+            <button class="tab" data-tab="referral" onclick="switchTab('referral')">🤝 Parrainage</button>
             <button class="tab" data-tab="scanner" onclick="switchTab('scanner')">📱 Scanner QR</button>
         </nav>
 
@@ -333,6 +334,27 @@
             <div class="card">
                 <h3>🎫 Tickets navette</h3>
                 <div id="bus-tickets-table" class="table-container"></div>
+            </div>
+        </section>
+
+        <section id="tab-referral" class="tab-content">
+            <div class="card">
+                <h3>🤝 Créer un lien de parrainage</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nom du lien</label>
+                        <input type="text" id="referral-name" placeholder="BDE Polytech, Instagram, Ambassadeur A...">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button class="btn btn-primary" onclick="createReferralLink()">Créer le lien</button>
+                    </div>
+                </div>
+                <span id="referral-msg" class="form-msg hidden"></span>
+            </div>
+
+            <div class="card">
+                <h3>🔎 Performance des liens</h3>
+                <div id="referral-links-table" class="table-container"></div>
             </div>
         </section>
 

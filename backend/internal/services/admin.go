@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -264,4 +265,35 @@ func (s *AdminService) ValidateJWT(tokenStr string) (jwt.MapClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func (s *AdminService) CreateReferralLink(ctx context.Context, req models.CreateReferralLinkRequest, baseURL string) (*models.CreateReferralLinkResponse, error) {
+	link, err := s.orderRepo.CreateReferralLink(ctx, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	row := models.ReferralLinkRow{
+		ID:       link.ID,
+		Name:     link.Name,
+		Code:     link.Code,
+		IsActive: link.IsActive,
+		ShareURL: strings.TrimRight(baseURL, "/") + "/r/" + link.Code,
+	}
+
+	return &models.CreateReferralLinkResponse{Link: row}, nil
+}
+
+func (s *AdminService) ListReferralLinks(ctx context.Context, baseURL string) ([]models.ReferralLinkRow, error) {
+	rows, err := s.orderRepo.ListReferralLinks(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := strings.TrimRight(baseURL, "/") + "/r/"
+	for idx := range rows {
+		rows[idx].ShareURL = prefix + rows[idx].Code
+	}
+
+	return rows, nil
 }

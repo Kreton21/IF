@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -73,31 +75,15 @@ func (h *TicketHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if refCookie, err := r.Cookie("if_ref_code"); err == nil && refCookie != nil {
+		req.ReferralCode = strings.TrimSpace(refCookie.Value)
+	}
+	if visitorCookie, err := r.Cookie("if_ref_vid"); err == nil && visitorCookie != nil {
+		req.ReferralVisitorID = strings.TrimSpace(visitorCookie.Value)
+	}
+
 	// Récupérer l'IP du client
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.Header.Get("X-Real-IP")
-	}
-	if ip == "" {
-		// Handle IPv6 [::1]:port format
-		addr := r.RemoteAddr
-		if strings.HasPrefix(addr, "[") {
-			// IPv6: [::1]:port
-			if idx := strings.LastIndex(addr, "]"); idx != -1 {
-				ip = addr[1:idx]
-			} else {
-				ip = "127.0.0.1"
-			}
-		} else if idx := strings.LastIndex(addr, ":"); idx != -1 {
-			ip = addr[:idx]
-		} else {
-			ip = addr
-		}
-	}
-	// Fallback to localhost if empty
-	if ip == "" {
-		ip = "127.0.0.1"
-	}
+	ip := extractClientIP(r)
 
 	resp, err := h.ticketService.CreateCheckout(r.Context(), req, ip, r.UserAgent())
 	if err != nil {
@@ -107,6 +93,51 @@ func (h *TicketHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, resp)
+}
+
+func (h *TicketHandler) HandleReferralRedirect(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimSpace(strings.ToLower(chi.URLParam(r, "code")))
+	if code == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	link, err := h.ticketService.GetReferralByCode(r.Context(), code)
+	if err != nil {
+		log.Printf("Erreur lookup lien parrainage %s: %v", code, err)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	if link == nil || !link.IsActive {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	visitorID := getOrCreateVisitorID(r)
+	ip := extractClientIP(r)
+
+	if err := h.ticketService.TrackReferralClick(r.Context(), link.ID, visitorID, ip, r.UserAgent()); err != nil {
+		log.Printf("Erreur tracking clic parrainage %s: %v", link.Code, err)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "if_ref_code",
+		Value:    link.Code,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "if_ref_vid",
+		Value:    visitorID,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 180,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func (h *TicketHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
@@ -230,4 +261,44 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 
 func isValidEmail(email string) bool {
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
+}
+
+func extractClientIP(r *http.Request) string {
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.Header.Get("X-Real-IP")
+	}
+	if ip == "" {
+		addr := r.RemoteAddr
+		if strings.HasPrefix(addr, "[") {
+			if idx := strings.LastIndex(addr, "]"); idx != -1 {
+				ip = addr[1:idx]
+			} else {
+				ip = "127.0.0.1"
+			}
+		} else if idx := strings.LastIndex(addr, ":"); idx != -1 {
+			ip = addr[:idx]
+		} else {
+			ip = addr
+		}
+	}
+	if ip == "" {
+		ip = "127.0.0.1"
+	}
+	if idx := strings.Index(ip, ","); idx != -1 {
+		ip = strings.TrimSpace(ip[:idx])
+	}
+	return ip
+}
+
+func getOrCreateVisitorID(r *http.Request) string {
+	if cookie, err := r.Cookie("if_ref_vid"); err == nil && cookie != nil && strings.TrimSpace(cookie.Value) != "" {
+		return strings.TrimSpace(cookie.Value)
+	}
+
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "visitor_fallback"
+	}
+	return hex.EncodeToString(b)
 }

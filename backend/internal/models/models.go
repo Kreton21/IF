@@ -133,6 +133,8 @@ type CheckoutRequest struct {
 	CustomerLastName  string        `json:"customer_last_name"`
 	CustomerPhone     string        `json:"customer_phone,omitempty"`
 	DateOfBirth       string        `json:"date_of_birth,omitempty"`
+	ReferralCode      string        `json:"-"`
+	ReferralVisitorID string        `json:"-"`
 	WantsCamping      bool          `json:"wants_camping,omitempty"`
 	Items             []CheckoutItem `json:"items"`
 }
@@ -377,4 +379,33 @@ type BusTicketAdminRow struct {
 	IsRoundTrip        bool      `json:"is_round_trip"`
 	IsValidated        bool      `json:"is_validated"`
 	CreatedAt          time.Time `json:"created_at"`
+}
+
+type CreateReferralLinkRequest struct {
+	Name string `json:"name"`
+}
+
+type ReferralLinkRow struct {
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	Code               string    `json:"code"`
+	IsActive           bool      `json:"is_active"`
+	CreatedAt          time.Time `json:"created_at"`
+	ClickCount         int       `json:"click_count"`
+	UniqueVisitors     int       `json:"unique_visitors"`
+	ConvertedOrders    int       `json:"converted_orders"`
+	ConvertedTickets   int       `json:"converted_tickets"`
+	ConvertedRevenue   int       `json:"converted_revenue_cents"`
+	ShareURL           string    `json:"share_url,omitempty"`
+}
+
+type CreateReferralLinkResponse struct {
+	Link ReferralLinkRow `json:"link"`
+}
+
+type ReferralPublicInfo struct {
+	ID       string `json:"id"`
+	Code     string `json:"code"`
+	Name     string `json:"name"`
+	IsActive bool   `json:"is_active"`
 }

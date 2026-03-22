@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -455,4 +457,189 @@ func (r *OrderRepository) GetExpiredPendingOrderIDs(ctx context.Context, olderTh
 	}
 
 	return ids, nil
+}
+
+func (r *OrderRepository) CreateReferralLink(ctx context.Context, name string) (*models.ReferralPublicInfo, error) {
+	trimmedName := strings.TrimSpace(name)
+	if trimmedName == "" {
+		return nil, fmt.Errorf("nom de lien requis")
+	}
+
+	for attempt := 0; attempt < 5; attempt++ {
+		code, err := randomReferralCode()
+		if err != nil {
+			return nil, fmt.Errorf("erreur génération code parrainage: %w", err)
+		}
+
+		var link models.ReferralPublicInfo
+		err = r.pool.QueryRow(ctx, `
+			INSERT INTO referral_links (name, code, is_active)
+			VALUES ($1, $2, true)
+			RETURNING id, code, name, is_active
+		`, trimmedName, code).Scan(&link.ID, &link.Code, &link.Name, &link.IsActive)
+		if err == nil {
+			return &link, nil
+		}
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+			continue
+		}
+		return nil, fmt.Errorf("erreur création lien parrainage: %w", err)
+	}
+
+	return nil, fmt.Errorf("impossible de générer un code de parrainage unique")
+}
+
+func (r *OrderRepository) GetReferralLinkByCode(ctx context.Context, code string) (*models.ReferralPublicInfo, error) {
+	trimmedCode := strings.TrimSpace(strings.ToLower(code))
+	if trimmedCode == "" {
+		return nil, nil
+	}
+
+	var link models.ReferralPublicInfo
+	err := r.pool.QueryRow(ctx, `
+		SELECT id, code, name, is_active
+		FROM referral_links
+		WHERE code = $1
+		LIMIT 1
+	`, trimmedCode).Scan(&link.ID, &link.Code, &link.Name, &link.IsActive)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur récupération lien parrainage: %w", err)
+	}
+
+	return &link, nil
+}
+
+func (r *OrderRepository) RecordReferralClick(ctx context.Context, referralLinkID, visitorID, ipAddress, userAgent string) error {
+	if strings.TrimSpace(referralLinkID) == "" || strings.TrimSpace(visitorID) == "" {
+		return nil
+	}
+
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO referral_clicks (referral_link_id, visitor_id, ip_address, user_agent)
+		VALUES ($1, $2, NULLIF($3, '')::inet, NULLIF($4, ''))
+	`, referralLinkID, visitorID, ipAddress, userAgent)
+	if err != nil {
+		return fmt.Errorf("erreur enregistrement clic parrainage: %w", err)
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) AttachReferralConversion(ctx context.Context, tx pgx.Tx, orderID, referralLinkID, visitorID string) error {
+	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(referralLinkID) == "" {
+		return nil
+	}
+
+	_, err := tx.Exec(ctx, `
+		INSERT INTO referral_order_conversions (order_id, referral_link_id, visitor_id)
+		VALUES ($1, $2, NULLIF($3, ''))
+		ON CONFLICT (order_id) DO NOTHING
+	`, orderID, referralLinkID, visitorID)
+	if err != nil {
+		return fmt.Errorf("erreur liaison conversion parrainage: %w", err)
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) ListReferralLinks(ctx context.Context) ([]models.ReferralLinkRow, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			rl.id,
+			rl.name,
+			rl.code,
+			rl.is_active,
+			rl.created_at,
+			(
+				SELECT COUNT(*)
+				FROM referral_clicks c
+				WHERE c.referral_link_id = rl.id
+			) AS click_count,
+			(
+				SELECT COUNT(DISTINCT c.visitor_id)
+				FROM referral_clicks c
+				WHERE c.referral_link_id = rl.id
+			) AS unique_visitors,
+			(
+				SELECT COUNT(*)
+				FROM referral_order_conversions roc
+				JOIN orders o ON o.id = roc.order_id
+				WHERE roc.referral_link_id = rl.id
+				  AND o.status IN ('paid', 'confirmed')
+				  AND EXISTS (
+					  SELECT 1
+					  FROM tickets t
+					  LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+					  WHERE t.order_id = o.id
+					    AND bt.ticket_id IS NULL
+				  )
+			) AS converted_orders,
+			(
+				SELECT COUNT(*)
+				FROM referral_order_conversions roc
+				JOIN orders o ON o.id = roc.order_id
+				JOIN tickets t ON t.order_id = o.id
+				LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE roc.referral_link_id = rl.id
+				  AND o.status IN ('paid', 'confirmed')
+				  AND bt.ticket_id IS NULL
+			) AS converted_tickets,
+			(
+				SELECT COALESCE(SUM(o.total_cents), 0)
+				FROM referral_order_conversions roc
+				JOIN orders o ON o.id = roc.order_id
+				WHERE roc.referral_link_id = rl.id
+				  AND o.status IN ('paid', 'confirmed')
+				  AND EXISTS (
+					  SELECT 1
+					  FROM tickets t
+					  LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+					  WHERE t.order_id = o.id
+					    AND bt.ticket_id IS NULL
+				  )
+			) AS converted_revenue_cents
+		FROM referral_links rl
+		ORDER BY rl.created_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("erreur récupération liens parrainage: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.ReferralLinkRow, 0)
+	for rows.Next() {
+		var row models.ReferralLinkRow
+		if scanErr := rows.Scan(
+			&row.ID,
+			&row.Name,
+			&row.Code,
+			&row.IsActive,
+			&row.CreatedAt,
+			&row.ClickCount,
+			&row.UniqueVisitors,
+			&row.ConvertedOrders,
+			&row.ConvertedTickets,
+			&row.ConvertedRevenue,
+		); scanErr != nil {
+			return nil, fmt.Errorf("erreur lecture lien parrainage: %w", scanErr)
+		}
+		out = append(out, row)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("erreur parcours liens parrainage: %w", rows.Err())
+	}
+
+	return out, nil
+}
+
+func randomReferralCode() (string, error) {
+	b := make([]byte, 5)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return strings.ToLower(hex.EncodeToString(b)), nil
 }

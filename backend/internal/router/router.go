@@ -121,8 +121,12 @@ func NewRouter(
 			r.Post("/bus/departures/{departureID}/mask", adminHandler.ToggleBusDepartureMask)
 			r.Delete("/bus/departures/{departureID}", adminHandler.DeleteBusDeparture)
 			r.Get("/bus/tickets", adminHandler.ListBusTickets)
+			r.Get("/referrals", adminHandler.ListReferralLinks)
+			r.Post("/referrals", adminHandler.CreateReferralLink)
 		})
 	})
+
+	r.Get("/r/{code}", ticketHandler.HandleReferralRedirect)
 
 	// ==========================================
 	// Frontend static files (no-cache for dev)

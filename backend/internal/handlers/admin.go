@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"strconv"
 	"time"
 
@@ -559,6 +560,49 @@ func (h *AdminHandler) ListBusTickets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
+func (h *AdminHandler) CreateReferralLink(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.CreateReferralLinkRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	baseURL := publicBaseURL(r)
+	resp, err := h.adminService.CreateReferralLink(r.Context(), req, baseURL)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, resp)
+}
+
+func (h *AdminHandler) ListReferralLinks(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	rows, err := h.adminService.ListReferralLinks(r.Context(), publicBaseURL(r))
+	if err != nil {
+		log.Printf("Erreur récupération liens parrainage: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	if rows == nil {
+		rows = []models.ReferralLinkRow{}
+	}
+	writeJSON(w, http.StatusOK, rows)
+}
+
 // ToggleCategoryMask masque/démasque une catégorie
 func (h *AdminHandler) ToggleCategoryMask(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
@@ -605,4 +649,16 @@ func (h *AdminHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Catégorie supprimée"})
+}
+
+func publicBaseURL(r *http.Request) string {
+	scheme := "http"
+	if strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") || r.TLS != nil {
+		scheme = "https"
+	}
+	host := strings.TrimSpace(r.Host)
+	if host == "" {
+		host = "localhost"
+	}
+	return scheme + "://" + host
 }

@@ -14,7 +14,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${YELLOW}⚠  This will DELETE ALL DATA from the festival database.${NC}"
-echo -e "${YELLOW}   Tables affected: orders/tickets, navettes, webhook_logs, catégories/types${NC}"
+echo -e "${YELLOW}   Tables affected: orders/tickets, navettes, parrainage, webhook_logs, catégories/types${NC}"
 echo -e "${YELLOW}   The admins table will be preserved.${NC}"
 echo ""
 read -p "Are you sure? (y/N) " -n 1 -r
@@ -32,6 +32,9 @@ BEGIN;
 
 -- Delete in order respecting foreign key constraints
 DELETE FROM webhook_logs;
+DELETE FROM referral_order_conversions;
+DELETE FROM referral_clicks;
+DELETE FROM referral_links;
 DELETE FROM bus_tickets;
 DELETE FROM bus_order_rides;
 DELETE FROM order_items;
@@ -52,6 +55,6 @@ COMMIT;
 SQL
 
 echo -e "${GREEN}✓ Database cleared successfully.${NC}"
-echo -e "${GREEN}  - Tickets/commandes + données navettes + webhook logs supprimés${NC}"
+echo -e "${GREEN}  - Tickets/commandes + navettes + parrainage + webhook logs supprimés${NC}"
 echo -e "${GREEN}  - Order number sequence reset to 1${NC}"
 echo -e "${GREEN}  - Admin accounts preserved${NC}"

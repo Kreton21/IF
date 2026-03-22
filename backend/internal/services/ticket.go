@@ -246,6 +246,16 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		return nil, fmt.Errorf("réservé aux personnes de 18 ans et plus")
 	}
 
+	var referral *models.ReferralPublicInfo
+	if strings.TrimSpace(req.ReferralCode) != "" {
+		link, err := s.orderRepo.GetReferralLinkByCode(ctx, req.ReferralCode)
+		if err != nil {
+			log.Printf("WARN: erreur lookup parrainage %s: %v", req.ReferralCode, err)
+		} else if link != nil && link.IsActive {
+			referral = link
+		}
+	}
+
 	// 1. Valider les items et calculer le total
 	totalCents := 0
 	var validatedItems []struct {
@@ -313,6 +323,13 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	if err := s.orderRepo.SaveOrderItems(ctx, tx, order.ID, req.Items); err != nil {
 		s.ticketRepo.ReleaseTickets(ctx, req.Items)
 		return nil, fmt.Errorf("erreur sauvegarde items commande: %w", err)
+	}
+
+	if referral != nil {
+		if err := s.orderRepo.AttachReferralConversion(ctx, tx, order.ID, referral.ID, req.ReferralVisitorID); err != nil {
+			s.ticketRepo.ReleaseTickets(ctx, req.Items)
+			return nil, fmt.Errorf("erreur association parrainage: %w", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -390,6 +407,17 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		CheckoutURL: payResp.RedirectURL,
 		TotalCents:  totalCents,
 	}, nil
+}
+
+func (s *TicketService) GetReferralByCode(ctx context.Context, code string) (*models.ReferralPublicInfo, error) {
+	if strings.TrimSpace(code) == "" {
+		return nil, nil
+	}
+	return s.orderRepo.GetReferralLinkByCode(ctx, code)
+}
+
+func (s *TicketService) TrackReferralClick(ctx context.Context, referralLinkID, visitorID, ipAddress, userAgent string) error {
+	return s.orderRepo.RecordReferralClick(ctx, referralLinkID, visitorID, ipAddress, userAgent)
 }
 
 func (s *TicketService) GetBusOptions(ctx context.Context) (*models.BusOptionsResponse, error) {
