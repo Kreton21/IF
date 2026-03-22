@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -269,6 +269,9 @@ func (h *AdminHandler) CreateTicketType(w http.ResponseWriter, r *http.Request) 
 
 	if req.MaxPerOrder < 1 {
 		req.MaxPerOrder = 5
+	}
+	if req.OneTicketPerEmail {
+		req.MaxPerOrder = 1
 	}
 
 	tt, err := h.ticketService.CreateTicketType(r.Context(), req)

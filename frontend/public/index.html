@@ -284,6 +284,8 @@
           </label>
         </div>
 
+        <div id="attendees-forms" class="attendees-forms hidden"></div>
+
         <div class="order-summary" id="order-summary">
           <h4>📋 Récapitulatif</h4>
           <div id="summary-items"></div>
@@ -791,7 +793,7 @@
       <div id="qr-codes-container"></div>
       <p style="margin-top:16px">Vos billets avec QR codes ont également été envoyés à votre adresse email.</p>
       <div class="result-note">📱 Présentez le QR code (imprimé ou sur mobile) à l'entrée du festival.</div>
-      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Retour à l'accueil</button>
+      <button class="btn-rose" style="margin-top:28px" onclick="go('home')">Retour à l'accueil</button>
     </div>
   </section>
 </div>
@@ -803,7 +805,7 @@
       <div class="result-ico">❌</div>
       <h2>Erreur de paiement</h2>
       <p>Le paiement n'a pas pu être finalisé. Veuillez réessayer.</p>
-      <button class="btn-rose" style="margin-top:28px" onclick="location.href='/'">Réessayer</button>
+      <button class="btn-rose" style="margin-top:28px" onclick="go('home')">Réessayer</button>
     </div>
   </section>
 </div>

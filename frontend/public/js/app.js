@@ -11,6 +11,7 @@ const API_BASE = '/api/v1';
 const state = {
   ticketTypes: [],
   cart: {},       // { ticketTypeId: quantity }
+  attendees: {},  // { ticketTypeId: [{first_name,last_name,email}] }
   loading: false,
   customerEmail: '',
   selectedCategories: {}, // { ticketTypeId: categoryId }
@@ -50,7 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function go(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const page = document.getElementById('page-' + id);
-  if (page) page.classList.add('active');
+  if (page) {
+    page.classList.remove('hidden');
+    page.classList.add('active');
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('navLinks').classList.remove('open');
   setTimeout(initReveal, 80);
@@ -185,6 +189,7 @@ function resetEmailGate() {
   state.customerEmail = '';
   state.ticketTypes = [];
   state.cart = {};
+  state.attendees = {};
   state.selectedCategories = {};
   document.getElementById('email-gate').classList.remove('hidden');
   document.getElementById('tkt-step2').classList.add('hidden');
@@ -259,6 +264,7 @@ function renderTickets() {
     const categories = tt.categories || [];
     const selectedCatId = state.selectedCategories[tt.id];
     const selectedCat = categories.find(c => c.id === selectedCatId);
+    const qty = state.cart[tt.id] || 0;
 
     // Calculate remaining based on selected category or ticket type total
     let remaining;
@@ -276,7 +282,10 @@ function renderTickets() {
     const isSoldOut = remaining <= 0;
     const notYet = isActive && saleStart && now < saleStart;
     const isBest = idx === 0 && !isSoldOut;
-    const inCart = (state.cart[tt.id] || 0) > 0;
+    const inCart = qty > 0;
+    const onePerEmail = !!tt.one_ticket_per_email;
+    const maxPerOrder = onePerEmail ? 1 : Math.max(1, tt.max_per_order || 1);
+    const maxQty = Math.max(0, Math.min(maxPerOrder, remaining));
 
     const rvClass = idx === 0 ? 'rv' : idx === 1 ? 'rv2' : 'rv3';
 
@@ -309,7 +318,6 @@ function renderTickets() {
 
     const perks = getPerksForTicket(tt, idx);
 
-    // No quantity controls — 1 ticket per email
     const canBuy = isOnSale && (categories.length === 0 || selectedCatId);
 
     // CTA button
@@ -317,12 +325,20 @@ function renderTickets() {
     if (categories.length > 0 && !selectedCatId) {
       btnHtml = '<button class="btn-otl" disabled>Sélectionnez une catégorie</button>';
     } else if (canBuy) {
-      if (inCart) {
-        btnHtml = `<button class="btn-full selected-btn" onclick="deselectTicket('${tt.id}')">✓ Sélectionné</button>`;
-      } else if (isBest) {
-        btnHtml = `<button class="btn-full" onclick="selectTicket('${tt.id}')">Prendre ce tarif</button>`;
+      if (onePerEmail) {
+        if (inCart) {
+          btnHtml = `<button class="btn-full selected-btn" onclick="deselectTicket('${tt.id}')">✓ Sélectionné</button>`;
+        } else if (isBest) {
+          btnHtml = `<button class="btn-full" onclick="selectTicket('${tt.id}')">Prendre ce tarif</button>`;
+        } else {
+          btnHtml = `<button class="btn-otl" onclick="selectTicket('${tt.id}')">Prendre ce tarif</button>`;
+        }
       } else {
-        btnHtml = `<button class="btn-otl" onclick="selectTicket('${tt.id}')">Prendre ce tarif</button>`;
+        btnHtml = `<div class="tkt-qty">
+          <button type="button" onclick="decreaseTicket('${tt.id}')" ${qty <= 0 ? 'disabled' : ''}>−</button>
+          <span class="qty-val">${qty}</span>
+          <button type="button" onclick="increaseTicket('${tt.id}')" ${qty >= maxQty ? 'disabled' : ''}>+</button>
+        </div>`;
       }
     } else if (isSoldOut) {
       btnHtml = '<button class="btn-otl" disabled>Complet</button>';
@@ -374,6 +390,7 @@ function selectCategory(ticketTypeId, categoryId) {
   }
   // Reset cart for this type when changing category
   delete state.cart[ticketTypeId];
+  delete state.attendees[ticketTypeId];
   renderTickets();
 }
 
@@ -398,11 +415,11 @@ function getPerksForTicket(tt, idx) {
 // CART MANAGEMENT
 // ══════════════════════════════════════
 function selectTicket(id) {
-  // One ticket per email — clear previous selection and set this one
-  state.cart = {};
   state.cart[id] = 1;
+  syncAttendeesForTicket(id, 1);
   renderTickets();
   updateOrderSummary();
+  renderAttendeeForms();
   // Scroll to checkout form
   setTimeout(() => {
     const cs = document.getElementById('checkout-section');
@@ -414,8 +431,53 @@ function selectTicket(id) {
 
 function deselectTicket(id) {
   delete state.cart[id];
+  delete state.attendees[id];
   renderTickets();
   updateOrderSummary();
+  renderAttendeeForms();
+  updateCheckoutVisibility();
+}
+
+function increaseTicket(id) {
+  const tt = state.ticketTypes.find(t => t.id === id);
+  if (!tt || tt.one_ticket_per_email) return;
+
+  const categories = tt.categories || [];
+  const selectedCatId = state.selectedCategories[id];
+  const selectedCat = categories.find(c => c.id === selectedCatId);
+  const remaining = selectedCat
+    ? (selectedCat.quantity_allocated - selectedCat.quantity_sold)
+    : ((tt.quantity_total || 0) - (tt.quantity_sold || 0));
+
+  const maxPerOrder = Math.max(1, tt.max_per_order || 1);
+  const maxQty = Math.max(0, Math.min(maxPerOrder, remaining));
+  const current = state.cart[id] || 0;
+  if (current >= maxQty) return;
+
+  state.cart[id] = current + 1;
+  syncAttendeesForTicket(id, state.cart[id]);
+  renderTickets();
+  updateOrderSummary();
+  renderAttendeeForms();
+  updateCheckoutVisibility();
+}
+
+function decreaseTicket(id) {
+  const current = state.cart[id] || 0;
+  if (current <= 0) return;
+
+  const next = current - 1;
+  if (next <= 0) {
+    delete state.cart[id];
+    delete state.attendees[id];
+  } else {
+    state.cart[id] = next;
+    syncAttendeesForTicket(id, next);
+  }
+
+  renderTickets();
+  updateOrderSummary();
+  renderAttendeeForms();
   updateCheckoutVisibility();
 }
 
@@ -425,9 +487,91 @@ function updateCheckoutVisibility() {
   if (hasItems) {
     cs.classList.remove('hidden');
     updateOrderSummary();
+    renderAttendeeForms();
   } else {
     cs.classList.add('hidden');
+    const attendeesWrap = document.getElementById('attendees-forms');
+    if (attendeesWrap) {
+      attendeesWrap.innerHTML = '';
+      attendeesWrap.classList.add('hidden');
+    }
   }
+}
+
+function syncAttendeesForTicket(typeId, qty) {
+  if (qty <= 0) {
+    delete state.attendees[typeId];
+    return;
+  }
+
+  const existing = Array.isArray(state.attendees[typeId]) ? [...state.attendees[typeId]] : [];
+
+  while (existing.length < qty) {
+    existing.push({
+      first_name: document.getElementById('firstName')?.value.trim() || '',
+      last_name: document.getElementById('lastName')?.value.trim() || '',
+      email: (state.customerEmail || document.getElementById('email')?.value || '').trim().toLowerCase(),
+    });
+  }
+
+  state.attendees[typeId] = existing.slice(0, qty);
+}
+
+function updateAttendeeField(typeId, index, field, value) {
+  const attendees = Array.isArray(state.attendees[typeId]) ? state.attendees[typeId] : [];
+  if (!attendees[index]) {
+    attendees[index] = { first_name: '', last_name: '', email: '' };
+  }
+  attendees[index][field] = value;
+  state.attendees[typeId] = attendees;
+}
+
+function renderAttendeeForms() {
+  const wrap = document.getElementById('attendees-forms');
+  if (!wrap) return;
+
+  const lines = [];
+  for (const [typeId, qty] of Object.entries(state.cart)) {
+    if (!qty || qty < 1) continue;
+    const tt = state.ticketTypes.find(t => t.id === typeId);
+    if (!tt) continue;
+
+    syncAttendeesForTicket(typeId, qty);
+    const attendees = state.attendees[typeId] || [];
+
+    for (let idx = 0; idx < qty; idx++) {
+      const attendee = attendees[idx] || { first_name: '', last_name: '', email: '' };
+      const fieldsetTitle = `${tt.name} — Billet ${idx + 1}`;
+      const lockedEmail = !!tt.one_ticket_per_email;
+      const emailValue = lockedEmail
+        ? (state.customerEmail || document.getElementById('email')?.value || '').trim().toLowerCase()
+        : (attendee.email || '').trim().toLowerCase();
+
+      lines.push(`
+        <div class="attendee-card">
+          <h4>${fieldsetTitle}</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom du participant *</label>
+              <input type="text" value="${escapeHTML(attendee.first_name || '')}" oninput="updateAttendeeField('${typeId}', ${idx}, 'first_name', this.value)" required>
+            </div>
+            <div class="form-group">
+              <label>Nom du participant *</label>
+              <input type="text" value="${escapeHTML(attendee.last_name || '')}" oninput="updateAttendeeField('${typeId}', ${idx}, 'last_name', this.value)" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email du participant *</label>
+            <input type="email" value="${escapeHTML(emailValue)}" oninput="updateAttendeeField('${typeId}', ${idx}, 'email', this.value)" ${lockedEmail ? 'readonly' : ''} required>
+            ${lockedEmail ? '<small>Ce billet est limité à 1 ticket par email: adresse figée sur l\'email validé.</small>' : ''}
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  wrap.innerHTML = lines.join('');
+  wrap.classList.toggle('hidden', lines.length === 0);
 }
 
 function updateOrderSummary() {
@@ -469,10 +613,26 @@ function setupCheckoutForm() {
     const items = Object.entries(state.cart)
       .filter(([, qty]) => qty > 0)
       .map(([typeId, qty]) => {
-        const item = { ticket_type_id: typeId, quantity: qty };
+        const tt = state.ticketTypes.find(t => t.id === typeId);
+        syncAttendeesForTicket(typeId, qty);
+
+        const attendees = (state.attendees[typeId] || [])
+          .slice(0, qty)
+          .map(a => ({
+            first_name: (a.first_name || '').trim(),
+            last_name: (a.last_name || '').trim(),
+            email: (a.email || '').trim().toLowerCase(),
+          }));
+
+        const item = { ticket_type_id: typeId, quantity: qty, attendees };
         if (state.selectedCategories[typeId]) {
           item.category_id = state.selectedCategories[typeId];
         }
+
+        if (tt?.one_ticket_per_email && item.attendees.length > 0) {
+          item.attendees[0].email = (state.customerEmail || document.getElementById('email').value).trim().toLowerCase();
+        }
+
         return item;
       });
 
@@ -494,6 +654,26 @@ function setupCheckoutForm() {
     if (!body.customer_first_name || !body.customer_last_name || !body.customer_email) {
       showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
       return;
+    }
+
+    for (const item of items) {
+      if (!Array.isArray(item.attendees) || item.attendees.length !== item.quantity) {
+        showNotification('Veuillez remplir les informations nominatives de tous les billets', 'warning');
+        return;
+      }
+
+      const tt = state.ticketTypes.find(t => t.id === item.ticket_type_id);
+      for (const attendee of item.attendees) {
+        if (!attendee.first_name || !attendee.last_name || !attendee.email || !attendee.email.includes('@')) {
+          showNotification('Chaque billet doit avoir prénom, nom et email valide', 'warning');
+          return;
+        }
+      }
+
+      if (tt?.one_ticket_per_email && item.attendees[0]?.email.toLowerCase() !== body.customer_email.toLowerCase()) {
+        showNotification(`Le ticket "${tt.name}" doit utiliser l'email validé`, 'warning');
+        return;
+      }
     }
 
     if (state.customerEmail && body.customer_email.toLowerCase() !== state.customerEmail.toLowerCase()) {
@@ -865,10 +1045,12 @@ async function showOrderSuccess(orderId) {
     const order = await response.json();
     
     // Switch pages: hide home, show success
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-home').classList.remove('active');
     document.getElementById('page-home').classList.add('hidden');
     document.getElementById('page-success').classList.remove('hidden');
     document.getElementById('page-success').classList.add('active');
+    document.getElementById('page-error').classList.add('hidden');
     
     // Update order number
     const orderNumEl = document.getElementById('success-order-number');
@@ -893,10 +1075,12 @@ async function showOrderSuccess(orderId) {
   } catch (error) {
     console.error('Error loading order:', error);
     // Switch pages: hide home, show error
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-home').classList.remove('active');
     document.getElementById('page-home').classList.add('hidden');
     document.getElementById('page-error').classList.remove('hidden');
     document.getElementById('page-error').classList.add('active');
+    document.getElementById('page-success').classList.add('hidden');
   }
 }
 
@@ -977,4 +1161,13 @@ function showNotification(message, type = 'info') {
   setTimeout(() => {
     el.classList.remove('show');
   }, 4500);
+}
+
+function escapeHTML(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

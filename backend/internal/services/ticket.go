@@ -5,16 +5,16 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"log"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/kreton/if-festival/internal/config"
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
+	"github.com/redis/go-redis/v9"
 )
 
 // TicketService orchestre la logique métier d'achat de tickets
@@ -200,18 +200,23 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 
 		// Only include ticket type if it has matching categories or no categories at all
 		if len(cats) == 0 || len(filteredCats) > 0 {
+			effectiveMaxPerOrder := tt.MaxPerOrder
+			if !tt.OneTicketPerEmail && effectiveMaxPerOrder < 2 {
+				effectiveMaxPerOrder = 10
+			}
 			ttForEmail := models.TicketTypeForEmail{
-				ID:            tt.ID,
-				Name:          tt.Name,
-				Description:   tt.Description,
-				PriceCents:    tt.PriceCents,
-				QuantityTotal: tt.QuantityTotal,
-				QuantitySold:  tt.QuantitySold,
-				MaxPerOrder:   tt.MaxPerOrder,
-				SaleStart:     tt.SaleStart,
-				SaleEnd:       tt.SaleEnd,
-				IsActive:      tt.IsActive,
-				Categories:    filteredCats,
+				ID:                tt.ID,
+				Name:              tt.Name,
+				Description:       tt.Description,
+				PriceCents:        tt.PriceCents,
+				QuantityTotal:     tt.QuantityTotal,
+				QuantitySold:      tt.QuantitySold,
+				MaxPerOrder:       effectiveMaxPerOrder,
+				OneTicketPerEmail: tt.OneTicketPerEmail,
+				SaleStart:         tt.SaleStart,
+				SaleEnd:           tt.SaleEnd,
+				IsActive:          tt.IsActive,
+				Categories:        filteredCats,
 			}
 			result = append(result, ttForEmail)
 		}
@@ -224,22 +229,6 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutRequest, ipAddress, userAgent string) (*models.CheckoutResponse, error) {
 	if !isAdultFromDate(req.DateOfBirth) {
 		return nil, fmt.Errorf("réservé aux personnes de 18 ans et plus")
-	}
-
-	totalRequested := 0
-	for _, item := range req.Items {
-		totalRequested += item.Quantity
-	}
-	if totalRequested > 1 {
-		return nil, fmt.Errorf("vous ne pouvez avoir qu'un seul ticket par mail")
-	}
-
-	alreadyOwned, err := s.orderRepo.CountFestivalTicketsByEmail(ctx, req.CustomerEmail)
-	if err != nil {
-		return nil, err
-	}
-	if alreadyOwned > 0 {
-		return nil, fmt.Errorf("vous ne pouvez avoir qu'un seul ticket par mail")
 	}
 
 	var referral *models.ReferralPublicInfo
@@ -260,7 +249,8 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	normalizedEmail := normalizeEmail(req.CustomerEmail)
-	for _, item := range req.Items {
+	for idx := range req.Items {
+		item := req.Items[idx]
 		if item.Quantity < 1 {
 			return nil, fmt.Errorf("quantité invalide pour %s", item.TicketTypeID)
 		}
@@ -278,9 +268,68 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		if !emailAllowedByRules(normalizedEmail, tt.AllowedDomains) {
 			return nil, fmt.Errorf("ce ticket n'est pas accessible pour cette adresse email")
 		}
-		if item.Quantity > tt.MaxPerOrder {
-			return nil, fmt.Errorf("maximum %d tickets '%s' par commande", tt.MaxPerOrder, tt.Name)
+		if tt.OneTicketPerEmail && item.Quantity != 1 {
+			return nil, fmt.Errorf("le ticket '%s' est limité à 1 billet par email", tt.Name)
 		}
+		effectiveMaxPerOrder := tt.MaxPerOrder
+		if !tt.OneTicketPerEmail && effectiveMaxPerOrder < 2 {
+			effectiveMaxPerOrder = 10
+		}
+		if item.Quantity > effectiveMaxPerOrder {
+			return nil, fmt.Errorf("maximum %d tickets '%s' par commande", effectiveMaxPerOrder, tt.Name)
+		}
+
+		normalizedAttendees := make([]models.CheckoutAttendee, 0, item.Quantity)
+		if len(item.Attendees) > 0 {
+			if len(item.Attendees) != item.Quantity {
+				return nil, fmt.Errorf("les informations nominatives sont incomplètes pour le ticket '%s'", tt.Name)
+			}
+			for _, attendee := range item.Attendees {
+				firstName := strings.TrimSpace(attendee.FirstName)
+				lastName := strings.TrimSpace(attendee.LastName)
+				email := strings.ToLower(strings.TrimSpace(attendee.Email))
+
+				if firstName == "" {
+					firstName = strings.TrimSpace(req.CustomerFirstName)
+				}
+				if lastName == "" {
+					lastName = strings.TrimSpace(req.CustomerLastName)
+				}
+				if email == "" {
+					email = strings.ToLower(strings.TrimSpace(req.CustomerEmail))
+				}
+				if !strings.Contains(email, "@") {
+					return nil, fmt.Errorf("email participant invalide pour le ticket '%s'", tt.Name)
+				}
+
+				normalizedAttendees = append(normalizedAttendees, models.CheckoutAttendee{
+					FirstName: firstName,
+					LastName:  lastName,
+					Email:     email,
+				})
+			}
+		}
+
+		for len(normalizedAttendees) < item.Quantity {
+			normalizedAttendees = append(normalizedAttendees, models.CheckoutAttendee{
+				FirstName: strings.TrimSpace(req.CustomerFirstName),
+				LastName:  strings.TrimSpace(req.CustomerLastName),
+				Email:     strings.ToLower(strings.TrimSpace(req.CustomerEmail)),
+			})
+		}
+
+		if tt.OneTicketPerEmail {
+			attendeeEmail := normalizedAttendees[0].Email
+			alreadyOwned, err := s.orderRepo.CountFestivalTicketsByTypeAndEmail(ctx, item.TicketTypeID, attendeeEmail)
+			if err != nil {
+				return nil, err
+			}
+			if alreadyOwned > 0 {
+				return nil, fmt.Errorf("le ticket '%s' est déjà acheté pour l'email %s", tt.Name, attendeeEmail)
+			}
+		}
+
+		req.Items[idx].Attendees = normalizedAttendees
 
 		totalCents += tt.PriceCents * item.Quantity
 		validatedItems = append(validatedItems, struct {
@@ -290,7 +339,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	// 2. Réserver les tickets (avec lock pessimiste)
-	err = s.ticketRepo.ReserveTickets(ctx, req.Items)
+	err := s.ticketRepo.ReserveTickets(ctx, req.Items)
 	if err != nil {
 		return nil, fmt.Errorf("erreur réservation: %w", err)
 	}
@@ -769,6 +818,11 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 			return fmt.Errorf("erreur récupération type ticket: %w", err)
 		}
 
+		attendees := item.Attendees
+		if len(attendees) != item.Quantity {
+			attendees = make([]models.CheckoutAttendee, 0, item.Quantity)
+		}
+
 		for i := 0; i < item.Quantity; i++ {
 			qrToken, err := s.qrService.GenerateToken()
 			if err != nil {
@@ -780,14 +834,37 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 				return fmt.Errorf("erreur génération QR code: %w", err)
 			}
 
+			attendee := models.CheckoutAttendee{}
+			if i < len(attendees) {
+				attendee = attendees[i]
+			}
+
+			firstName := strings.TrimSpace(attendee.FirstName)
+			if firstName == "" {
+				firstName = strings.TrimSpace(order.CustomerFirstName)
+			}
+
+			lastName := strings.TrimSpace(attendee.LastName)
+			if lastName == "" {
+				lastName = strings.TrimSpace(order.CustomerLastName)
+			}
+
+			attendeeEmail := strings.ToLower(strings.TrimSpace(attendee.Email))
+			if attendeeEmail == "" {
+				attendeeEmail = strings.ToLower(strings.TrimSpace(order.CustomerEmail))
+			}
+
+			attendeeName := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+
 			ticket := &models.Ticket{
 				OrderID:           order.ID,
 				TicketTypeID:      item.TicketTypeID,
 				QRToken:           qrToken,
 				QRCodeData:        qrPNG,
 				IsCamping:         order.WantsCamping,
-				AttendeeFirstName: order.CustomerFirstName,
-				AttendeeLastName:  order.CustomerLastName,
+				AttendeeFirstName: firstName,
+				AttendeeLastName:  lastName,
+				AttendeeEmail:     attendeeEmail,
 			}
 
 			if err := s.ticketRepo.CreateTicket(ctx, tx, ticket); err != nil {
@@ -798,7 +875,8 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 
 			emailTickets = append(emailTickets, TicketEmailData{
 				TicketTypeName: tt.Name,
-				AttendeeName:   fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName),
+				AttendeeName:   attendeeName,
+				RecipientEmail: attendeeEmail,
 				QRToken:        qrToken,
 				QRCodePNG:      qrPNG,
 			})
@@ -813,8 +891,7 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 		log.Printf("WARN: erreur mise à jour statut confirmed: %v", err)
 	}
 
-	customerName := fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName)
-	if err := s.emailService.SendTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, emailTickets); err != nil {
+	if err := s.dispatchFestivalTicketEmails(order, emailTickets); err != nil {
 		log.Printf("ERROR: erreur envoi email: %v", err)
 	}
 
@@ -822,6 +899,52 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 
 	log.Printf("✅ Commande %s confirmée — %d tickets générés", order.OrderNumber, len(emailTickets))
 	return nil
+}
+
+func (s *TicketService) dispatchFestivalTicketEmails(order *models.Order, emailTickets []TicketEmailData) error {
+	if len(emailTickets) == 0 {
+		return nil
+	}
+
+	type recipientBatch struct {
+		name    string
+		tickets []TicketEmailData
+	}
+
+	batches := map[string]*recipientBatch{}
+	for _, ticket := range emailTickets {
+		email := strings.ToLower(strings.TrimSpace(ticket.RecipientEmail))
+		if email == "" {
+			email = strings.ToLower(strings.TrimSpace(order.CustomerEmail))
+		}
+		if email == "" {
+			continue
+		}
+
+		batch, exists := batches[email]
+		if !exists {
+			name := strings.TrimSpace(ticket.AttendeeName)
+			if name == "" {
+				name = strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
+			}
+			batch = &recipientBatch{name: name}
+			batches[email] = batch
+		}
+
+		batch.tickets = append(batch.tickets, ticket)
+	}
+
+	var firstErr error
+	for email, batch := range batches {
+		if err := s.emailService.SendTicketEmail(email, batch.name, order.OrderNumber, batch.tickets); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			log.Printf("WARN: échec envoi email ticket à %s: %v", email, err)
+		}
+	}
+
+	return firstErr
 }
 
 func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) error {

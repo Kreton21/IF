@@ -508,6 +508,25 @@ a { text-decoration:none; color:inherit; }
 }
 .form-group small { font-size:.72rem; color:var(--muted); margin-top:3px; display:block; }
 
+.attendees-forms {
+  margin:8px 0 20px;
+}
+
+.attendee-card {
+  background:var(--offwhite);
+  border:1px solid #e8e0f0;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:12px;
+}
+
+.attendee-card h4 {
+  font-size:.86rem;
+  margin:0 0 10px;
+  font-weight:800;
+  letter-spacing:.2px;
+}
+
 /* Order summary in checkout */
 .order-summary {
   background:var(--offwhite); border:1px solid #e8e0f0;

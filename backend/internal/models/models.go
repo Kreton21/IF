@@ -9,21 +9,22 @@ import (
 // ============================================
 
 type TicketType struct {
-	ID             string            `json:"id"`
-	Name           string            `json:"name"`
-	Description    string            `json:"description,omitempty"`
-	PriceCents     int               `json:"price_cents"`
-	QuantityTotal  int               `json:"quantity_total"`
-	QuantitySold   int               `json:"quantity_sold"`
-	SaleStart      time.Time         `json:"sale_start"`
-	SaleEnd        time.Time         `json:"sale_end"`
-	IsActive       bool              `json:"is_active"`
-	IsMasked       bool              `json:"is_masked"`
-	MaxPerOrder    int               `json:"max_per_order"`
-	AllowedDomains []string          `json:"allowed_domains"`
-	Categories     []TicketCategory  `json:"categories,omitempty"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
+	ID                string           `json:"id"`
+	Name              string           `json:"name"`
+	Description       string           `json:"description,omitempty"`
+	PriceCents        int              `json:"price_cents"`
+	QuantityTotal     int              `json:"quantity_total"`
+	QuantitySold      int              `json:"quantity_sold"`
+	SaleStart         time.Time        `json:"sale_start"`
+	SaleEnd           time.Time        `json:"sale_end"`
+	IsActive          bool             `json:"is_active"`
+	IsMasked          bool             `json:"is_masked"`
+	MaxPerOrder       int              `json:"max_per_order"`
+	OneTicketPerEmail bool             `json:"one_ticket_per_email"`
+	AllowedDomains    []string         `json:"allowed_domains"`
+	Categories        []TicketCategory `json:"categories,omitempty"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
 }
 
 type TicketCategory struct {
@@ -93,19 +94,20 @@ type Order struct {
 // ============================================
 
 type Ticket struct {
-	ID                 string     `json:"id"`
-	OrderID            string     `json:"order_id"`
-	TicketTypeID       string     `json:"ticket_type_id"`
-	QRToken            string     `json:"qr_token"`
-	QRCodeData         []byte     `json:"-"`
-	IsValidated        bool       `json:"is_validated"`
-	IsCamping          bool       `json:"is_camping"`
-	ValidatedAt        *time.Time `json:"validated_at,omitempty"`
-	ValidatedBy        string     `json:"validated_by,omitempty"`
-	AttendeeFirstName  string     `json:"attendee_first_name,omitempty"`
-	AttendeeLastName   string     `json:"attendee_last_name,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	TicketTypeName     string     `json:"ticket_type_name,omitempty"` // Jointure
+	ID                string     `json:"id"`
+	OrderID           string     `json:"order_id"`
+	TicketTypeID      string     `json:"ticket_type_id"`
+	QRToken           string     `json:"qr_token"`
+	QRCodeData        []byte     `json:"-"`
+	IsValidated       bool       `json:"is_validated"`
+	IsCamping         bool       `json:"is_camping"`
+	ValidatedAt       *time.Time `json:"validated_at,omitempty"`
+	ValidatedBy       string     `json:"validated_by,omitempty"`
+	AttendeeFirstName string     `json:"attendee_first_name,omitempty"`
+	AttendeeLastName  string     `json:"attendee_last_name,omitempty"`
+	AttendeeEmail     string     `json:"attendee_email,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	TicketTypeName    string     `json:"ticket_type_name,omitempty"` // Jointure
 }
 
 // ============================================
@@ -128,21 +130,28 @@ type Admin struct {
 // ============================================
 
 type CheckoutRequest struct {
-	CustomerEmail     string        `json:"customer_email"`
-	CustomerFirstName string        `json:"customer_first_name"`
-	CustomerLastName  string        `json:"customer_last_name"`
-	CustomerPhone     string        `json:"customer_phone,omitempty"`
-	DateOfBirth       string        `json:"date_of_birth,omitempty"`
-	ReferralCode      string        `json:"-"`
-	ReferralVisitorID string        `json:"-"`
-	WantsCamping      bool          `json:"wants_camping,omitempty"`
+	CustomerEmail     string         `json:"customer_email"`
+	CustomerFirstName string         `json:"customer_first_name"`
+	CustomerLastName  string         `json:"customer_last_name"`
+	CustomerPhone     string         `json:"customer_phone,omitempty"`
+	DateOfBirth       string         `json:"date_of_birth,omitempty"`
+	ReferralCode      string         `json:"-"`
+	ReferralVisitorID string         `json:"-"`
+	WantsCamping      bool           `json:"wants_camping,omitempty"`
 	Items             []CheckoutItem `json:"items"`
 }
 
 type CheckoutItem struct {
-	TicketTypeID string `json:"ticket_type_id"`
-	CategoryID   string `json:"category_id,omitempty"`
-	Quantity     int    `json:"quantity"`
+	TicketTypeID string             `json:"ticket_type_id"`
+	CategoryID   string             `json:"category_id,omitempty"`
+	Quantity     int                `json:"quantity"`
+	Attendees    []CheckoutAttendee `json:"attendees,omitempty"`
+}
+
+type CheckoutAttendee struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
 }
 
 type CheckoutResponse struct {
@@ -178,32 +187,32 @@ type ValidateQRRequest struct {
 }
 
 type ValidateQRResponse struct {
-	Valid              bool   `json:"valid"`
-	Message            string `json:"message"`
-	TicketID           string `json:"ticket_id,omitempty"`
-	AttendeeFirstName  string `json:"attendee_first_name,omitempty"`
-	AttendeeLastName   string `json:"attendee_last_name,omitempty"`
-	TicketTypeName     string `json:"ticket_type_name,omitempty"`
-	OrderNumber        string `json:"order_number,omitempty"`
-	AlreadyValidated   bool   `json:"already_validated,omitempty"`
-	IsCamping          bool   `json:"is_camping,omitempty"`
-	RideType           string `json:"ride_type,omitempty"`
-	FromStation        string `json:"from_station,omitempty"`
-	ToStation          string `json:"to_station,omitempty"`
-	DepartureAt        string `json:"departure_at,omitempty"`
-	ReturnDepartureAt  string `json:"return_departure_at,omitempty"`
+	Valid             bool   `json:"valid"`
+	Message           string `json:"message"`
+	TicketID          string `json:"ticket_id,omitempty"`
+	AttendeeFirstName string `json:"attendee_first_name,omitempty"`
+	AttendeeLastName  string `json:"attendee_last_name,omitempty"`
+	TicketTypeName    string `json:"ticket_type_name,omitempty"`
+	OrderNumber       string `json:"order_number,omitempty"`
+	AlreadyValidated  bool   `json:"already_validated,omitempty"`
+	IsCamping         bool   `json:"is_camping,omitempty"`
+	RideType          string `json:"ride_type,omitempty"`
+	FromStation       string `json:"from_station,omitempty"`
+	ToStation         string `json:"to_station,omitempty"`
+	DepartureAt       string `json:"departure_at,omitempty"`
+	ReturnDepartureAt string `json:"return_departure_at,omitempty"`
 }
 
 type SalesStats struct {
-	TotalOrders        int            `json:"total_orders"`
-	TotalRevenueCents  int            `json:"total_revenue_cents"`
-	TotalTicketsSold   int            `json:"total_tickets_sold"`
-	TotalValidated     int            `json:"total_validated"`
-	TotalCamping       int            `json:"total_camping"`
-	TestEmailEnabled   bool           `json:"test_email_enabled"`
-	ByTicketType       []TicketTypeStat `json:"by_ticket_type"`
-	RecentOrders       []Order        `json:"recent_orders"`
-	SalesByDay         []DailySales   `json:"sales_by_day"`
+	TotalOrders       int              `json:"total_orders"`
+	TotalRevenueCents int              `json:"total_revenue_cents"`
+	TotalTicketsSold  int              `json:"total_tickets_sold"`
+	TotalValidated    int              `json:"total_validated"`
+	TotalCamping      int              `json:"total_camping"`
+	TestEmailEnabled  bool             `json:"test_email_enabled"`
+	ByTicketType      []TicketTypeStat `json:"by_ticket_type"`
+	RecentOrders      []Order          `json:"recent_orders"`
+	SalesByDay        []DailySales     `json:"sales_by_day"`
 }
 
 type CampingClaimRequest struct {
@@ -216,20 +225,20 @@ type CampingClaimResponse struct {
 }
 
 type TicketTypeStat struct {
-	TicketTypeID    string `json:"ticket_type_id"`
-	Name            string `json:"name"`
-	PriceCents      int    `json:"price_cents"`
-	QuantityTotal   int    `json:"quantity_total"`
-	QuantitySold    int    `json:"quantity_sold"`
-	QuantityValidated int  `json:"quantity_validated"`
-	RevenueCents    int    `json:"revenue_cents"`
+	TicketTypeID      string `json:"ticket_type_id"`
+	Name              string `json:"name"`
+	PriceCents        int    `json:"price_cents"`
+	QuantityTotal     int    `json:"quantity_total"`
+	QuantitySold      int    `json:"quantity_sold"`
+	QuantityValidated int    `json:"quantity_validated"`
+	RevenueCents      int    `json:"revenue_cents"`
 }
 
 type DailySales struct {
-	Date          string `json:"date"`
-	OrderCount    int    `json:"order_count"`
-	TicketCount   int    `json:"ticket_count"`
-	RevenueCents  int    `json:"revenue_cents"`
+	Date         string `json:"date"`
+	OrderCount   int    `json:"order_count"`
+	TicketCount  int    `json:"ticket_count"`
+	RevenueCents int    `json:"revenue_cents"`
 }
 
 type OrderListParams struct {
@@ -247,24 +256,26 @@ type OrderListResponse struct {
 }
 
 type CreateTicketTypeRequest struct {
-	Name           string    `json:"name"`
-	Description    string    `json:"description"`
-	PriceCents     int       `json:"price_cents"`
-	QuantityTotal  int       `json:"quantity_total"`
-	SaleStart      time.Time `json:"sale_start"`
-	SaleEnd        time.Time `json:"sale_end"`
-	MaxPerOrder    int       `json:"max_per_order"`
-	AllowedDomains []string  `json:"allowed_domains"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	PriceCents        int       `json:"price_cents"`
+	QuantityTotal     int       `json:"quantity_total"`
+	SaleStart         time.Time `json:"sale_start"`
+	SaleEnd           time.Time `json:"sale_end"`
+	MaxPerOrder       int       `json:"max_per_order"`
+	OneTicketPerEmail bool      `json:"one_ticket_per_email"`
+	AllowedDomains    []string  `json:"allowed_domains"`
 }
 
 type UpdateTicketTypeRequest struct {
-	Name           string    `json:"name"`
-	Description    string    `json:"description"`
-	PriceCents     int       `json:"price_cents"`
-	QuantityTotal  int       `json:"quantity_total"`
-	SaleStart      time.Time `json:"sale_start"`
-	SaleEnd        time.Time `json:"sale_end"`
-	AllowedDomains []string  `json:"allowed_domains"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	PriceCents        int       `json:"price_cents"`
+	QuantityTotal     int       `json:"quantity_total"`
+	SaleStart         time.Time `json:"sale_start"`
+	SaleEnd           time.Time `json:"sale_end"`
+	OneTicketPerEmail bool      `json:"one_ticket_per_email"`
+	AllowedDomains    []string  `json:"allowed_domains"`
 }
 
 type CreateCategoryRequest struct {
@@ -282,17 +293,18 @@ type ReallocateCategoryRequest struct {
 
 // TicketTypeWithCategories is returned by the public API for a given email
 type TicketTypeForEmail struct {
-	ID            string             `json:"id"`
-	Name          string             `json:"name"`
-	Description   string             `json:"description,omitempty"`
-	PriceCents    int                `json:"price_cents"`
-	QuantityTotal int                `json:"quantity_total"`
-	QuantitySold  int                `json:"quantity_sold"`
-	MaxPerOrder   int                `json:"max_per_order"`
-	SaleStart     time.Time          `json:"sale_start"`
-	SaleEnd       time.Time          `json:"sale_end"`
-	IsActive      bool               `json:"is_active"`
-	Categories    []CategoryForEmail `json:"categories"`
+	ID                string             `json:"id"`
+	Name              string             `json:"name"`
+	Description       string             `json:"description,omitempty"`
+	PriceCents        int                `json:"price_cents"`
+	QuantityTotal     int                `json:"quantity_total"`
+	QuantitySold      int                `json:"quantity_sold"`
+	MaxPerOrder       int                `json:"max_per_order"`
+	OneTicketPerEmail bool               `json:"one_ticket_per_email"`
+	SaleStart         time.Time          `json:"sale_start"`
+	SaleEnd           time.Time          `json:"sale_end"`
+	IsActive          bool               `json:"is_active"`
+	Categories        []CategoryForEmail `json:"categories"`
 }
 
 type CategoryForEmail struct {
@@ -325,22 +337,22 @@ type BusDeparture struct {
 }
 
 type BusOptionsResponse struct {
-	Stations          []BusStation   `json:"stations"`
+	Stations           []BusStation   `json:"stations"`
 	OutboundDepartures []BusDeparture `json:"outbound_departures"`
 	ReturnDepartures   []BusDeparture `json:"return_departures"`
 }
 
 type BusCheckoutRequest struct {
-	CustomerEmail      string `json:"customer_email"`
-	CustomerFirstName  string `json:"customer_first_name"`
-	CustomerLastName   string `json:"customer_last_name"`
-	CustomerPhone      string `json:"customer_phone,omitempty"`
-	TripType           string `json:"trip_type,omitempty"` // outbound | return | round_trip
-	FromStationID      string `json:"from_station_id,omitempty"`
+	CustomerEmail       string `json:"customer_email"`
+	CustomerFirstName   string `json:"customer_first_name"`
+	CustomerLastName    string `json:"customer_last_name"`
+	CustomerPhone       string `json:"customer_phone,omitempty"`
+	TripType            string `json:"trip_type,omitempty"` // outbound | return | round_trip
+	FromStationID       string `json:"from_station_id,omitempty"`
 	OutboundDepartureID string `json:"outbound_departure_id,omitempty"`
-	RoundTrip          bool   `json:"round_trip,omitempty"` // rétrocompat
-	ReturnDepartureID  string `json:"return_departure_id,omitempty"`
-	ReturnStationID    string `json:"return_station_id,omitempty"`
+	RoundTrip           bool   `json:"round_trip,omitempty"` // rétrocompat
+	ReturnDepartureID   string `json:"return_departure_id,omitempty"`
+	ReturnStationID     string `json:"return_station_id,omitempty"`
 }
 
 type CreateBusStationRequest struct {
@@ -366,19 +378,19 @@ type UpdateBusDepartureRequest struct {
 }
 
 type BusTicketAdminRow struct {
-	TicketID           string    `json:"ticket_id"`
-	OrderNumber        string    `json:"order_number"`
-	OrderTotalCents    int       `json:"order_total_cents"`
-	CustomerFirstName  string    `json:"customer_first_name"`
-	CustomerLastName   string    `json:"customer_last_name"`
-	CustomerEmail      string    `json:"customer_email"`
-	FromStation        string    `json:"from_station"`
-	ToStation          string    `json:"to_station"`
-	DepartureTime      time.Time `json:"departure_time"`
+	TicketID            string     `json:"ticket_id"`
+	OrderNumber         string     `json:"order_number"`
+	OrderTotalCents     int        `json:"order_total_cents"`
+	CustomerFirstName   string     `json:"customer_first_name"`
+	CustomerLastName    string     `json:"customer_last_name"`
+	CustomerEmail       string     `json:"customer_email"`
+	FromStation         string     `json:"from_station"`
+	ToStation           string     `json:"to_station"`
+	DepartureTime       time.Time  `json:"departure_time"`
 	ReturnDepartureTime *time.Time `json:"return_departure_time,omitempty"`
-	IsRoundTrip        bool      `json:"is_round_trip"`
-	IsValidated        bool      `json:"is_validated"`
-	CreatedAt          time.Time `json:"created_at"`
+	IsRoundTrip         bool       `json:"is_round_trip"`
+	IsValidated         bool       `json:"is_validated"`
+	CreatedAt           time.Time  `json:"created_at"`
 }
 
 type CreateReferralLinkRequest struct {
@@ -386,17 +398,17 @@ type CreateReferralLinkRequest struct {
 }
 
 type ReferralLinkRow struct {
-	ID                 string    `json:"id"`
-	Name               string    `json:"name"`
-	Code               string    `json:"code"`
-	IsActive           bool      `json:"is_active"`
-	CreatedAt          time.Time `json:"created_at"`
-	ClickCount         int       `json:"click_count"`
-	UniqueVisitors     int       `json:"unique_visitors"`
-	ConvertedOrders    int       `json:"converted_orders"`
-	ConvertedTickets   int       `json:"converted_tickets"`
-	ConvertedRevenue   int       `json:"converted_revenue_cents"`
-	ShareURL           string    `json:"share_url,omitempty"`
+	ID               string    `json:"id"`
+	Name             string    `json:"name"`
+	Code             string    `json:"code"`
+	IsActive         bool      `json:"is_active"`
+	CreatedAt        time.Time `json:"created_at"`
+	ClickCount       int       `json:"click_count"`
+	UniqueVisitors   int       `json:"unique_visitors"`
+	ConvertedOrders  int       `json:"converted_orders"`
+	ConvertedTickets int       `json:"converted_tickets"`
+	ConvertedRevenue int       `json:"converted_revenue_cents"`
+	ShareURL         string    `json:"share_url,omitempty"`
 }
 
 type CreateReferralLinkResponse struct {

@@ -97,6 +97,7 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 type TicketEmailData struct {
 	TicketTypeName string
 	AttendeeName   string
+	RecipientEmail string
 	QRToken        string
 	QRCodePNG      []byte
 	CID            string

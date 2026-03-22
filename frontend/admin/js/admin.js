@@ -793,11 +793,12 @@ async function handleCreateTicketType(e) {
         description: document.getElementById('tt-desc').value.trim(),
         price_cents: Math.round(parseFloat(document.getElementById('tt-price').value) * 100),
         quantity_total: parseInt(document.getElementById('tt-qty').value, 10),
-        max_per_order: 1,
+        one_ticket_per_email: !!document.getElementById('tt-one-per-email')?.checked,
         sale_start: new Date(`${document.getElementById('tt-start-date').value}T${document.getElementById('tt-start-time').value}:00`).toISOString(),
         sale_end: new Date(`${document.getElementById('tt-end-date').value}T${document.getElementById('tt-end-time').value}:00`).toISOString(),
         allowed_domains: allowed,
     };
+    body.max_per_order = body.one_ticket_per_email ? 1 : 10;
 
     try {
         const res = await apiFetch(`${API_BASE}/admin/ticket-types`, { method: 'POST', body: JSON.stringify(body) });
@@ -860,7 +861,7 @@ async function renderTicketTypesAdmin(types) {
                     <strong>${tt.name}</strong> — ${formatPrice(tt.price_cents)}
                     ${maskedBadge}
                     <span style="color:#718096;font-size:0.85em;">
-                        ${tt.quantity_sold}/${tt.quantity_total} vendus · Accès: ${domains}
+                        ${tt.quantity_sold}/${tt.quantity_total} vendus · Accès: ${domains} · ${tt.one_ticket_per_email ? '1 ticket / email' : `jusqu'à ${Math.max(2, tt.max_per_order || 0)} / commande`}
                     </span>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:4px;">
@@ -884,6 +885,12 @@ async function renderTicketTypesAdmin(types) {
                 <div class="form-group"><label>Prix (€)</label><input type="number" id="edit-price-${tt.id}" value="${(tt.price_cents / 100).toFixed(2)}" step="0.01" min="0"></div>
             </div>
             <div class="form-group"><label>Description</label><input type="text" id="edit-desc-${tt.id}" value="${escapeAttr(tt.description || '')}"></div>
+            <div class="form-group" style="margin-top:-4px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
+                    <input type="checkbox" id="edit-one-per-email-${tt.id}" ${tt.one_ticket_per_email ? 'checked' : ''}>
+                    1 ticket maximum par email
+                </label>
+            </div>
             <div class="form-row">
                 <div class="form-group"><label>Quantité totale (min: ${tt.quantity_sold} vendus)</label><input type="number" id="edit-qty-${tt.id}" value="${tt.quantity_total}" min="${tt.quantity_sold}"></div>
             </div>
@@ -1050,6 +1057,7 @@ async function saveTicketType(ticketTypeId) {
         description: document.getElementById(`edit-desc-${ticketTypeId}`).value.trim(),
         price_cents: Math.round(parseFloat(document.getElementById(`edit-price-${ticketTypeId}`).value) * 100),
         quantity_total: parseInt(document.getElementById(`edit-qty-${ticketTypeId}`).value, 10),
+        one_ticket_per_email: !!document.getElementById(`edit-one-per-email-${ticketTypeId}`)?.checked,
         sale_start: new Date(`${document.getElementById(`edit-start-date-${ticketTypeId}`).value}T${document.getElementById(`edit-start-time-${ticketTypeId}`).value}:00`).toISOString(),
         sale_end: new Date(`${document.getElementById(`edit-end-date-${ticketTypeId}`).value}T${document.getElementById(`edit-end-time-${ticketTypeId}`).value}:00`).toISOString(),
         allowed_domains: allowed,

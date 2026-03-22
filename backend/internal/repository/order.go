@@ -450,6 +450,24 @@ func (r *OrderRepository) CountFestivalTicketsByEmail(ctx context.Context, email
 	return count, nil
 }
 
+func (r *OrderRepository) CountFestivalTicketsByTypeAndEmail(ctx context.Context, ticketTypeID, email string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM tickets t
+		JOIN orders o ON o.id = t.order_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE t.ticket_type_id = $1
+		  AND o.status IN ('pending', 'paid', 'confirmed')
+		  AND bt.ticket_id IS NULL
+		  AND LOWER(COALESCE(NULLIF(t.attendee_email, ''), o.customer_email)) = LOWER($2)
+	`, ticketTypeID, strings.TrimSpace(email)).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("erreur comptage tickets festival par type/email: %w", err)
+	}
+	return count, nil
+}
+
 func (r *OrderRepository) GetExpiredPendingOrderIDs(ctx context.Context, olderThan time.Time) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id
