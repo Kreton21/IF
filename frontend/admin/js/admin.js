@@ -895,7 +895,7 @@ async function renderTicketTypesAdmin(types) {
                 <div class="form-group"><label>Fin vente — Date</label><input type="date" id="edit-end-date-${tt.id}" value="${endDate}"></div>
                 <div class="form-group"><label>Fin vente — Heure</label><input type="text" id="edit-end-time-${tt.id}" value="${endTime}" pattern="([01]\\d|2[0-3]):[0-5]\\d" maxlength="5"></div>
             </div>
-            <div class="form-group"><label>Emails/domaines autorisés</label><input type="text" id="edit-domains-${tt.id}" value="${escapeAttr(domainsStr)}" placeholder="@univ.fr, admin@gmail.com"><small>Séparés par des virgules. Exemple: @univ.fr, admin@gmail.com. Vide = accessible à tous.</small></div>
+            <div class="form-group"><label>Emails/domaines autorisés</label><div style="display:flex;gap:8px;align-items:center;"><input type="text" id="edit-domains-${tt.id}" value="${escapeAttr(domainsStr)}" placeholder="@univ.fr, admin@gmail.com" style="flex:1;"><button type="button" class="btn btn-sm" onclick="importAllowedFromCSV('edit-domains-${tt.id}')">Import CSV</button></div><small>Séparés par des virgules. Exemple: @univ.fr, admin@gmail.com. Vide = accessible à tous.</small></div>
             <div style="display:flex;gap:8px;margin-top:8px;">
                 <button class="btn btn-primary btn-sm" onclick="saveTicketType('${tt.id}')">Enregistrer</button>
                 <button class="btn btn-sm" onclick="toggleEditForm('${tt.id}')">Annuler</button>
@@ -983,6 +983,54 @@ function renderAllowedEntries(entries) {
 
     const all = escapeAttr(normalized.join(', '));
     return `${tags} <span class="domain-tag" title="${all}">+${remaining}</span>`;
+}
+
+function importAllowedFromCSV(targetInputId) {
+    const target = document.getElementById(targetInputId);
+    if (!target) return;
+
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = '.csv,text/csv,.txt';
+
+    picker.addEventListener('change', () => {
+        const file = picker.files && picker.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const text = String(reader.result || '');
+            const imported = parseAllowedCSVEntries(text);
+            if (imported.length === 0) {
+                alert('Aucune entrée email/domaine détectée dans le fichier.');
+                return;
+            }
+
+            const existing = parseAllowedCSVEntries(target.value || '');
+            const merged = Array.from(new Set([...existing, ...imported]));
+            target.value = merged.join(', ');
+            alert(`${imported.length} entrée(s) importée(s).`);
+        };
+
+        reader.onerror = () => {
+            alert('Impossible de lire le fichier CSV.');
+        };
+
+        reader.readAsText(file, 'utf-8');
+    });
+
+    picker.click();
+}
+
+function parseAllowedCSVEntries(rawText) {
+    const text = (rawText || '').replace(/^\uFEFF/, '');
+    const chunks = text.split(/[\n\r,;\t]+/);
+
+    return chunks
+        .map(value => value.trim())
+        .map(value => value.replace(/^"|"$/g, ''))
+        .map(value => value.toLowerCase())
+        .filter(Boolean);
 }
 
 function toggleEditForm(ticketTypeId) {

@@ -259,7 +259,10 @@
                     </div>
                     <div class="form-group">
                         <label>Emails/domaines autorisés (banque)</label>
-                        <input type="text" id="tt-domains" placeholder="@univ.fr, admin@gmail.com">
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" id="tt-domains" placeholder="@univ.fr, admin@gmail.com" style="flex:1;">
+                            <button type="button" class="btn btn-sm" onclick="importAllowedFromCSV('tt-domains')">Import CSV</button>
+                        </div>
                         <small>Séparés par des virgules. Exemple: @univ.fr, admin@gmail.com. Vide = accessible à tous.</small>
                     </div>
                     <button type="submit" class="btn btn-primary">Créer</button>
