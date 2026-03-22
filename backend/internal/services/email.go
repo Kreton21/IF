@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/phpdave11/gofpdf"
+	"github.com/go-pdf/fpdf"
 	"github.com/kreton/if-festival/internal/config"
 )
 
@@ -200,7 +200,7 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 			continue
 		}
 
-		pdf := gofpdf.New("P", "mm", "A4", "")
+		pdf := fpdf.New("P", "mm", "A4", "")
 		pdf.SetMargins(15, 15, 15)
 		pdf.AddPage()
 
@@ -219,8 +219,8 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 		pdf.Ln(6)
 
 		imageKey := fmt.Sprintf("qr-%d", idx)
-		pdf.RegisterImageOptionsReader(imageKey, gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
-		pdf.ImageOptions(imageKey, 55, 65, 100, 100, false, gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+		pdf.RegisterImageOptionsReader(imageKey, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
+		pdf.ImageOptions(imageKey, 55, 65, 100, 100, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
 
 		pdf.SetY(180)
 		pdf.SetFont("Arial", "", 11)
