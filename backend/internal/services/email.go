@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/phpdave11/gofpdf"
 	"github.com/kreton/if-festival/internal/config"
 )
 
@@ -77,12 +78,15 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 	}
 
 	htmlBody, err := s.buildEmailHTML(customerName, orderNumber, tickets, templatePath)
-	if err != nil {
-		return fmt.Errorf("erreur génération email: %w", err)
-	}
+	_ = htmlBody
 	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, s.cfg.SMTPFrom)
 
-	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, tickets); err != nil {
+	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
+	if err != nil {
+		return fmt.Errorf("erreur génération PDF billets: %w", err)
+	}
+
+	if err := s.sendMIMEEmail(to, subject, plainBody, attachments); err != nil {
 		return err
 	}
 
@@ -129,8 +133,14 @@ func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets 
 	return buf.String(), nil
 }
 
-func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, tickets []TicketEmailData) error {
-	boundary := "==FESTIVAL_BOUNDARY=="
+type EmailAttachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
+}
+
+func (s *EmailService) sendMIMEEmail(to, subject, plainBody string, attachments []EmailAttachment) error {
+	boundary := "==FESTIVAL_MIXED_BOUNDARY=="
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	messageID := fmt.Sprintf("<if-%d@%s>", time.Now().UnixNano(), senderDomain(s.cfg.SMTPFrom))
 
@@ -141,7 +151,7 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, ti
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
 	msg.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
 	msg.WriteString("MIME-Version: 1.0\r\n")
-	msg.WriteString(fmt.Sprintf("Content-Type: multipart/related; boundary=\"%s\"\r\n", boundary))
+	msg.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", boundary))
 	msg.WriteString("\r\n")
 
 	// Plain text part
@@ -152,30 +162,26 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, ti
 	msg.WriteString(plainBody)
 	msg.WriteString("\r\n")
 
-	// HTML part
-	msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	msg.WriteString("Content-Type: text/html; charset=utf-8\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 7bit\r\n")
-	msg.WriteString("\r\n")
-	msg.WriteString(htmlBody)
-	msg.WriteString("\r\n")
-
-	// QR code images inline
-	for i, ticket := range tickets {
-		if len(ticket.QRCodePNG) > 0 {
-			cid := ticket.CID
-			if strings.TrimSpace(cid) == "" {
-				cid = fmt.Sprintf("qr-%d", i)
-			}
-			msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-			msg.WriteString("Content-Type: image/png\r\n")
-			msg.WriteString(fmt.Sprintf("Content-ID: <%s>\r\n", cid))
-			msg.WriteString("Content-Transfer-Encoding: base64\r\n")
-			msg.WriteString(fmt.Sprintf("Content-Disposition: inline; filename=\"qr_%d.png\"\r\n", i))
-			msg.WriteString("\r\n")
-			msg.WriteString(encodeBase64RFC2045(ticket.QRCodePNG))
-			msg.WriteString("\r\n")
+	for _, attachment := range attachments {
+		if len(attachment.Data) == 0 {
+			continue
 		}
+		contentType := strings.TrimSpace(attachment.ContentType)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		filename := strings.TrimSpace(attachment.Filename)
+		if filename == "" {
+			filename = "attachment.bin"
+		}
+
+		msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		msg.WriteString(fmt.Sprintf("Content-Type: %s; name=\"%s\"\r\n", contentType, filename))
+		msg.WriteString("Content-Transfer-Encoding: base64\r\n")
+		msg.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", filename))
+		msg.WriteString("\r\n")
+		msg.WriteString(encodeBase64RFC2045(attachment.Data))
+		msg.WriteString("\r\n")
 	}
 
 	msg.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
@@ -184,6 +190,65 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, ti
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
 
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
+}
+
+func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber string, tickets []TicketEmailData) ([]EmailAttachment, error) {
+	attachments := make([]EmailAttachment, 0, len(tickets))
+
+	for idx, ticket := range tickets {
+		if len(ticket.QRCodePNG) == 0 {
+			continue
+		}
+
+		pdf := gofpdf.New("P", "mm", "A4", "")
+		pdf.SetMargins(15, 15, 15)
+		pdf.AddPage()
+
+		pdf.SetFont("Arial", "B", 18)
+		pdf.CellFormat(0, 10, s.cfg.FestivalName, "", 1, "L", false, 0, "")
+
+		pdf.SetFont("Arial", "", 12)
+		pdf.CellFormat(0, 8, fmt.Sprintf("Commande: %s", orderNumber), "", 1, "L", false, 0, "")
+		pdf.CellFormat(0, 8, fmt.Sprintf("Client: %s", customerName), "", 1, "L", false, 0, "")
+
+		label := ticket.TicketTypeName
+		if strings.TrimSpace(ticket.AttendeeName) != "" {
+			label = fmt.Sprintf("%s - %s", ticket.TicketTypeName, ticket.AttendeeName)
+		}
+		pdf.CellFormat(0, 8, fmt.Sprintf("Billet: %s", label), "", 1, "L", false, 0, "")
+		pdf.Ln(6)
+
+		imageKey := fmt.Sprintf("qr-%d", idx)
+		pdf.RegisterImageOptionsReader(imageKey, gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
+		pdf.ImageOptions(imageKey, 55, 65, 100, 100, false, gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+
+		pdf.SetY(180)
+		pdf.SetFont("Arial", "", 11)
+		pdf.MultiCell(0, 7, "Presentez ce QR code a l'entree du festival. Ce billet est personnel et ne peut etre valide qu'une seule fois.", "", "L", false)
+
+		var out bytes.Buffer
+		if err := pdf.Output(&out); err != nil {
+			return nil, err
+		}
+
+		filename := fmt.Sprintf("ticket_%s_%d.pdf", sanitizeFilename(orderNumber), idx+1)
+		attachments = append(attachments, EmailAttachment{
+			Filename:    filename,
+			ContentType: "application/pdf",
+			Data:        out.Bytes(),
+		})
+	}
+
+	return attachments, nil
+}
+
+func sanitizeFilename(value string) string {
+	replacer := strings.NewReplacer(" ", "_", "/", "-", "\\", "-", ":", "-", "*", "", "?", "", "\"", "", "<", "", ">", "", "|", "")
+	cleaned := replacer.Replace(strings.TrimSpace(value))
+	if cleaned == "" {
+		return "ticket"
+	}
+	return cleaned
 }
 
 func buildPlainTextTicketEmail(festivalName, customerName, orderNumber string, tickets []TicketEmailData, supportEmail string) string {
