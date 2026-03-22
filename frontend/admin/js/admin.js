@@ -844,9 +844,7 @@ async function renderTicketTypesAdmin(types) {
         } catch (e) { /* ignore */ }
         catsCache[tt.id] = cats;
 
-        const domains = (tt.allowed_domains && tt.allowed_domains.length > 0)
-            ? tt.allowed_domains.map(d => `<span class="domain-tag">${d}</span>`).join(' ')
-            : '<span style="color:#a0aec0;">Tous</span>';
+        const domains = renderAllowedEntries(tt.allowed_domains || []);
 
         const totalAllocated = cats.reduce((s, c) => s + c.quantity_allocated, 0);
         const unallocated = tt.quantity_total - totalAllocated;
@@ -862,7 +860,7 @@ async function renderTicketTypesAdmin(types) {
                     <strong>${tt.name}</strong> — ${formatPrice(tt.price_cents)}
                     ${maskedBadge}
                     <span style="color:#718096;font-size:0.85em;">
-                        ${tt.quantity_sold}/${tt.quantity_total} vendus · Domaines: ${domains}
+                        ${tt.quantity_sold}/${tt.quantity_total} vendus · Accès: ${domains}
                     </span>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:4px;">
@@ -897,7 +895,7 @@ async function renderTicketTypesAdmin(types) {
                 <div class="form-group"><label>Fin vente — Date</label><input type="date" id="edit-end-date-${tt.id}" value="${endDate}"></div>
                 <div class="form-group"><label>Fin vente — Heure</label><input type="text" id="edit-end-time-${tt.id}" value="${endTime}" pattern="([01]\\d|2[0-3]):[0-5]\\d" maxlength="5"></div>
             </div>
-            <div class="form-group"><label>Domaines email autorisés</label><input type="text" id="edit-domains-${tt.id}" value="${escapeAttr(domainsStr)}" placeholder="gmail.com, universite.fr"><small>Séparés par des virgules. Vide = accessible à tous.</small></div>
+            <div class="form-group"><label>Emails/domaines autorisés</label><input type="text" id="edit-domains-${tt.id}" value="${escapeAttr(domainsStr)}" placeholder="@univ.fr, admin@gmail.com"><small>Séparés par des virgules. Exemple: @univ.fr, admin@gmail.com. Vide = accessible à tous.</small></div>
             <div style="display:flex;gap:8px;margin-top:8px;">
                 <button class="btn btn-primary btn-sm" onclick="saveTicketType('${tt.id}')">Enregistrer</button>
                 <button class="btn btn-sm" onclick="toggleEditForm('${tt.id}')">Annuler</button>
@@ -910,9 +908,7 @@ async function renderTicketTypesAdmin(types) {
             html += `<table class="cat-table">
                 <thead><tr><th>Catégorie</th><th>Alloués</th><th>Vendus</th><th>Restants</th><th>Domaines</th><th>Actions</th></tr></thead><tbody>`;
             cats.forEach(c => {
-                const cDomains = (c.allowed_domains && c.allowed_domains.length > 0)
-                    ? c.allowed_domains.map(d => `<span class="domain-tag">${d}</span>`).join(' ')
-                    : '<span style="color:#a0aec0;">Tous</span>';
+                const cDomains = renderAllowedEntries(c.allowed_domains || []);
                 const remaining = c.quantity_allocated - c.quantity_sold;
                 const catMaskedClass = c.is_masked ? ' cat-masked' : '';
                 const catMaskedBadge = c.is_masked ? ' <span class="badge badge-masked" style="font-size:0.7em;">MASQUÉ</span>' : '';
@@ -958,6 +954,35 @@ async function renderTicketTypesAdmin(types) {
 
 function escapeAttr(str) {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderAllowedEntries(entries) {
+    if (!entries || entries.length === 0) {
+        return '<span style="color:#a0aec0;">Tous</span>';
+    }
+
+    const normalized = entries
+        .map(e => (e || '').trim())
+        .filter(Boolean);
+
+    if (normalized.length === 0) {
+        return '<span style="color:#a0aec0;">Tous</span>';
+    }
+
+    const limit = 4;
+    const visible = normalized.slice(0, limit);
+    const remaining = normalized.length - visible.length;
+    const tags = visible.map(value => {
+        const escaped = escapeAttr(value);
+        return `<span class="domain-tag" title="${escaped}">${escaped}</span>`;
+    }).join(' ');
+
+    if (remaining <= 0) {
+        return tags;
+    }
+
+    const all = escapeAttr(normalized.join(', '));
+    return `${tags} <span class="domain-tag" title="${all}">+${remaining}</span>`;
 }
 
 function toggleEditForm(ticketTypeId) {

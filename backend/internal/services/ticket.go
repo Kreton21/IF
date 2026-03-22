@@ -158,11 +158,10 @@ func (s *TicketService) DeleteCategory(ctx context.Context, categoryID string) e
 
 // GetTicketTypesForEmail returns ticket types and their categories filtered for a given email domain
 func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string) ([]models.TicketTypeForEmail, error) {
-	parts := strings.SplitN(email, "@", 2)
-	if len(parts) != 2 {
+	normalizedEmail := normalizeEmail(email)
+	if normalizedEmail == "" {
 		return nil, fmt.Errorf("email invalide")
 	}
-	domain := strings.ToLower(parts[1])
 
 	allTypes, err := s.GetAvailableTicketTypes(ctx)
 	if err != nil {
@@ -171,18 +170,8 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 
 	var result []models.TicketTypeForEmail
 	for _, tt := range allTypes {
-		// Check if user's domain has access to this ticket type
-		if len(tt.AllowedDomains) > 0 {
-			domainMatch := false
-			for _, d := range tt.AllowedDomains {
-				if strings.ToLower(d) == domain {
-					domainMatch = true
-					break
-				}
-			}
-			if !domainMatch {
-				continue
-			}
+		if !emailAllowedByRules(normalizedEmail, tt.AllowedDomains) {
+			continue
 		}
 
 		// Get categories for this ticket type
@@ -198,17 +187,8 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 			if cat.IsMasked {
 				continue
 			}
-			if len(cat.AllowedDomains) > 0 {
-				catMatch := false
-				for _, d := range cat.AllowedDomains {
-					if strings.ToLower(d) == domain {
-						catMatch = true
-						break
-					}
-				}
-				if !catMatch {
-					continue
-				}
+			if !emailAllowedByRules(normalizedEmail, cat.AllowedDomains) {
+				continue
 			}
 			filteredCats = append(filteredCats, models.CategoryForEmail{
 				ID:                cat.ID,
@@ -246,6 +226,22 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		return nil, fmt.Errorf("réservé aux personnes de 18 ans et plus")
 	}
 
+	totalRequested := 0
+	for _, item := range req.Items {
+		totalRequested += item.Quantity
+	}
+	if totalRequested > 1 {
+		return nil, fmt.Errorf("vous ne pouvez avoir qu'un seul ticket par mail")
+	}
+
+	alreadyOwned, err := s.orderRepo.CountFestivalTicketsByEmail(ctx, req.CustomerEmail)
+	if err != nil {
+		return nil, err
+	}
+	if alreadyOwned > 0 {
+		return nil, fmt.Errorf("vous ne pouvez avoir qu'un seul ticket par mail")
+	}
+
 	var referral *models.ReferralPublicInfo
 	if strings.TrimSpace(req.ReferralCode) != "" {
 		link, err := s.orderRepo.GetReferralLinkByCode(ctx, req.ReferralCode)
@@ -263,6 +259,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		quantity   int
 	}
 
+	normalizedEmail := normalizeEmail(req.CustomerEmail)
 	for _, item := range req.Items {
 		if item.Quantity < 1 {
 			return nil, fmt.Errorf("quantité invalide pour %s", item.TicketTypeID)
@@ -277,6 +274,9 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		}
 		if !tt.IsOnSale() {
 			return nil, fmt.Errorf("le ticket '%s' n'est plus en vente", tt.Name)
+		}
+		if !emailAllowedByRules(normalizedEmail, tt.AllowedDomains) {
+			return nil, fmt.Errorf("ce ticket n'est pas accessible pour cette adresse email")
 		}
 		if item.Quantity > tt.MaxPerOrder {
 			return nil, fmt.Errorf("maximum %d tickets '%s' par commande", tt.MaxPerOrder, tt.Name)
@@ -1083,6 +1083,71 @@ func joinStrings(ss []string) string {
 		result += s
 	}
 	return result
+}
+
+func normalizeEmail(email string) string {
+	trimmed := strings.ToLower(strings.TrimSpace(email))
+	parts := strings.SplitN(trimmed, "@", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return ""
+	}
+	return trimmed
+}
+
+func emailAllowedByRules(email string, rules []string) bool {
+	if len(rules) == 0 {
+		return true
+	}
+
+	normalizedEmail := normalizeEmail(email)
+	if normalizedEmail == "" {
+		return false
+	}
+	parts := strings.SplitN(normalizedEmail, "@", 2)
+	localPart := parts[0]
+	domain := parts[1]
+
+	for _, rawRule := range rules {
+		rule := strings.ToLower(strings.TrimSpace(rawRule))
+		if rule == "" {
+			continue
+		}
+
+		if strings.HasPrefix(rule, "@") {
+			ruleDomain := strings.TrimPrefix(rule, "@")
+			if ruleDomain != "" && ruleDomain == domain {
+				return true
+			}
+			continue
+		}
+
+		if strings.Contains(rule, "@") {
+			ruleParts := strings.SplitN(rule, "@", 2)
+			if len(ruleParts) == 2 {
+				ruleLocal := strings.TrimSpace(ruleParts[0])
+				ruleDomain := strings.TrimSpace(ruleParts[1])
+				if ruleDomain == "" {
+					continue
+				}
+				if ruleLocal == "" {
+					if ruleDomain == domain {
+						return true
+					}
+					continue
+				}
+				if ruleLocal == localPart && ruleDomain == domain {
+					return true
+				}
+			}
+			continue
+		}
+
+		if rule == domain {
+			return true
+		}
+	}
+
+	return false
 }
 
 func isAdultFromDate(dateOfBirth string) bool {
