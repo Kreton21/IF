@@ -344,13 +344,16 @@ function renderTickets() {
       btnHtml = '<button class="btn-otl" disabled>Bientôt disponible</button>';
     }
 
+    const description = (tt.description || '').trim();
+    const descHtml = description ? `<p class="tkt-desc">${description}</p>` : '';
+
     const card = document.createElement('div');
     card.className = `tkt-card ${rvClass} ${isBest ? 'best' : ''} ${inCart ? 'selected' : ''}`;
     card.innerHTML = `
       ${isBest ? '<div class="tkt-badge">⚡ Recommandé</div>' : ''}
       <p class="tkt-tier">${tt.name}</p>
       <div class="tkt-price">${formatPrice(tt.price_cents)}</div>
-      <p class="tkt-desc">${tt.description || ''}</p>
+      ${descHtml}
       ${catHtml}
       ${availHtml}
       ${btnHtml}
