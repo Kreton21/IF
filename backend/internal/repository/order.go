@@ -346,6 +346,32 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		stats.SalesByDay = append(stats.SalesByDay, d)
 	}
 
+	stats.SalesTimeline = make(map[string][]models.SalesTimelinePoint)
+
+	timeline1h, err := r.querySalesTimeline(ctx, "1 hour", "to_timestamp(floor(extract(epoch from o.created_at) / 300) * 300)")
+	if err != nil {
+		return nil, err
+	}
+	stats.SalesTimeline["1h"] = timeline1h
+
+	timeline1d, err := r.querySalesTimeline(ctx, "1 day", "date_trunc('hour', o.created_at)")
+	if err != nil {
+		return nil, err
+	}
+	stats.SalesTimeline["1j"] = timeline1d
+
+	timeline1w, err := r.querySalesTimeline(ctx, "7 days", "date_trunc('day', o.created_at)")
+	if err != nil {
+		return nil, err
+	}
+	stats.SalesTimeline["1semaine"] = timeline1w
+
+	timeline1m, err := r.querySalesTimeline(ctx, "1 month", "date_trunc('day', o.created_at)")
+	if err != nil {
+		return nil, err
+	}
+	stats.SalesTimeline["1mois"] = timeline1m
+
 	// 10 dernières commandes
 	recentRows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
@@ -679,28 +705,34 @@ func (r *OrderRepository) ListReferralLinks(ctx context.Context) ([]models.Refer
 
 func (r *OrderRepository) getReferralDailySalesByLink(ctx context.Context, referralLinkID string) ([]models.DailyReferralSales, error) {
 	rows, err := r.pool.Query(ctx, `
+		WITH clicks_by_day AS (
+			SELECT
+				DATE(c.created_at) AS d,
+				COUNT(*) AS click_count
+			FROM referral_clicks c
+			WHERE c.referral_link_id = $1
+			GROUP BY DATE(c.created_at)
+		),
+		tickets_by_day AS (
+			SELECT
+				DATE(roc.created_at) AS d,
+				COUNT(*) AS ticket_count
+			FROM referral_order_conversions roc
+			JOIN orders o ON o.id = roc.order_id
+			JOIN tickets t ON t.order_id = o.id
+			LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+			WHERE roc.referral_link_id = $1
+			  AND o.status IN ('paid', 'confirmed')
+			  AND bt.ticket_id IS NULL
+			GROUP BY DATE(roc.created_at)
+		)
 		SELECT
-			DATE(roc.created_at)::text as sale_date,
-			COUNT(*) as converted_orders,
-			COALESCE(SUM((
-				SELECT COUNT(*)
-				FROM tickets t2
-				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
-				WHERE t2.order_id = roc.order_id AND bt2.ticket_id IS NULL
-			)), 0) as converted_tickets,
-			COALESCE(SUM(o.total_cents), 0) as revenue
-		FROM referral_order_conversions roc
-		JOIN orders o ON o.id = roc.order_id
-		WHERE roc.referral_link_id = $1
-		  AND o.status IN ('paid', 'confirmed')
-		  AND NOT EXISTS (
-			  SELECT 1
-			  FROM tickets tb
-			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
-			  WHERE tb.order_id = o.id
-		  )
-		GROUP BY DATE(roc.created_at)
-		ORDER BY DATE(roc.created_at) DESC
+			COALESCE(c.d, t.d)::text AS sale_date,
+			COALESCE(c.click_count, 0) AS click_count,
+			COALESCE(t.ticket_count, 0) AS ticket_count
+		FROM clicks_by_day c
+		FULL OUTER JOIN tickets_by_day t ON t.d = c.d
+		ORDER BY COALESCE(c.d, t.d) DESC
 		LIMIT 30
 	`, referralLinkID)
 	if err != nil {
@@ -711,7 +743,7 @@ func (r *OrderRepository) getReferralDailySalesByLink(ctx context.Context, refer
 	out := make([]models.DailyReferralSales, 0)
 	for rows.Next() {
 		var d models.DailyReferralSales
-		if scanErr := rows.Scan(&d.Date, &d.ConvertedOrders, &d.ConvertedTickets, &d.RevenueCents); scanErr != nil {
+		if scanErr := rows.Scan(&d.Date, &d.ClickCount, &d.TicketCount); scanErr != nil {
 			return nil, fmt.Errorf("erreur scan stats par jour par lien: %w", scanErr)
 		}
 		out = append(out, d)
@@ -719,6 +751,54 @@ func (r *OrderRepository) getReferralDailySalesByLink(ctx context.Context, refer
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("erreur lecture stats par jour par lien: %w", err)
+	}
+
+	return out, nil
+}
+
+func (r *OrderRepository) querySalesTimeline(ctx context.Context, intervalLiteral, bucketExpr string) ([]models.SalesTimelinePoint, error) {
+	query := fmt.Sprintf(`
+		SELECT
+			%s AS bucket,
+			COALESCE(SUM(o.total_cents), 0) AS revenue,
+			COALESCE(SUM((
+				SELECT COUNT(*)
+				FROM tickets t2
+				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
+				WHERE t2.order_id = o.id AND bt2.ticket_id IS NULL
+			)), 0) AS ticket_count
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND o.created_at >= NOW() - INTERVAL '%s'
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
+		GROUP BY bucket
+		ORDER BY bucket ASC
+	`, bucketExpr, intervalLiteral)
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("erreur série ventes (%s): %w", intervalLiteral, err)
+	}
+	defer rows.Close()
+
+	out := make([]models.SalesTimelinePoint, 0)
+	for rows.Next() {
+		var bucket time.Time
+		var point models.SalesTimelinePoint
+		if scanErr := rows.Scan(&bucket, &point.RevenueCents, &point.TicketCount); scanErr != nil {
+			return nil, fmt.Errorf("erreur lecture série ventes (%s): %w", intervalLiteral, scanErr)
+		}
+		point.Bucket = bucket.Format(time.RFC3339)
+		out = append(out, point)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur parcours série ventes (%s): %w", intervalLiteral, err)
 	}
 
 	return out, nil

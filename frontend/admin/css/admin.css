@@ -405,6 +405,13 @@ tr:hover { background: #f8fafc; }
     background: #fafbff;
 }
 
+.chart-range-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
 .daily-chart-head {
     display: flex;
     justify-content: space-between;
@@ -415,9 +422,43 @@ tr:hover { background: #f8fafc; }
 }
 
 .daily-line-chart-wrap {
-    width: 100%;
+    flex: 1;
     height: 240px;
 }
+
+.daily-chart-main {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.daily-chart-legend {
+    width: 180px;
+    border-left: 1px dashed var(--border);
+    padding-left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    color: var(--text-light);
+    font-size: .85rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.revenue { background: #667eea; }
+.legend-dot.tickets { background: #ed8936; }
 
 .daily-line-chart {
     width: 100%;
@@ -430,14 +471,27 @@ tr:hover { background: #f8fafc; }
 }
 
 .daily-line-chart .line {
-    stroke: var(--primary);
     stroke-width: 3;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
 
-.daily-line-chart circle {
-    fill: var(--secondary);
+.daily-line-chart .line-revenue {
+    stroke: #667eea;
+}
+
+.daily-line-chart .line-tickets {
+    stroke: #ed8936;
+}
+
+.daily-line-chart .line-revenue-dot {
+    fill: #667eea;
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+
+.daily-line-chart .line-tickets-dot {
+    fill: #ed8936;
     stroke: #fff;
     stroke-width: 1.5;
 }
@@ -458,6 +512,8 @@ tr:hover { background: #f8fafc; }
     .stat-value { font-size: 1.6rem; }
     .filters { flex-direction: column; }
     .filters input, .filters select { min-width: auto; }
+    .daily-chart-main { flex-direction: column; }
+    .daily-chart-legend { width: 100%; border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 10px; }
 }
 
 /* ==========================================

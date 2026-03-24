@@ -10,6 +10,8 @@ let adminRole = localStorage.getItem('admin_role') || 'admin';
 let searchTimeout = null;
 let currentPage = 1;
 let busOptionsCache = null;
+let latestSalesStats = null;
+let salesChartRange = '1j';
 
 // ==========================================
 // Initialisation
@@ -350,12 +352,11 @@ function renderReferralLinks(rows) {
         let dailyHtml = '<span style="color:#a0aec0;">Aucune conversion</span>';
         if (dailyRows.length > 0) {
             dailyHtml = `<table style="font-size:.8rem;min-width:260px;">
-                <thead><tr><th>Date</th><th>Cmd</th><th>Tickets</th><th>CA</th></tr></thead><tbody>
+                <thead><tr><th>Date</th><th>Clicks</th><th>Tickets</th></tr></thead><tbody>
                 ${dailyRows.map(d => `<tr>
                     <td>${formatDate(d.date)}</td>
-                    <td>${d.converted_orders || 0}</td>
-                    <td>${d.converted_tickets || 0}</td>
-                    <td>${formatPrice(d.revenue_cents || 0)}</td>
+                    <td>${d.click_count || 0}</td>
+                    <td>${d.ticket_count || 0}</td>
                 </tr>`).join('')}
                 </tbody></table>`;
         }
@@ -397,6 +398,7 @@ async function loadStats() {
         ]);
         const stats = await statsResponse.json();
         const busTickets = await busTicketsResponse.json();
+        latestSalesStats = stats;
 
         const testEmailCard = document.getElementById('test-email-card');
         if (testEmailCard) {
@@ -438,6 +440,19 @@ function switchStatsView(kind) {
     busPanel.classList.toggle('hidden', !showBus);
     festivalBtn.classList.toggle('btn-primary', !showBus);
     busBtn.classList.toggle('btn-primary', showBus);
+}
+
+function setSalesChartRange(rangeKey) {
+    salesChartRange = rangeKey;
+
+    document.querySelectorAll('#sales-chart-range-tabs [data-range]').forEach(btn => {
+        const isActive = btn.getAttribute('data-range') === rangeKey;
+        btn.classList.toggle('btn-primary', isActive);
+    });
+
+    if (latestSalesStats) {
+        renderDailySalesChart(latestSalesStats.sales_by_day || []);
+    }
 }
 
 function renderBusStats(rows) {
@@ -619,54 +634,88 @@ function renderDailySalesChart(days) {
     const container = document.getElementById('sales-by-day-chart');
     if (!container) return;
 
-    if (!days.length) {
-        container.innerHTML = '<p style="color:#718096;">Aucune donnée pour le graphe</p>';
+    const timeline = latestSalesStats?.sales_timeline || {};
+    const points = Array.isArray(timeline[salesChartRange]) ? timeline[salesChartRange] : [];
+
+    if (!points.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucune donnée pour ce créneau</p>';
         return;
     }
 
-    const ordered = [...days].reverse();
-    const maxRevenue = Math.max(...ordered.map(d => d.revenue_cents || 0), 1);
+    const ordered = [...points];
+    const maxRevenue = Math.max(...ordered.map(p => p.revenue_cents || 0), 1);
+    const maxTickets = Math.max(...ordered.map(p => p.ticket_count || 0), 1);
 
     const width = Math.max(ordered.length * 44, 320);
     const height = 220;
     const pad = 28;
     const stepX = ordered.length > 1 ? (width - pad * 2) / (ordered.length - 1) : 0;
 
-    const points = ordered.map((d, idx) => {
-        const value = d.revenue_cents || 0;
+    const chartPoints = ordered.map((point, idx) => {
+        const revenue = point.revenue_cents || 0;
+        const tickets = point.ticket_count || 0;
         const x = pad + idx * stepX;
-        const y = height - pad - ((value / maxRevenue) * (height - pad * 2));
-        return { x, y, value, date: d.date };
+        const revenueY = height - pad - ((revenue / maxRevenue) * (height - pad * 2));
+        const ticketsY = height - pad - ((tickets / maxTickets) * (height - pad * 2));
+        return { x, revenueY, ticketsY, revenue, tickets, bucket: point.bucket };
     });
 
-    const xLabels = points.map((point, idx) => {
+    const xLabels = chartPoints.map((point, idx) => {
         if (ordered.length > 10 && idx % Math.ceil(ordered.length / 8) !== 0 && idx !== ordered.length - 1) {
             return '';
         }
-        return `<text x="${point.x.toFixed(2)}" y="${height - 8}" text-anchor="middle">${formatDate(ordered[idx].date)}</text>`;
+        return `<text x="${point.x.toFixed(2)}" y="${height - 8}" text-anchor="middle">${formatBucketLabel(point.bucket, salesChartRange)}</text>`;
     }).join('');
 
-    const dots = points.map(point => `
-        <circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.5">
-            <title>${formatDate(point.date)} · ${formatPrice(point.value)}</title>
+    const revenueLine = chartPoints.map(point => `${point.x.toFixed(2)},${point.revenueY.toFixed(2)}`).join(' ');
+    const ticketsLine = chartPoints.map(point => `${point.x.toFixed(2)},${point.ticketsY.toFixed(2)}`).join(' ');
+
+    const revenueDots = chartPoints.map(point => `
+        <circle class="line-revenue-dot" cx="${point.x.toFixed(2)}" cy="${point.revenueY.toFixed(2)}" r="3.2">
+            <title>${formatBucketLabel(point.bucket, salesChartRange)} · CA ${formatPrice(point.revenue)}</title>
+        </circle>
+    `).join('');
+
+    const ticketsDots = chartPoints.map(point => `
+        <circle class="line-tickets-dot" cx="${point.x.toFixed(2)}" cy="${point.ticketsY.toFixed(2)}" r="3.2">
+            <title>${formatBucketLabel(point.bucket, salesChartRange)} · Tickets ${point.tickets}</title>
         </circle>
     `).join('');
 
     container.innerHTML = `
         <div class="daily-chart-head">
-            <span>Max jour: <strong>${formatPrice(maxRevenue)}</strong></span>
-            <span>${ordered.length} jours</span>
+            <span>Plage: <strong>${salesChartRange}</strong></span>
+            <span>${ordered.length} points</span>
         </div>
-        <div class="daily-line-chart-wrap">
-            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="daily-line-chart" role="img" aria-label="Ventes par jour">
-                <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" class="axis" />
-                <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="axis" />
-                <polyline points="${points.map(point => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}" class="line" fill="none" />
-                ${dots}
-                <g class="x-labels">${xLabels}</g>
-            </svg>
+        <div class="daily-chart-main">
+            <div class="daily-line-chart-wrap">
+                <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="daily-line-chart" role="img" aria-label="Ventes par période">
+                    <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" class="axis" />
+                    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="axis" />
+                    <polyline points="${revenueLine}" class="line line-revenue" fill="none" />
+                    <polyline points="${ticketsLine}" class="line line-tickets" fill="none" />
+                    ${revenueDots}
+                    ${ticketsDots}
+                    <g class="x-labels">${xLabels}</g>
+                </svg>
+            </div>
+            <div class="daily-chart-legend">
+                <div class="legend-item"><span class="legend-dot revenue"></span>CA (${formatPrice(maxRevenue)} max)</div>
+                <div class="legend-item"><span class="legend-dot tickets"></span>Tickets (${maxTickets} max)</div>
+            </div>
         </div>
     `;
+}
+
+function formatBucketLabel(bucket, rangeKey) {
+    const date = new Date(bucket);
+    if (Number.isNaN(date.getTime())) return '';
+
+    if (rangeKey === '1h' || rangeKey === '1j') {
+        return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
 
 function renderRecentOrders(orders) {

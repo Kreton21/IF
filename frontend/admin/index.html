@@ -154,6 +154,12 @@
             <!-- Ventes par jour -->
             <div class="card">
                 <h3>📈 Ventes par jour</h3>
+                <div class="chart-range-tabs" id="sales-chart-range-tabs">
+                    <button type="button" class="btn btn-sm" data-range="1h" onclick="setSalesChartRange('1h')">1h</button>
+                    <button type="button" class="btn btn-sm btn-primary" data-range="1j" onclick="setSalesChartRange('1j')">1j</button>
+                    <button type="button" class="btn btn-sm" data-range="1semaine" onclick="setSalesChartRange('1semaine')">1 semaine</button>
+                    <button type="button" class="btn btn-sm" data-range="1mois" onclick="setSalesChartRange('1mois')">1 mois</button>
+                </div>
                 <div id="sales-by-day-chart" class="daily-chart"></div>
                 <div id="stats-by-day" class="table-container" style="margin-top:12px;"></div>
             </div>
