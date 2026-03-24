@@ -213,6 +213,7 @@ type SalesStats struct {
 	ByTicketType      []TicketTypeStat `json:"by_ticket_type"`
 	RecentOrders      []Order          `json:"recent_orders"`
 	SalesByDay        []DailySales     `json:"sales_by_day"`
+	ReferralSalesByDay []DailyReferralSales `json:"referral_sales_by_day"`
 }
 
 type CampingClaimRequest struct {
@@ -239,6 +240,13 @@ type DailySales struct {
 	OrderCount   int    `json:"order_count"`
 	TicketCount  int    `json:"ticket_count"`
 	RevenueCents int    `json:"revenue_cents"`
+}
+
+type DailyReferralSales struct {
+	Date            string `json:"date"`
+	ConvertedOrders int    `json:"converted_orders"`
+	ConvertedTickets int   `json:"converted_tickets"`
+	RevenueCents    int    `json:"revenue_cents"`
 }
 
 type OrderListParams struct {

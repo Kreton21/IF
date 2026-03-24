@@ -96,13 +96,19 @@ function showDashboard() {
 
     // Masquer les onglets selon le rôle
     const isStaff = adminRole === 'staff';
+    const isSuperAdmin = adminRole === 'super-admin';
     const changePasswordBtn = document.getElementById('change-password-btn');
     if (changePasswordBtn) {
-        changePasswordBtn.classList.toggle('hidden', isStaff);
+        changePasswordBtn.classList.toggle('hidden', !isSuperAdmin);
     }
     const passwordPanel = document.getElementById('password-panel');
     if (passwordPanel) {
         passwordPanel.classList.add('hidden');
+        if (!isSuperAdmin) {
+            passwordPanel.style.display = 'none';
+        } else {
+            passwordPanel.style.display = 'block';
+        }
     }
     document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"], .tab[data-tab="bus"], .tab[data-tab="referral"]').forEach(tab => {
         tab.style.display = isStaff ? 'none' : '';
@@ -117,7 +123,7 @@ function showDashboard() {
 }
 
 function togglePasswordPanel() {
-    if (adminRole === 'staff') return;
+    if (adminRole !== 'super-admin') return;
     const panel = document.getElementById('password-panel');
     if (!panel) return;
     panel.classList.toggle('hidden');
@@ -126,7 +132,7 @@ function togglePasswordPanel() {
 async function handleChangePassword(e) {
     e.preventDefault();
 
-    if (adminRole === 'staff') {
+    if (adminRole !== 'super-admin') {
         return;
     }
 
@@ -185,7 +191,7 @@ async function handleChangePassword(e) {
 async function handleSetStaffPassword(e) {
     e.preventDefault();
 
-    if (adminRole === 'staff') {
+    if (adminRole !== 'super-admin') {
         return;
     }
 
@@ -393,7 +399,9 @@ async function loadStats() {
         renderTypeStats(stats.by_ticket_type || []);
 
         // Ventes par jour
+        renderDailySalesChart(stats.sales_by_day || []);
         renderDailyStats(stats.sales_by_day || []);
+        renderReferralDailyStats(stats.referral_sales_by_day || []);
 
         // Commandes récentes
         renderRecentOrders(stats.recent_orders || []);
@@ -570,6 +578,7 @@ function renderTypeStats(types) {
 
 function renderDailyStats(days) {
     const container = document.getElementById('stats-by-day');
+    if (!container) return;
     if (days.length === 0) {
         container.innerHTML = '<p style="color:#718096;">Aucune vente</p>';
         return;
@@ -586,6 +595,63 @@ function renderDailyStats(days) {
             <td>${d.order_count}</td>
             <td>${d.ticket_count}</td>
             <td><strong>${formatPrice(d.revenue_cents)}</strong></td>
+        </tr>`;
+    });
+
+    container.innerHTML = html + '</tbody></table>';
+}
+
+function renderDailySalesChart(days) {
+    const container = document.getElementById('sales-by-day-chart');
+    if (!container) return;
+
+    if (!days.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucune donnée pour le graphe</p>';
+        return;
+    }
+
+    const ordered = [...days].reverse();
+    const maxRevenue = Math.max(...ordered.map(d => d.revenue_cents || 0), 1);
+
+    const bars = ordered.map(d => {
+        const value = d.revenue_cents || 0;
+        const heightPct = Math.max(6, Math.round((value / maxRevenue) * 100));
+        const label = formatDate(d.date);
+        return `<div class="daily-chart-bar-wrap">
+            <div class="daily-chart-bar" style="height:${heightPct}%" title="${label} · ${formatPrice(value)}"></div>
+            <div class="daily-chart-label">${label}</div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="daily-chart-head">
+            <span>Max jour: <strong>${formatPrice(maxRevenue)}</strong></span>
+            <span>${ordered.length} jours</span>
+        </div>
+        <div class="daily-chart-bars">${bars}</div>
+    `;
+}
+
+function renderReferralDailyStats(days) {
+    const container = document.getElementById('referral-stats-by-day');
+    if (!container) return;
+
+    if (days.length === 0) {
+        container.innerHTML = '<p style="color:#718096;">Aucune vente issue du parrainage</p>';
+        return;
+    }
+
+    let html = `<table>
+        <thead><tr>
+            <th>Date</th><th>Commandes converties</th><th>Tickets convertis</th><th>CA converti</th>
+        </tr></thead><tbody>`;
+
+    days.forEach(d => {
+        html += `<tr>
+            <td>${formatDate(d.date)}</td>
+            <td>${d.converted_orders || 0}</td>
+            <td>${d.converted_tickets || 0}</td>
+            <td><strong>${formatPrice(d.revenue_cents || 0)}</strong></td>
         </tr>`;
     });
 

@@ -347,6 +347,45 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 		stats.SalesByDay = append(stats.SalesByDay, d)
 	}
 
+	// Ventes par jour depuis liens de parrainage
+	refDayRows, err := r.pool.Query(ctx, `
+		SELECT
+			DATE(roc.created_at)::text as sale_date,
+			COUNT(*) as converted_orders,
+			COALESCE(SUM((
+				SELECT COUNT(*)
+				FROM tickets t2
+				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
+				WHERE t2.order_id = roc.order_id AND bt2.ticket_id IS NULL
+			)), 0) as converted_tickets,
+			COALESCE(SUM(o.total_cents), 0) as revenue
+		FROM referral_order_conversions roc
+		JOIN orders o ON o.id = roc.order_id
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
+		GROUP BY DATE(roc.created_at)
+		ORDER BY DATE(roc.created_at) DESC
+		LIMIT 30
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("erreur stats par jour referral: %w", err)
+	}
+	defer refDayRows.Close()
+
+	for refDayRows.Next() {
+		var d models.DailyReferralSales
+		err := refDayRows.Scan(&d.Date, &d.ConvertedOrders, &d.ConvertedTickets, &d.RevenueCents)
+		if err != nil {
+			return nil, fmt.Errorf("erreur scan daily referral: %w", err)
+		}
+		stats.ReferralSalesByDay = append(stats.ReferralSalesByDay, d)
+	}
+
 	// 10 dernières commandes
 	recentRows, err := r.pool.Query(ctx, `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
