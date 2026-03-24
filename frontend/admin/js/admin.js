@@ -342,10 +342,24 @@ function renderReferralLinks(rows) {
 
     let html = `<table>
         <thead><tr>
-            <th>Nom</th><th>Lien</th><th>Clics</th><th>Visiteurs uniques</th><th>Commandes converties</th><th>Tickets convertis</th><th>CA converti</th><th>Action</th>
+            <th>Nom</th><th>Lien</th><th>Clics</th><th>Visiteurs uniques</th><th>Commandes converties</th><th>Tickets convertis</th><th>CA converti</th><th>Détail jour</th><th>Action</th>
         </tr></thead><tbody>`;
 
     rows.forEach(row => {
+        const dailyRows = Array.isArray(row.daily_sales_by_day) ? row.daily_sales_by_day : [];
+        let dailyHtml = '<span style="color:#a0aec0;">Aucune conversion</span>';
+        if (dailyRows.length > 0) {
+            dailyHtml = `<table style="font-size:.8rem;min-width:260px;">
+                <thead><tr><th>Date</th><th>Cmd</th><th>Tickets</th><th>CA</th></tr></thead><tbody>
+                ${dailyRows.map(d => `<tr>
+                    <td>${formatDate(d.date)}</td>
+                    <td>${d.converted_orders || 0}</td>
+                    <td>${d.converted_tickets || 0}</td>
+                    <td>${formatPrice(d.revenue_cents || 0)}</td>
+                </tr>`).join('')}
+                </tbody></table>`;
+        }
+
         html += `<tr>
             <td><strong>${row.name}</strong><br><small>${formatDateTime(row.created_at)}</small></td>
             <td><a href="${row.share_url}" target="_blank" rel="noopener noreferrer">${row.share_url}</a></td>
@@ -354,6 +368,7 @@ function renderReferralLinks(rows) {
             <td>${row.converted_orders}</td>
             <td>${row.converted_tickets}</td>
             <td><strong>${formatPrice(row.converted_revenue_cents || 0)}</strong></td>
+            <td>${dailyHtml}</td>
             <td><button class="btn btn-sm btn-primary" onclick="copyReferralLink('${escapeAttr(row.share_url)}')">Copier</button></td>
         </tr>`;
     });
@@ -401,7 +416,6 @@ async function loadStats() {
         // Ventes par jour
         renderDailySalesChart(stats.sales_by_day || []);
         renderDailyStats(stats.sales_by_day || []);
-        renderReferralDailyStats(stats.referral_sales_by_day || []);
 
         // Commandes récentes
         renderRecentOrders(stats.recent_orders || []);
@@ -613,49 +627,46 @@ function renderDailySalesChart(days) {
     const ordered = [...days].reverse();
     const maxRevenue = Math.max(...ordered.map(d => d.revenue_cents || 0), 1);
 
-    const bars = ordered.map(d => {
+    const width = Math.max(ordered.length * 44, 320);
+    const height = 220;
+    const pad = 28;
+    const stepX = ordered.length > 1 ? (width - pad * 2) / (ordered.length - 1) : 0;
+
+    const points = ordered.map((d, idx) => {
         const value = d.revenue_cents || 0;
-        const heightPct = Math.max(6, Math.round((value / maxRevenue) * 100));
-        const label = formatDate(d.date);
-        return `<div class="daily-chart-bar-wrap">
-            <div class="daily-chart-bar" style="height:${heightPct}%" title="${label} · ${formatPrice(value)}"></div>
-            <div class="daily-chart-label">${label}</div>
-        </div>`;
+        const x = pad + idx * stepX;
+        const y = height - pad - ((value / maxRevenue) * (height - pad * 2));
+        return { x, y, value, date: d.date };
+    });
+
+    const xLabels = points.map((point, idx) => {
+        if (ordered.length > 10 && idx % Math.ceil(ordered.length / 8) !== 0 && idx !== ordered.length - 1) {
+            return '';
+        }
+        return `<text x="${point.x.toFixed(2)}" y="${height - 8}" text-anchor="middle">${formatDate(ordered[idx].date)}</text>`;
     }).join('');
+
+    const dots = points.map(point => `
+        <circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.5">
+            <title>${formatDate(point.date)} · ${formatPrice(point.value)}</title>
+        </circle>
+    `).join('');
 
     container.innerHTML = `
         <div class="daily-chart-head">
             <span>Max jour: <strong>${formatPrice(maxRevenue)}</strong></span>
             <span>${ordered.length} jours</span>
         </div>
-        <div class="daily-chart-bars">${bars}</div>
+        <div class="daily-line-chart-wrap">
+            <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="daily-line-chart" role="img" aria-label="Ventes par jour">
+                <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" class="axis" />
+                <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="axis" />
+                <polyline points="${points.map(point => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}" class="line" fill="none" />
+                ${dots}
+                <g class="x-labels">${xLabels}</g>
+            </svg>
+        </div>
     `;
-}
-
-function renderReferralDailyStats(days) {
-    const container = document.getElementById('referral-stats-by-day');
-    if (!container) return;
-
-    if (days.length === 0) {
-        container.innerHTML = '<p style="color:#718096;">Aucune vente issue du parrainage</p>';
-        return;
-    }
-
-    let html = `<table>
-        <thead><tr>
-            <th>Date</th><th>Commandes converties</th><th>Tickets convertis</th><th>CA converti</th>
-        </tr></thead><tbody>`;
-
-    days.forEach(d => {
-        html += `<tr>
-            <td>${formatDate(d.date)}</td>
-            <td>${d.converted_orders || 0}</td>
-            <td>${d.converted_tickets || 0}</td>
-            <td><strong>${formatPrice(d.revenue_cents || 0)}</strong></td>
-        </tr>`;
-    });
-
-    container.innerHTML = html + '</tbody></table>';
 }
 
 function renderRecentOrders(orders) {

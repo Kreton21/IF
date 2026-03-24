@@ -119,7 +119,6 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 		}
 		return nil, fmt.Errorf("erreur query order by reference: %w", err)
 	}
-
 	return &o, nil
 }
 
@@ -345,45 +344,6 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 			return nil, fmt.Errorf("erreur scan daily: %w", err)
 		}
 		stats.SalesByDay = append(stats.SalesByDay, d)
-	}
-
-	// Ventes par jour depuis liens de parrainage
-	refDayRows, err := r.pool.Query(ctx, `
-		SELECT
-			DATE(roc.created_at)::text as sale_date,
-			COUNT(*) as converted_orders,
-			COALESCE(SUM((
-				SELECT COUNT(*)
-				FROM tickets t2
-				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
-				WHERE t2.order_id = roc.order_id AND bt2.ticket_id IS NULL
-			)), 0) as converted_tickets,
-			COALESCE(SUM(o.total_cents), 0) as revenue
-		FROM referral_order_conversions roc
-		JOIN orders o ON o.id = roc.order_id
-		WHERE o.status IN ('paid', 'confirmed')
-		  AND NOT EXISTS (
-			  SELECT 1
-			  FROM tickets tb
-			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
-			  WHERE tb.order_id = o.id
-		  )
-		GROUP BY DATE(roc.created_at)
-		ORDER BY DATE(roc.created_at) DESC
-		LIMIT 30
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("erreur stats par jour referral: %w", err)
-	}
-	defer refDayRows.Close()
-
-	for refDayRows.Next() {
-		var d models.DailyReferralSales
-		err := refDayRows.Scan(&d.Date, &d.ConvertedOrders, &d.ConvertedTickets, &d.RevenueCents)
-		if err != nil {
-			return nil, fmt.Errorf("erreur scan daily referral: %w", err)
-		}
-		stats.ReferralSalesByDay = append(stats.ReferralSalesByDay, d)
 	}
 
 	// 10 dernières commandes
@@ -700,11 +660,65 @@ func (r *OrderRepository) ListReferralLinks(ctx context.Context) ([]models.Refer
 		); scanErr != nil {
 			return nil, fmt.Errorf("erreur lecture lien parrainage: %w", scanErr)
 		}
+
+		daily, dailyErr := r.getReferralDailySalesByLink(ctx, row.ID)
+		if dailyErr != nil {
+			return nil, dailyErr
+		}
+		row.DailySalesByDay = daily
+
 		out = append(out, row)
 	}
 
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("erreur parcours liens parrainage: %w", rows.Err())
+	}
+
+	return out, nil
+}
+
+func (r *OrderRepository) getReferralDailySalesByLink(ctx context.Context, referralLinkID string) ([]models.DailyReferralSales, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			DATE(roc.created_at)::text as sale_date,
+			COUNT(*) as converted_orders,
+			COALESCE(SUM((
+				SELECT COUNT(*)
+				FROM tickets t2
+				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
+				WHERE t2.order_id = roc.order_id AND bt2.ticket_id IS NULL
+			)), 0) as converted_tickets,
+			COALESCE(SUM(o.total_cents), 0) as revenue
+		FROM referral_order_conversions roc
+		JOIN orders o ON o.id = roc.order_id
+		WHERE roc.referral_link_id = $1
+		  AND o.status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
+		GROUP BY DATE(roc.created_at)
+		ORDER BY DATE(roc.created_at) DESC
+		LIMIT 30
+	`, referralLinkID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur stats par jour par lien: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.DailyReferralSales, 0)
+	for rows.Next() {
+		var d models.DailyReferralSales
+		if scanErr := rows.Scan(&d.Date, &d.ConvertedOrders, &d.ConvertedTickets, &d.RevenueCents); scanErr != nil {
+			return nil, fmt.Errorf("erreur scan stats par jour par lien: %w", scanErr)
+		}
+		out = append(out, d)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur lecture stats par jour par lien: %w", err)
 	}
 
 	return out, nil
