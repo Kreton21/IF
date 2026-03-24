@@ -48,11 +48,11 @@ func (h *AdminHandler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// ChangePassword permet à un admin de changer son mot de passe
+// ChangePassword permet uniquement au super-admin de changer son mot de passe
 func (h *AdminHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	role := middleware.GetAdminRole(r.Context())
-	if role != "admin" {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+	rawRole := middleware.GetAdminRawRole(r.Context())
+	if rawRole != "super-admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé au super-admin"})
 		return
 	}
 
@@ -82,11 +82,11 @@ func (h *AdminHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Mot de passe mis à jour"})
 }
 
-// SetStaffPassword permet à un admin de changer le mot de passe d'un staff
+// SetStaffPassword permet uniquement au super-admin de changer le mot de passe d'un staff
 func (h *AdminHandler) SetStaffPassword(w http.ResponseWriter, r *http.Request) {
-	role := middleware.GetAdminRole(r.Context())
-	if role != "admin" {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+	rawRole := middleware.GetAdminRawRole(r.Context())
+	if rawRole != "super-admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé au super-admin"})
 		return
 	}
 

@@ -14,6 +14,7 @@ const (
 	AdminIDKey   contextKey = "admin_id"
 	AdminNameKey contextKey = "admin_name"
 	AdminRoleKey contextKey = "admin_role"
+	AdminRawRoleKey contextKey = "admin_raw_role"
 )
 
 // JWTAuth middleware pour protéger les routes admin
@@ -47,7 +48,12 @@ func JWTAuth(adminService *services.AdminService) func(http.Handler) http.Handle
 				ctx = context.WithValue(ctx, AdminNameKey, name)
 			}
 			if role, ok := claims["role"].(string); ok {
-				ctx = context.WithValue(ctx, AdminRoleKey, role)
+				ctx = context.WithValue(ctx, AdminRawRoleKey, role)
+				effectiveRole := role
+				if role == "super-admin" {
+					effectiveRole = "admin"
+				}
+				ctx = context.WithValue(ctx, AdminRoleKey, effectiveRole)
 			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -66,6 +72,14 @@ func GetAdminName(ctx context.Context) string {
 // GetAdminRole extrait le rôle admin du context
 func GetAdminRole(ctx context.Context) string {
 	if role, ok := ctx.Value(AdminRoleKey).(string); ok {
+		return role
+	}
+	return ""
+}
+
+// GetAdminRawRole extrait le rôle réel admin du context (ex: super-admin)
+func GetAdminRawRole(ctx context.Context) string {
+	if role, ok := ctx.Value(AdminRawRoleKey).(string); ok {
 		return role
 	}
 	return ""

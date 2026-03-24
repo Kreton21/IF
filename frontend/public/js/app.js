@@ -316,8 +316,6 @@ function renderTickets() {
       </div>`;
     }
 
-    const perks = getPerksForTicket(tt, idx);
-
     const canBuy = isOnSale && (categories.length === 0 || selectedCatId);
 
     // CTA button
@@ -355,9 +353,6 @@ function renderTickets() {
       <p class="tkt-desc">${tt.description || ''}</p>
       ${catHtml}
       ${availHtml}
-      <ul class="tkt-perks">
-        ${perks.map(p => `<li>${p}</li>`).join('')}
-      </ul>
       ${btnHtml}
     `;
 
@@ -392,23 +387,6 @@ function selectCategory(ticketTypeId, categoryId) {
   delete state.cart[ticketTypeId];
   delete state.attendees[ticketTypeId];
   renderTickets();
-}
-
-/**
- * Generate perks list for a ticket type based on its position
- */
-function getPerksForTicket(tt, idx) {
-  // If the ticket description contains bullet-style info, use generic perks
-  const basePerk = 'Accès festival complet';
-  const animPerk = 'Accès toutes animations';
-
-  if (idx === 0) {
-    return [basePerk, animPerk, 'Meilleur prix garanti'];
-  } else if (idx === 1) {
-    return [basePerk, animPerk];
-  } else {
-    return [basePerk, 'Entrée dernière vague'];
-  }
 }
 
 // ══════════════════════════════════════

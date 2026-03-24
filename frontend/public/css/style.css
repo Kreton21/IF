@@ -266,14 +266,17 @@ a { text-decoration:none; color:inherit; }
 }
 .tkt-tier { font-size:.66rem; font-weight:800; letter-spacing:4px; text-transform:uppercase; color:#ccc; margin-bottom:6px; }
 .tkt-price {
-  font-family:'Bebas Neue',sans-serif; font-size:4.5rem; line-height:1;
+  font-family:'Bebas Neue',sans-serif; font-size:5.4rem; line-height:.96;
   background:linear-gradient(135deg,var(--rose),var(--peach));
   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
-.tkt-desc { font-size:.75rem; color:#ccc; margin-bottom:22px; }
-.tkt-perks { list-style:none; margin-bottom:28px; flex:1; }
-.tkt-perks li { font-size:.83rem; padding:7px 0; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; gap:9px; }
-.tkt-perks li::before { content:'✓'; color:var(--rose); font-weight:900; }
+.tkt-desc {
+  font-size:1rem;
+  line-height:1.65;
+  color:var(--muted);
+  margin:14px 0 28px;
+  min-height:6.4em;
+}
 .btn-full {
   width:100%;
   background:linear-gradient(135deg,var(--rose),var(--peach));

@@ -125,6 +125,17 @@ func main() {
 	// 8. Créer les comptes par défaut si nécessaire
 	go func() {
 		ctx := context.Background()
+		// Super-admin principal
+		existingSuperAdmin, _ := adminRepo.GetByUsername(ctx, "superadmin")
+		if existingSuperAdmin == nil {
+			err := adminService.CreateAdmin(ctx, "superadmin", "superadmin2026", "Super Administrateur", "super-admin")
+			if err != nil {
+				log.Printf("⚠️  Erreur création super-admin par défaut: %v", err)
+			} else {
+				log.Println("👤 Super-admin par défaut créé (superadmin / superadmin2026)")
+			}
+		}
+
 		// Admin principal
 		existing, _ := adminRepo.GetByUsername(ctx, "admin")
 		if existing == nil {
