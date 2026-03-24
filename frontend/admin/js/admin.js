@@ -12,6 +12,7 @@ let currentPage = 1;
 let busOptionsCache = null;
 let latestSalesStats = null;
 let salesChartRange = '1j';
+let salesChart = null;
 
 // ==========================================
 // Initialisation
@@ -416,7 +417,7 @@ async function loadStats() {
         renderTypeStats(stats.by_ticket_type || []);
 
         // Ventes par jour
-        renderDailySalesChart(stats.sales_by_day || []);
+        setSalesChartRange(salesChartRange);
         renderDailyStats(stats.sales_by_day || []);
 
         // Commandes récentes
@@ -451,7 +452,7 @@ function setSalesChartRange(rangeKey) {
     });
 
     if (latestSalesStats) {
-        renderDailySalesChart(latestSalesStats.sales_by_day || []);
+        renderDailySalesChart();
     }
 }
 
@@ -630,81 +631,140 @@ function renderDailyStats(days) {
     container.innerHTML = html + '</tbody></table>';
 }
 
-function renderDailySalesChart(days) {
+function renderDailySalesChart() {
     const container = document.getElementById('sales-by-day-chart');
     if (!container) return;
+
+    if (typeof Chart === 'undefined') {
+        container.innerHTML = '<p style="color:#e53e3e;">Chart.js non chargé</p>';
+        return;
+    }
 
     const timeline = latestSalesStats?.sales_timeline || {};
     const points = Array.isArray(timeline[salesChartRange]) ? timeline[salesChartRange] : [];
 
     if (!points.length) {
+        if (salesChart) {
+            salesChart.destroy();
+            salesChart = null;
+        }
         container.innerHTML = '<p style="color:#718096;">Aucune donnée pour ce créneau</p>';
         return;
     }
 
-    const ordered = [...points];
-    const maxRevenue = Math.max(...ordered.map(p => p.revenue_cents || 0), 1);
-    const maxTickets = Math.max(...ordered.map(p => p.ticket_count || 0), 1);
-
-    const width = Math.max(ordered.length * 44, 320);
-    const height = 220;
-    const pad = 28;
-    const stepX = ordered.length > 1 ? (width - pad * 2) / (ordered.length - 1) : 0;
-
-    const chartPoints = ordered.map((point, idx) => {
-        const revenue = point.revenue_cents || 0;
-        const tickets = point.ticket_count || 0;
-        const x = pad + idx * stepX;
-        const revenueY = height - pad - ((revenue / maxRevenue) * (height - pad * 2));
-        const ticketsY = height - pad - ((tickets / maxTickets) * (height - pad * 2));
-        return { x, revenueY, ticketsY, revenue, tickets, bucket: point.bucket };
-    });
-
-    const xLabels = chartPoints.map((point, idx) => {
-        if (ordered.length > 10 && idx % Math.ceil(ordered.length / 8) !== 0 && idx !== ordered.length - 1) {
-            return '';
-        }
-        return `<text x="${point.x.toFixed(2)}" y="${height - 8}" text-anchor="middle">${formatBucketLabel(point.bucket, salesChartRange)}</text>`;
-    }).join('');
-
-    const revenueLine = chartPoints.map(point => `${point.x.toFixed(2)},${point.revenueY.toFixed(2)}`).join(' ');
-    const ticketsLine = chartPoints.map(point => `${point.x.toFixed(2)},${point.ticketsY.toFixed(2)}`).join(' ');
-
-    const revenueDots = chartPoints.map(point => `
-        <circle class="line-revenue-dot" cx="${point.x.toFixed(2)}" cy="${point.revenueY.toFixed(2)}" r="3.2">
-            <title>${formatBucketLabel(point.bucket, salesChartRange)} · CA ${formatPrice(point.revenue)}</title>
-        </circle>
-    `).join('');
-
-    const ticketsDots = chartPoints.map(point => `
-        <circle class="line-tickets-dot" cx="${point.x.toFixed(2)}" cy="${point.ticketsY.toFixed(2)}" r="3.2">
-            <title>${formatBucketLabel(point.bucket, salesChartRange)} · Tickets ${point.tickets}</title>
-        </circle>
-    `).join('');
+    const ordered = [...points].sort((a, b) => new Date(a.bucket) - new Date(b.bucket));
+    const labels = ordered.map(point => formatBucketLabel(point.bucket, salesChartRange));
+    const revenueData = ordered.map(point => point.revenue_cents || 0);
+    const ticketData = ordered.map(point => point.ticket_count || 0);
+    const rawDates = ordered.map(point => point.bucket);
 
     container.innerHTML = `
         <div class="daily-chart-head">
             <span>Plage: <strong>${salesChartRange}</strong></span>
             <span>${ordered.length} points</span>
         </div>
-        <div class="daily-chart-main">
-            <div class="daily-line-chart-wrap">
-                <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="daily-line-chart" role="img" aria-label="Ventes par période">
-                    <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" class="axis" />
-                    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="axis" />
-                    <polyline points="${revenueLine}" class="line line-revenue" fill="none" />
-                    <polyline points="${ticketsLine}" class="line line-tickets" fill="none" />
-                    ${revenueDots}
-                    ${ticketsDots}
-                    <g class="x-labels">${xLabels}</g>
-                </svg>
-            </div>
-            <div class="daily-chart-legend">
-                <div class="legend-item"><span class="legend-dot revenue"></span>CA (${formatPrice(maxRevenue)} max)</div>
-                <div class="legend-item"><span class="legend-dot tickets"></span>Tickets (${maxTickets} max)</div>
+        <div class="daily-chart-main chartjs-main">
+            <div class="daily-line-chart-wrap chartjs-wrap">
+                <canvas id="sales-chart-canvas" aria-label="Ventes par période"></canvas>
             </div>
         </div>
     `;
+
+    const canvas = document.getElementById('sales-chart-canvas');
+    if (!canvas) return;
+
+    if (salesChart) {
+        salesChart.destroy();
+        salesChart = null;
+    }
+
+    salesChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'CA',
+                    data: revenueData,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102,126,234,0.12)',
+                    pointBackgroundColor: '#667eea',
+                    pointRadius: 3,
+                    tension: 0.3,
+                    yAxisID: 'yRevenue',
+                },
+                {
+                    label: 'Tickets',
+                    data: ticketData,
+                    borderColor: '#ed8936',
+                    backgroundColor: 'rgba(237,137,54,0.12)',
+                    pointBackgroundColor: '#ed8936',
+                    pointRadius: 3,
+                    tension: 0.3,
+                    yAxisID: 'yTickets',
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                    },
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            const idx = items?.[0]?.dataIndex ?? 0;
+                            return formatTooltipDate(rawDates[idx], salesChartRange);
+                        },
+                        label: ctx => {
+                            if (ctx.dataset.label === 'CA') {
+                                return `CA: ${formatPrice(ctx.parsed.y || 0)}`;
+                            }
+                            return `Tickets: ${ctx.parsed.y || 0}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 8,
+                    },
+                    grid: {
+                        display: false,
+                    },
+                },
+                yRevenue: {
+                    type: 'linear',
+                    position: 'left',
+                    ticks: {
+                        callback: value => formatPrice(Number(value) || 0),
+                    },
+                },
+                yTickets: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        precision: 0,
+                    },
+                },
+            },
+        },
+    });
 }
 
 function formatBucketLabel(bucket, rangeKey) {
@@ -716,6 +776,17 @@ function formatBucketLabel(bucket, rangeKey) {
     }
 
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatTooltipDate(bucket, rangeKey) {
+    const date = new Date(bucket);
+    if (Number.isNaN(date.getTime())) return '';
+
+    if (rangeKey === '1h' || rangeKey === '1j') {
+        return date.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function renderRecentOrders(orders) {

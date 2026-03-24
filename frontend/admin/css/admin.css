@@ -426,79 +426,19 @@ tr:hover { background: #f8fafc; }
     height: 240px;
 }
 
+.chartjs-wrap {
+    min-height: 260px;
+}
+
 .daily-chart-main {
     display: flex;
     gap: 14px;
     align-items: stretch;
 }
 
-.daily-chart-legend {
-    width: 180px;
-    border-left: 1px dashed var(--border);
-    padding-left: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    justify-content: center;
-    color: var(--text-light);
-    font-size: .85rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.legend-dot.revenue { background: #667eea; }
-.legend-dot.tickets { background: #ed8936; }
-
-.daily-line-chart {
-    width: 100%;
-    height: 100%;
-}
-
-.daily-line-chart .axis {
-    stroke: #cbd5e0;
-    stroke-width: 1;
-}
-
-.daily-line-chart .line {
-    stroke-width: 3;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-}
-
-.daily-line-chart .line-revenue {
-    stroke: #667eea;
-}
-
-.daily-line-chart .line-tickets {
-    stroke: #ed8936;
-}
-
-.daily-line-chart .line-revenue-dot {
-    fill: #667eea;
-    stroke: #fff;
-    stroke-width: 1.5;
-}
-
-.daily-line-chart .line-tickets-dot {
-    fill: #ed8936;
-    stroke: #fff;
-    stroke-width: 1.5;
-}
-
-.daily-line-chart .x-labels text {
-    fill: var(--text-light);
-    font-size: 8px;
+.chartjs-main canvas {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* Responsive */
@@ -513,7 +453,6 @@ tr:hover { background: #f8fafc; }
     .filters { flex-direction: column; }
     .filters input, .filters select { min-width: auto; }
     .daily-chart-main { flex-direction: column; }
-    .daily-chart-legend { width: 100%; border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 10px; }
 }
 
 /* ==========================================
