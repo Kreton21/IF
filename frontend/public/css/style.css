@@ -4,6 +4,17 @@
 ════════════════════════════════════════ */
 
 /* ════════════════════════════════════════
+	 FONTS
+════════════════════════════════════════ */
+@font-face {
+	font-family: 'Paytone One';
+	src: url('../fonts/PaytoneOne-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ════════════════════════════════════════
 	 VARIABLES
 ════════════════════════════════════════ */
 :root {
@@ -164,7 +175,7 @@ a { text-decoration:none; color:inherit; }
 
 .hero-palms { position:absolute; bottom:0; left:0; width:100%; z-index:3; }
 
-.particles { position:absolute; inset:0; z-index:2; pointer-events:none; overflow:hidden; }
+.particles { position:absolute; inset:0; z-index:20; pointer-events:none; overflow:hidden; }
 .sparkle {
 	position:absolute; border-radius:50%;
 	animation:sparkleUp linear infinite;
