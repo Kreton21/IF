@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -416,15 +417,21 @@ func (r *OrderRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 
 func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID string, items []models.CheckoutItem) error {
 	query := `
-		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity)
-		VALUES ($1, $2, $3, $4)`
+		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity, attendees_json)
+		VALUES ($1, $2, $3, $4, $5)`
 
 	for _, item := range items {
 		var categoryID interface{}
 		if item.CategoryID != "" {
 			categoryID = item.CategoryID
 		}
-		if _, err := tx.Exec(ctx, query, orderID, item.TicketTypeID, categoryID, item.Quantity); err != nil {
+
+		attendeesJSON, err := json.Marshal(item.Attendees)
+		if err != nil {
+			return fmt.Errorf("erreur sérialisation attendees order_item: %w", err)
+		}
+
+		if _, err := tx.Exec(ctx, query, orderID, item.TicketTypeID, categoryID, item.Quantity, attendeesJSON); err != nil {
 			return fmt.Errorf("erreur insertion order_item: %w", err)
 		}
 	}
@@ -434,7 +441,7 @@ func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID
 
 func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]models.CheckoutItem, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT ticket_type_id, COALESCE(category_id::text, ''), quantity
+		SELECT ticket_type_id, COALESCE(category_id::text, ''), quantity, COALESCE(attendees_json, '[]'::jsonb)
 		FROM order_items
 		WHERE order_id = $1`, orderID)
 	if err != nil {
@@ -445,8 +452,14 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 	items := make([]models.CheckoutItem, 0)
 	for rows.Next() {
 		var item models.CheckoutItem
-		if err := rows.Scan(&item.TicketTypeID, &item.CategoryID, &item.Quantity); err != nil {
+		var attendeesRaw []byte
+		if err := rows.Scan(&item.TicketTypeID, &item.CategoryID, &item.Quantity, &attendeesRaw); err != nil {
 			return nil, fmt.Errorf("erreur scan order_item: %w", err)
+		}
+		if len(attendeesRaw) > 0 {
+			if err := json.Unmarshal(attendeesRaw, &item.Attendees); err != nil {
+				return nil, fmt.Errorf("erreur parsing attendees order_item: %w", err)
+			}
 		}
 		items = append(items, item)
 	}

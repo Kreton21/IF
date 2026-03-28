@@ -14,7 +14,6 @@ const state = {
   attendees: {},  // { ticketTypeId: [{first_name,last_name,email}] }
   loading: false,
   customerEmail: '',
-  selectedCategories: {}, // { ticketTypeId: categoryId }
   busOptions: null,
   busLoading: false,
 };
@@ -190,7 +189,6 @@ function resetEmailGate() {
   state.ticketTypes = [];
   state.cart = {};
   state.attendees = {};
-  state.selectedCategories = {};
   document.getElementById('email-gate').classList.remove('hidden');
   document.getElementById('tkt-step2').classList.add('hidden');
   document.getElementById('checkout-section').classList.add('hidden');
@@ -262,17 +260,11 @@ function renderTickets() {
 
   sorted.forEach((tt, idx) => {
     const categories = tt.categories || [];
-    const selectedCatId = state.selectedCategories[tt.id];
-    const selectedCat = categories.find(c => c.id === selectedCatId);
     const qty = state.cart[tt.id] || 0;
 
-    // Calculate remaining based on selected category or ticket type total
-    let remaining;
-    if (selectedCat) {
-      remaining = selectedCat.quantity_allocated - selectedCat.quantity_sold;
-    } else {
-      remaining = (tt.quantity_total || 0) - (tt.quantity_sold || 0);
-    }
+    const remaining = categories.length > 0
+      ? getTotalCategoryRemaining(tt)
+      : ((tt.quantity_total || 0) - (tt.quantity_sold || 0));
 
     const now = new Date();
     const saleStart = tt.sale_start ? new Date(tt.sale_start) : null;
@@ -291,38 +283,21 @@ function renderTickets() {
 
     // Availability badge
     let availHtml = '';
-    if (selectedCat) {
+    if (categories.length > 0) {
       if (isSoldOut) {
-        availHtml = '<div class="tkt-avail sold-out">❌ Complet pour cette catégorie</div>';
+        availHtml = '<div class="tkt-avail sold-out">❌ Plus de places disponibles</div>';
       } else if (isOnSale) {
-        availHtml = '<div class="tkt-avail available">✅ Catégorie disponible</div>';
+        availHtml = '<div class="tkt-avail available">✅ Catégorie à choisir pour chaque billet</div>';
       }
     } else if (notYet) {
       availHtml = '<div class="tkt-avail not-yet">🕐 Vente pas encore ouverte</div>';
     }
 
-    // Category dropdown
-    let catHtml = '';
-    if (categories.length > 0) {
-      catHtml = `<div class="tkt-cat-select">
-        <label>Votre catégorie :</label>
-        <select onchange="selectCategory('${tt.id}', this.value)">
-          <option value="">— Sélectionner —</option>
-          ${categories.map(c => {
-            const sel = (selectedCatId === c.id) ? 'selected' : '';
-            return `<option value="${c.id}" ${sel}>${c.name}</option>`;
-          }).join('')}
-        </select>
-      </div>`;
-    }
-
-    const canBuy = isOnSale && (categories.length === 0 || selectedCatId);
+    const canBuy = isOnSale;
 
     // CTA button
     let btnHtml = '';
-    if (categories.length > 0 && !selectedCatId) {
-      btnHtml = '<button class="btn-otl" disabled>Sélectionnez une catégorie</button>';
-    } else if (canBuy) {
+    if (canBuy) {
       if (onePerEmail) {
         if (inCart) {
           btnHtml = `<button class="btn-full selected-btn" onclick="deselectTicket('${tt.id}')">✓ Sélectionné</button>`;
@@ -354,7 +329,6 @@ function renderTickets() {
       <p class="tkt-tier">${tt.name}</p>
       <div class="tkt-price">${formatPrice(tt.price_cents)}</div>
       ${descHtml}
-      ${catHtml}
       ${availHtml}
       ${btnHtml}
     `;
@@ -364,32 +338,6 @@ function renderTickets() {
 
   setTimeout(initReveal, 50);
   updateCheckoutVisibility();
-}
-
-function selectCategory(ticketTypeId, categoryId) {
-  const ticketType = state.ticketTypes.find(t => t.id === ticketTypeId);
-  const selectedCategory = (ticketType?.categories || []).find(c => c.id === categoryId);
-
-  if (selectedCategory) {
-    const remaining = selectedCategory.quantity_allocated - selectedCategory.quantity_sold;
-    if (remaining <= 0) {
-      delete state.selectedCategories[ticketTypeId];
-      delete state.cart[ticketTypeId];
-      renderTickets();
-      alert('Plus de places, veuillez réesayer ultérieurement.');
-      return;
-    }
-  }
-
-  if (categoryId) {
-    state.selectedCategories[ticketTypeId] = categoryId;
-  } else {
-    delete state.selectedCategories[ticketTypeId];
-  }
-  // Reset cart for this type when changing category
-  delete state.cart[ticketTypeId];
-  delete state.attendees[ticketTypeId];
-  renderTickets();
 }
 
 // ══════════════════════════════════════
@@ -424,10 +372,8 @@ function increaseTicket(id) {
   if (!tt || tt.one_ticket_per_email) return;
 
   const categories = tt.categories || [];
-  const selectedCatId = state.selectedCategories[id];
-  const selectedCat = categories.find(c => c.id === selectedCatId);
-  const remaining = selectedCat
-    ? (selectedCat.quantity_allocated - selectedCat.quantity_sold)
+  const remaining = categories.length > 0
+    ? getTotalCategoryRemaining(tt)
     : ((tt.quantity_total || 0) - (tt.quantity_sold || 0));
 
   const maxPerOrder = Math.max(1, tt.max_per_order || 1);
@@ -485,6 +431,8 @@ function syncAttendeesForTicket(typeId, qty) {
     return;
   }
 
+  const tt = state.ticketTypes.find(t => t.id === typeId);
+  const hasCategories = Array.isArray(tt?.categories) && tt.categories.length > 0;
   const existing = Array.isArray(state.attendees[typeId]) ? [...state.attendees[typeId]] : [];
 
   while (existing.length < qty) {
@@ -492,7 +440,14 @@ function syncAttendeesForTicket(typeId, qty) {
       first_name: document.getElementById('firstName')?.value.trim() || '',
       last_name: document.getElementById('lastName')?.value.trim() || '',
       email: (state.customerEmail || document.getElementById('email')?.value || '').trim().toLowerCase(),
+      category_id: hasCategories ? '' : undefined,
     });
+  }
+
+  if (hasCategories) {
+    for (const attendee of existing) {
+      if (typeof attendee.category_id !== 'string') attendee.category_id = '';
+    }
   }
 
   state.attendees[typeId] = existing.slice(0, qty);
@@ -501,7 +456,7 @@ function syncAttendeesForTicket(typeId, qty) {
 function updateAttendeeField(typeId, index, field, value) {
   const attendees = Array.isArray(state.attendees[typeId]) ? state.attendees[typeId] : [];
   if (!attendees[index]) {
-    attendees[index] = { first_name: '', last_name: '', email: '' };
+    attendees[index] = { first_name: '', last_name: '', email: '', category_id: '' };
   }
   attendees[index][field] = value;
   state.attendees[typeId] = attendees;
@@ -516,6 +471,7 @@ function renderAttendeeForms() {
     if (!qty || qty < 1) continue;
     const tt = state.ticketTypes.find(t => t.id === typeId);
     if (!tt) continue;
+    const categories = tt.categories || [];
 
     syncAttendeesForTicket(typeId, qty);
     const attendees = state.attendees[typeId] || [];
@@ -546,6 +502,19 @@ function renderAttendeeForms() {
             <input type="email" value="${escapeHTML(emailValue)}" oninput="updateAttendeeField('${typeId}', ${idx}, 'email', this.value)" ${lockedEmail ? 'readonly' : ''} required>
             ${lockedEmail ? '<small>Ce billet est limité à 1 ticket par email: adresse figée sur l\'email validé.</small>' : ''}
           </div>
+          ${categories.length > 0 ? `<div class="form-group">
+            <label>Catégorie du participant *</label>
+            <select onchange="updateAttendeeField('${typeId}', ${idx}, 'category_id', this.value)" required>
+              <option value="">— Sélectionner une catégorie —</option>
+              ${categories.map(c => {
+                const selected = attendee.category_id === c.id ? 'selected' : '';
+                const remaining = getCategoryRemaining(c);
+                const disabled = remaining <= 0 ? 'disabled' : '';
+                const suffix = remaining <= 0 ? ' (Complet)' : ` (${remaining} place${remaining > 1 ? 's' : ''} restantes)`;
+                return `<option value="${c.id}" ${selected} ${disabled}>${escapeHTML(c.name)}${suffix}</option>`;
+              }).join('')}
+            </select>
+          </div>` : ''}
         </div>
       `);
     }
@@ -591,31 +560,48 @@ function setupCheckoutForm() {
     e.preventDefault();
     if (state.loading) return;
 
-    const items = Object.entries(state.cart)
-      .filter(([, qty]) => qty > 0)
-      .map(([typeId, qty]) => {
-        const tt = state.ticketTypes.find(t => t.id === typeId);
-        syncAttendeesForTicket(typeId, qty);
+    const grouped = new Map();
 
-        const attendees = (state.attendees[typeId] || [])
-          .slice(0, qty)
-          .map(a => ({
-            first_name: (a.first_name || '').trim(),
-            last_name: (a.last_name || '').trim(),
-            email: (a.email || '').trim().toLowerCase(),
-          }));
+    for (const [typeId, qty] of Object.entries(state.cart)) {
+      if (!qty || qty < 1) continue;
+      const tt = state.ticketTypes.find(t => t.id === typeId);
+      syncAttendeesForTicket(typeId, qty);
 
-        const item = { ticket_type_id: typeId, quantity: qty, attendees };
-        if (state.selectedCategories[typeId]) {
-          item.category_id = state.selectedCategories[typeId];
+      const attendees = (state.attendees[typeId] || []).slice(0, qty).map(a => ({
+        first_name: (a.first_name || '').trim(),
+        last_name: (a.last_name || '').trim(),
+        email: (a.email || '').trim().toLowerCase(),
+        category_id: (a.category_id || '').trim(),
+      }));
+
+      for (const attendee of attendees) {
+        const categoryId = attendee.category_id;
+        const key = `${typeId}::${categoryId}`;
+        if (!grouped.has(key)) {
+          const base = { ticket_type_id: typeId, quantity: 0, attendees: [] };
+          if (categoryId) base.category_id = categoryId;
+          grouped.set(key, base);
         }
 
-        if (tt?.one_ticket_per_email && item.attendees.length > 0) {
-          item.attendees[0].email = (state.customerEmail || document.getElementById('email').value).trim().toLowerCase();
-        }
+        const item = grouped.get(key);
+        item.quantity += 1;
+        item.attendees.push({
+          first_name: attendee.first_name,
+          last_name: attendee.last_name,
+          email: attendee.email,
+        });
+      }
 
-        return item;
-      });
+      if (tt?.one_ticket_per_email) {
+        const forcedEmail = (state.customerEmail || document.getElementById('email').value).trim().toLowerCase();
+        for (const item of grouped.values()) {
+          if (item.ticket_type_id !== typeId) continue;
+          if (item.attendees[0]) item.attendees[0].email = forcedEmail;
+        }
+      }
+    }
+
+    const items = Array.from(grouped.values());
 
     if (items.length === 0) {
       showNotification('Veuillez sélectionner au moins un billet', 'warning');
@@ -644,6 +630,12 @@ function setupCheckoutForm() {
       }
 
       const tt = state.ticketTypes.find(t => t.id === item.ticket_type_id);
+      const categories = tt?.categories || [];
+      if (categories.length > 0 && !item.category_id) {
+        showNotification(`Choisissez une catégorie pour chaque billet "${tt.name}"`, 'warning');
+        return;
+      }
+
       for (const attendee of item.attendees) {
         if (!attendee.first_name || !attendee.last_name || !attendee.email || !attendee.email.includes('@')) {
           showNotification('Chaque billet doit avoir prénom, nom et email valide', 'warning');
@@ -709,6 +701,15 @@ function setupCheckoutForm() {
       btn.textContent = '💳 Procéder au paiement';
     }
   });
+}
+
+function getCategoryRemaining(category) {
+  return Math.max(0, (category?.quantity_allocated || 0) - (category?.quantity_sold || 0));
+}
+
+function getTotalCategoryRemaining(ticketType) {
+  const categories = ticketType?.categories || [];
+  return categories.reduce((sum, category) => sum + getCategoryRemaining(category), 0);
 }
 
 function setupCampingClaimForm() {
