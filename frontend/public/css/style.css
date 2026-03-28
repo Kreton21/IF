@@ -135,6 +135,7 @@ a { text-decoration:none; color:inherit; }
   box-shadow:0 6px 30px rgba(255,255,255,.08);
   animation:drift linear infinite;
 }
+.cloud img { display:block; width:100%; height:auto; }
 @keyframes drift { from{transform:translateX(0)} to{transform:translateX(calc(100vw + 400px))} }
 
 .particles { position:absolute; inset:0; z-index:2; pointer-events:none; overflow:hidden; }
@@ -162,6 +163,16 @@ a { text-decoration:none; color:inherit; }
 .hero-content h1 em { font-style:normal; color:var(--warm); }
 .hero-date { font-size:1.05rem; font-weight:700; color:#fff; margin-top:14px; text-shadow:0 2px 10px rgba(0,0,0,.15); }
 .hero-lieu { font-size:.82rem; color:rgba(255,255,255,.65); margin-top:4px; font-weight:600; }
+
+.hero-logo {
+  width:min(780px,90vw);
+  max-width:780px;
+  animation:logoPop .6s ease-out;
+}
+@keyframes logoPop {
+  0% { transform:scale(0); }
+  100% { transform:scale(1); }
+}
 
 /* Countdown */
 .cd-wrap { margin:12px auto 0; max-width:480px; }
