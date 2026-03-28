@@ -164,7 +164,7 @@ function initParticles() {
 
 function initHeroVideo() {
   const video = document.querySelector('.hero-video');
-  if (!video) return;
+  if (!video || typeof video.play !== 'function') return;
 
   const ensurePlay = () => {
     const playPromise = video.play();
