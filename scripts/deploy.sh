@@ -4,7 +4,7 @@
 # L'Interfilières Festival - Deployment Script
 # ═══════════════════════════════════════════════════════════
 # This script:
-# - Pulls latest code from GitHub
+# - Uses local code already present on disk
 # - Rebuilds the Go backend
 # - Restarts the festival service
 # ═══════════════════════════════════════════════════════════
@@ -28,34 +28,14 @@ echo -e "${BLUE}  L'Interfilières Festival - Deployment${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
-# Step 1: Git pull
-echo -e "${YELLOW}[1/5]${NC} Pulling latest code from GitHub..."
+# Step 1: Use local source code
+echo -e "${YELLOW}[1/4]${NC} Using local source code (no Git operations)..."
 cd "$PROJECT_DIR"
-
-# Check if there are uncommitted changes
-if [[ -n $(git status -s) ]]; then
-    echo -e "${RED}⚠️  Warning: You have uncommitted changes${NC}"
-    echo -e "${YELLOW}Stashing local changes...${NC}"
-    git stash
-    STASHED=1
-fi
-
-# Pull latest code
-git pull origin main || {
-    echo -e "${RED}✗ Failed to pull from GitHub${NC}"
-    exit 1
-}
-
-if [[ $STASHED -eq 1 ]]; then
-    echo -e "${YELLOW}Attempting to restore stashed changes...${NC}"
-    git stash pop || echo -e "${YELLOW}⚠️  Stash conflict - resolve manually${NC}"
-fi
-
-echo -e "${GREEN}✓ Code updated${NC}"
+echo -e "${GREEN}✓ Local source ready${NC}"
 echo ""
 
 # Step 2: Check Go dependencies
-echo -e "${YELLOW}[2/5]${NC} Checking Go dependencies..."
+echo -e "${YELLOW}[2/4]${NC} Checking Go dependencies..."
 cd "$BACKEND_DIR"
 
 go mod download || {
@@ -67,7 +47,7 @@ echo -e "${GREEN}✓ Dependencies ready${NC}"
 echo ""
 
 # Step 3: Build backend
-echo -e "${YELLOW}[3/5]${NC} Building Go backend..."
+echo -e "${YELLOW}[3/4]${NC} Building Go backend..."
 
 # Clean old binary
 rm -f festival-server
@@ -82,7 +62,7 @@ echo -e "${GREEN}✓ Backend built successfully${NC}"
 echo ""
 
 # Step 4: Check Docker containers
-echo -e "${YELLOW}[4/5]${NC} Checking Docker containers..."
+echo -e "${YELLOW}[4/4]${NC} Checking Docker containers..."
 
 # Make sure postgres and redis are running
 cd "$PROJECT_DIR"
@@ -106,9 +86,9 @@ fi
 echo -e "${GREEN}✓ Docker containers running${NC}"
 echo ""
 
-# Step 4.5: Verify systemd service configuration
+# Verify systemd service configuration
 if systemctl list-unit-files | grep -q "$SERVICE_NAME"; then
-    echo -e "${YELLOW}[4.5/5]${NC} Checking systemd service configuration..."
+    echo -e "${YELLOW}[4/4]${NC} Checking systemd service configuration..."
     
     if ! sudo grep -q "FRONTEND_DIR=$PROJECT_DIR/frontend" /etc/systemd/system/"$SERVICE_NAME" 2>/dev/null; then
         echo -e "${YELLOW}⚠️  Updating systemd service with correct FRONTEND_DIR...${NC}"
@@ -130,7 +110,7 @@ if systemctl list-unit-files | grep -q "$SERVICE_NAME"; then
 fi
 
 # Step 5: Restart service
-echo -e "${YELLOW}[5/5]${NC} Restarting festival service..."
+echo -e "${YELLOW}[4/4]${NC} Restarting festival service..."
 
 # Check if systemd service exists
 if systemctl list-unit-files | grep -q "$SERVICE_NAME"; then
