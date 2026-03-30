@@ -338,6 +338,10 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		}{tt, item.Quantity})
 	}
 
+	if req.WantsRefundInsurance {
+		totalCents += 100
+	}
+
 	// 2. Réserver les tickets (avec lock pessimiste)
 	err := s.ticketRepo.ReserveTickets(ctx, req.Items)
 	if err != nil {
@@ -358,6 +362,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		CustomerLastName:  req.CustomerLastName,
 		CustomerPhone:     req.CustomerPhone,
 		WantsCamping:      req.WantsCamping,
+		WantsRefundInsurance: req.WantsRefundInsurance,
 		TotalCents:        totalCents,
 		Status:            models.OrderStatusPending,
 		IPAddress:         ipAddress,

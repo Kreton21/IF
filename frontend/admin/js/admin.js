@@ -412,6 +412,7 @@ async function loadStats() {
         document.getElementById('stat-revenue').textContent = formatPrice(stats.total_revenue_cents || 0);
         document.getElementById('stat-validated').textContent = stats.total_validated || 0;
         document.getElementById('stat-camping').textContent = stats.total_camping || 0;
+        document.getElementById('stat-refund-insurance').textContent = stats.total_refund_insurance || 0;
 
         // Stats par type
         renderTypeStats(stats.by_ticket_type || []);
@@ -829,7 +830,7 @@ function renderOrdersTable(orders) {
 
     let html = `<table>
         <thead><tr>
-            <th>N°</th><th>Client</th><th>Email</th><th>Total</th><th>Statut</th><th>Date</th>
+            <th>N°</th><th>Client</th><th>Email</th><th>Camping</th><th>Assurance</th><th>Total</th><th>Statut</th><th>Date</th>
         </tr></thead><tbody>`;
 
     orders.forEach(o => {
@@ -837,6 +838,8 @@ function renderOrdersTable(orders) {
             <td><strong>${o.order_number}</strong></td>
             <td>${o.customer_first_name} ${o.customer_last_name}</td>
             <td>${o.customer_email}</td>
+            <td>${o.wants_camping ? 'Oui' : 'Non'}</td>
+            <td>${o.wants_refund_insurance ? 'Oui' : 'Non'}</td>
             <td>${formatPrice(o.total_cents)}</td>
             <td><span class="badge badge-${o.status}">${statusLabel(o.status)}</span></td>
             <td>${formatDateTime(o.created_at)}</td>

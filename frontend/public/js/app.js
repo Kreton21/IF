@@ -568,6 +568,15 @@ function updateOrderSummary() {
     </div>`;
   }
 
+  const wantsRefundInsurance = document.getElementById('wants-refund-insurance')?.checked || false;
+  if (wantsRefundInsurance) {
+    total += 100;
+    html += `<div class="summary-item">
+      <span>Assurance remboursement</span>
+      <span>${formatPrice(100)}</span>
+    </div>`;
+  }
+
   summaryItems.innerHTML = html;
   totalEl.textContent = formatPrice(total);
 }
@@ -638,6 +647,7 @@ function setupCheckoutForm() {
       customer_phone: document.getElementById('phone').value.trim(),
       date_of_birth: document.getElementById('dateOfBirth').value,
       wants_camping: document.getElementById('wants-camping')?.checked || false,
+      wants_refund_insurance: document.getElementById('wants-refund-insurance')?.checked || false,
       items: items,
     };
 
@@ -725,6 +735,12 @@ function setupCheckoutForm() {
     }
   });
 }
+
+document.addEventListener('change', (event) => {
+  if (event.target && event.target.id === 'wants-refund-insurance') {
+    updateOrderSummary();
+  }
+});
 
 function getCategoryRemaining(category) {
   return Math.max(0, (category?.quantity_allocated || 0) - (category?.quantity_sold || 0));
