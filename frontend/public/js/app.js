@@ -533,8 +533,7 @@ function renderAttendeeForms() {
                 const selected = attendee.category_id === c.id ? 'selected' : '';
                 const remaining = getCategoryRemaining(c);
                 const disabled = remaining <= 0 ? 'disabled' : '';
-                const suffix = remaining <= 0 ? ' (Complet)' : ` (${remaining} place${remaining > 1 ? 's' : ''} restantes)`;
-                return `<option value="${c.id}" ${selected} ${disabled}>${escapeHTML(c.name)}${suffix}</option>`;
+                return `<option value="${c.id}" ${selected} ${disabled}>${escapeHTML(c.name)}</option>`;
               }).join('')}
             </select>
           </div>` : ''}

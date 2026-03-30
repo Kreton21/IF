@@ -8,6 +8,8 @@ import (
 	"net/smtp"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -257,9 +259,9 @@ func (s *EmailService) renderTicketPDF(htmlContent string, ticket TicketEmailDat
 }
 
 func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byte, error) {
-	bin := strings.TrimSpace(s.cfg.WKHTMLTOPDFBin)
-	if bin == "" {
-		bin = "wkhtmltopdf"
+	bin, err := resolveWKHTMLToPDFBinary(strings.TrimSpace(s.cfg.WKHTMLTOPDFBin))
+	if err != nil {
+		return nil, err
 	}
 
 	cmd := exec.Command(
@@ -302,7 +304,7 @@ func (s *EmailService) renderTicketPDFWithFPDF(htmlContent string, ticket Ticket
 
 	pdf.SetFont("Arial", "", 11)
 	html := pdf.HTMLBasicNew()
-	html.Write(6.0, htmlContent)
+	html.Write(6.0, sanitizeHTMLForFPDF(htmlContent))
 
 	if len(ticket.QRCodePNG) > 0 {
 		pdf.Ln(6)
@@ -321,6 +323,69 @@ func (s *EmailService) renderTicketPDFWithFPDF(htmlContent string, ticket Ticket
 	return out.Bytes(), nil
 }
 
+func resolveWKHTMLToPDFBinary(configured string) (string, error) {
+	seen := map[string]struct{}{}
+	candidates := make([]string, 0, 8)
+
+	if configured != "" {
+		candidates = append(candidates, configured)
+	}
+	candidates = append(candidates, "wkhtmltopdf")
+
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		candidates = append(candidates,
+			filepath.Join(home, "wkhtmltopdf-bin", "wkhtmltopdf"),
+			filepath.Join(home, "bin", "wkhtmltopdf"),
+		)
+	}
+
+	candidates = append(candidates,
+		"/usr/local/bin/wkhtmltopdf",
+		"/usr/bin/wkhtmltopdf",
+	)
+
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+
+		if strings.Contains(candidate, "/") {
+			if st, err := os.Stat(candidate); err == nil && !st.IsDir() {
+				return candidate, nil
+			}
+			continue
+		}
+
+		if resolved, err := exec.LookPath(candidate); err == nil {
+			return resolved, nil
+		}
+	}
+
+	return "", fmt.Errorf("wkhtmltopdf introuvable (renseignez WKHTMLTOPDF_BIN ou ajoutez le binaire au PATH)")
+}
+
+func sanitizeHTMLForFPDF(htmlContent string) string {
+	cleaned := htmlContent
+	patterns := []string{
+		`(?is)<style[^>]*>.*?</style>`,
+		`(?is)<script[^>]*>.*?</script>`,
+		`(?is)<head[^>]*>.*?</head>`,
+		`(?is)</?(html|body|doctype)[^>]*>`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		cleaned = re.ReplaceAllString(cleaned, "")
+	}
+
+	return cleaned
+}
+
 func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, ticket TicketEmailData) (string, error) {
 	templateContent := defaultTicketPDFTemplate
 	if path := strings.TrimSpace(s.cfg.TicketPDFTemplatePath); path != "" {
@@ -337,6 +402,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 	}
 
 	var buf bytes.Buffer
+	qrDataURI := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG))
 	err = t.Execute(&buf, map[string]interface{}{
 		"FestivalName": s.cfg.FestivalName,
 		"FestivalDate": s.cfg.FestivalDate,
@@ -347,7 +413,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"AttendeeName":   ticket.AttendeeName,
 		"RecipientEmail": ticket.RecipientEmail,
 		"QRToken":        ticket.QRToken,
-		"QRCodeDataURI":  "data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG),
+		"QRCodeDataURI":  qrDataURI,
 		"SupportEmail": s.cfg.SMTPFrom,
 	})
 	if err != nil {
