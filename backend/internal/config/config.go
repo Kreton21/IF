@@ -113,7 +113,7 @@ func Load() (*Config, error) {
 		BusEmailSubjectTemplate: getEnv("BUS_EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Votre ticket navette (Commande {{.OrderNumber}})"),
 
 		FestivalName: getEnv("FESTIVAL_NAME", "L'Interfilières"),
-		FestivalDate: getEnv("FESTIVAL_DATE", "2026-07-15"),
+		FestivalDate: getEnv("FESTIVAL_DATE", "2026-05-30"),
 	}
 
 	return cfg, nil
