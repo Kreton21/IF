@@ -402,6 +402,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 	}
 
 	var buf bytes.Buffer
+	qrDataURI := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG))
 	err = t.Execute(&buf, map[string]interface{}{
 		"FestivalName": s.cfg.FestivalName,
 		"FestivalDate": s.cfg.FestivalDate,
@@ -412,7 +413,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"AttendeeName":   ticket.AttendeeName,
 		"RecipientEmail": ticket.RecipientEmail,
 		"QRToken":        ticket.QRToken,
-		"QRCodeDataURI":  "data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG),
+		"QRCodeDataURI":  qrDataURI,
 		"SupportEmail": s.cfg.SMTPFrom,
 	})
 	if err != nil {
