@@ -384,7 +384,7 @@ iframe:not(.hero-video) {
 }
 .tkt-tier { font-size:.66rem; font-weight:800; letter-spacing:4px; text-transform:uppercase; color:#ccc; margin-bottom:6px; }
 .tkt-price {
-	font-family:var(--font-primary); font-size:5.4rem; line-height:.96;
+	font-family:var(--font-primary); font-size:5.4rem;
 	background:linear-gradient(135deg,var(--rose),var(--peach));
 	-webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
