@@ -75,6 +75,7 @@ type Order struct {
 	CustomerLastName     string      `json:"customer_last_name"`
 	CustomerPhone        string      `json:"customer_phone,omitempty"`
 	WantsCamping         bool        `json:"wants_camping,omitempty"`
+	WantsRefundInsurance bool        `json:"wants_refund_insurance,omitempty"`
 	TotalCents           int         `json:"total_cents"`
 	Status               OrderStatus `json:"status"`
 	HelloAssoCheckoutID  string      `json:"helloasso_checkout_id,omitempty"`
@@ -138,6 +139,7 @@ type CheckoutRequest struct {
 	ReferralCode      string         `json:"-"`
 	ReferralVisitorID string         `json:"-"`
 	WantsCamping      bool           `json:"wants_camping,omitempty"`
+	WantsRefundInsurance bool         `json:"wants_refund_insurance,omitempty"`
 	Items             []CheckoutItem `json:"items"`
 }
 
@@ -209,6 +211,7 @@ type SalesStats struct {
 	TotalTicketsSold  int              `json:"total_tickets_sold"`
 	TotalValidated    int              `json:"total_validated"`
 	TotalCamping      int              `json:"total_camping"`
+	TotalRefundInsurance int           `json:"total_refund_insurance"`
 	TestEmailEnabled  bool             `json:"test_email_enabled"`
 	ByTicketType      []TicketTypeStat `json:"by_ticket_type"`
 	RecentOrders      []Order          `json:"recent_orders"`
