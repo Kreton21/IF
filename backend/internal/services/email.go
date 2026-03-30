@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/smtp"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -214,30 +215,13 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 	attachments := make([]EmailAttachment, 0, len(tickets))
 
 	for idx, ticket := range tickets {
-		pdf := fpdf.New("P", "mm", "A4", "")
-		pdf.SetMargins(15, 15, 15)
-		pdf.AddPage()
-
 		htmlContent, err := s.buildTicketPDFHTML(customerName, orderNumber, ticket)
 		if err != nil {
 			return nil, fmt.Errorf("erreur génération HTML PDF billet: %w", err)
 		}
 
-		pdf.SetFont("Arial", "", 11)
-		html := pdf.HTMLBasicNew()
-		html.Write(6.0, htmlContent)
-
-		if len(ticket.QRCodePNG) > 0 {
-			pdf.Ln(6)
-			imageKey := fmt.Sprintf("qr-%d", idx)
-			pdf.RegisterImageOptionsReader(imageKey, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
-			currentY := pdf.GetY()
-			pdf.ImageOptions(imageKey, 55, currentY, 100, 100, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
-			pdf.SetY(currentY + 106)
-		}
-
-		var out bytes.Buffer
-		if err := pdf.Output(&out); err != nil {
+		pdfData, err := s.renderTicketPDF(htmlContent, ticket, idx)
+		if err != nil {
 			return nil, err
 		}
 
@@ -245,11 +229,96 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 		attachments = append(attachments, EmailAttachment{
 			Filename:    filename,
 			ContentType: "application/pdf",
-			Data:        out.Bytes(),
+			Data:        pdfData,
 		})
 	}
 
 	return attachments, nil
+}
+
+func (s *EmailService) renderTicketPDF(htmlContent string, ticket TicketEmailData, idx int) ([]byte, error) {
+	engine := strings.ToLower(strings.TrimSpace(s.cfg.TicketPDFEngine))
+
+	switch engine {
+	case "", "auto":
+		pdfData, err := s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+		if err == nil {
+			return pdfData, nil
+		}
+		fmt.Printf("WARN: wkhtmltopdf indisponible, fallback fpdf (%v)\n", err)
+		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
+	case "wkhtmltopdf":
+		return s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+	case "fpdf":
+		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
+	default:
+		return nil, fmt.Errorf("moteur PDF inconnu '%s' (attendu: auto, wkhtmltopdf, fpdf)", s.cfg.TicketPDFEngine)
+	}
+}
+
+func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byte, error) {
+	bin := strings.TrimSpace(s.cfg.WKHTMLTOPDFBin)
+	if bin == "" {
+		bin = "wkhtmltopdf"
+	}
+
+	cmd := exec.Command(
+		bin,
+		"--encoding", "utf-8",
+		"--page-size", "A4",
+		"--margin-top", "12",
+		"--margin-right", "12",
+		"--margin-bottom", "12",
+		"--margin-left", "12",
+		"-",
+		"-",
+	)
+	cmd.Stdin = strings.NewReader(htmlContent)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		errMsg := strings.TrimSpace(stderr.String())
+		if errMsg == "" {
+			errMsg = err.Error()
+		}
+		return nil, fmt.Errorf("échec wkhtmltopdf: %s", errMsg)
+	}
+
+	if stdout.Len() == 0 {
+		return nil, fmt.Errorf("wkhtmltopdf a produit un PDF vide")
+	}
+
+	return stdout.Bytes(), nil
+}
+
+func (s *EmailService) renderTicketPDFWithFPDF(htmlContent string, ticket TicketEmailData, idx int) ([]byte, error) {
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(15, 15, 15)
+	pdf.AddPage()
+
+	pdf.SetFont("Arial", "", 11)
+	html := pdf.HTMLBasicNew()
+	html.Write(6.0, htmlContent)
+
+	if len(ticket.QRCodePNG) > 0 {
+		pdf.Ln(6)
+		imageKey := fmt.Sprintf("qr-%d", idx)
+		pdf.RegisterImageOptionsReader(imageKey, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
+		currentY := pdf.GetY()
+		pdf.ImageOptions(imageKey, 55, currentY, 100, 100, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+		pdf.SetY(currentY + 106)
+	}
+
+	var out bytes.Buffer
+	if err := pdf.Output(&out); err != nil {
+		return nil, err
+	}
+
+	return out.Bytes(), nil
 }
 
 func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, ticket TicketEmailData) (string, error) {
