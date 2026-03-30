@@ -645,24 +645,24 @@ func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) 
 const defaultTicketEmailTemplate = `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#FBF7FF;font-family:Arial,Helvetica,sans-serif;color:#220850;">
-<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FBF7FF;padding:24px 12px;">
+<body style="margin:0;padding:0;background:#ffe2bf;font-family:Arial,Helvetica,sans-serif;color:#3f1a10;">
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(180deg,#7f1713 0%,#b52a1b 30%,#e14e21 62%,#ff8b2b 84%,#ffe2bf 100%);padding:24px 12px;">
 <tr><td align="center">
-<table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:700px;background:#FFF5EC;border-radius:24px;overflow:hidden;">
-<tr><td style="background:linear-gradient(160deg,#1E0845 0%,#7B3FA8 52%,#F97FA0 100%);padding:38px 24px;text-align:center;">
-<div style="font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.74);margin-bottom:10px;">Confirmation de commande</div>
-<div style="font-size:38px;font-weight:900;letter-spacing:2px;color:#FFF5EC;margin-bottom:12px;">{{.FestivalName}}</div>
-<div style="font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.6;">{{.FestivalDate}}</div>
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:700px;background:#fffdfa;border-radius:24px;overflow:hidden;box-shadow:0 10px 40px rgba(127,23,19,.18);border:1px solid rgba(216,58,33,.16);">
+<tr><td style="background:linear-gradient(145deg,#7f1713 0%,#d83a21 55%,#ff8b2b 100%);padding:32px 24px;text-align:center;">
+<div style="font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:10px;">Confirmation de commande</div>
+<div style="font-size:34px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-shadow:0 1px 2px rgba(0,0,0,.25);margin-bottom:10px;">{{.FestivalName}}</div>
+<div style="font-size:16px;font-weight:700;color:#ffe9d2;line-height:1.6;">{{.FestivalDate}}</div>
 </td></tr>
-<tr><td style="padding:30px 26px 12px;">
-<p style="margin:0 0 14px;font-size:16px;line-height:1.75;">Bonjour <strong>{{.CustomerName}}</strong>,</p>
-<p style="margin:0 0 14px;font-size:16px;line-height:1.75;">Votre commande <strong>{{.OrderNumber}}</strong> a bien été confirmée.</p>
-<p style="margin:0 0 18px;font-size:16px;line-height:1.75;">Vos billets sont joints à cet email en PDF.</p>
+<tr><td style="padding:28px 26px 12px;">
+<p style="margin:0 0 12px;font-size:15px;line-height:1.75;color:#3f1a10;">Bonjour <strong>{{.CustomerName}}</strong>,</p>
+<p style="margin:0 0 12px;font-size:15px;line-height:1.75;color:#3f1a10;">Votre commande <strong>{{.OrderNumber}}</strong> a bien été confirmée.</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#3f1a10;">Vos billets sont joints à cet email en PDF.</p>
 </td></tr>
-<tr><td style="background:#1E0845;padding:26px;text-align:center;">
-<div style="font-size:26px;font-weight:900;color:#FFC933;margin-bottom:8px;">{{.FestivalName}}</div>
-<div style="font-size:13px;color:rgba(255,255,255,.68);margin-bottom:6px;">{{.FestivalDate}}</div>
-<div style="font-size:12px;color:rgba(255,255,255,.42);">Contact : {{.SupportEmail}}</div>
+<tr><td style="background:#7f1713;padding:22px 26px;text-align:center;">
+<div style="font-size:24px;font-weight:900;text-transform:uppercase;color:#ff8b2b;margin-bottom:6px;">{{.FestivalName}}</div>
+<div style="font-size:13px;color:#ffe9d2;margin-bottom:4px;">{{.FestivalDate}}</div>
+<div style="font-size:12px;color:rgba(255,233,210,.5);">Contact : {{.SupportEmail}}</div>
 </td></tr>
 </table>
 </td></tr>
