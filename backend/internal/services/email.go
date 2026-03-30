@@ -253,7 +253,16 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 }
 
 func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, ticket TicketEmailData) (string, error) {
-	t, err := template.New("ticket-pdf").Parse(defaultTicketPDFTemplate)
+	templateContent := defaultTicketPDFTemplate
+	if path := strings.TrimSpace(s.cfg.TicketPDFTemplatePath); path != "" {
+		if data, err := os.ReadFile(path); err == nil {
+			templateContent = string(data)
+		} else {
+			fmt.Printf("WARN: impossible de lire template PDF ticket=%s, fallback template interne (%v)\n", path, err)
+		}
+	}
+
+	t, err := template.New("ticket-pdf").Parse(templateContent)
 	if err != nil {
 		return "", err
 	}

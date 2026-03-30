@@ -49,6 +49,7 @@ type Config struct {
 	SMTPFromName string
 	EnableAdminTestEmail bool
 	EmailTemplatePath    string
+	TicketPDFTemplatePath string
 	EmailSubjectTemplate string
 	BusEmailTemplatePath    string
 	BusEmailSubjectTemplate string
@@ -101,7 +102,8 @@ func Load() (*Config, error) {
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
 		SMTPFromName: getEnv("SMTP_FROM_NAME", "IF Festival"),
 		EnableAdminTestEmail: enableAdminTestEmail,
-		EmailTemplatePath:    getEnv("EMAIL_TEMPLATE_PATH", "templates/ticket_confirmation.html"),
+		EmailTemplatePath:    getEnv("EMAIL_TEMPLATE_PATH", "mail/ticket_email.html"),
+		TicketPDFTemplatePath: getEnv("TICKET_PDF_TEMPLATE_PATH", "mail/ticket_pdf.html"),
 		EmailSubjectTemplate: getEnv("EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Vos billets (Commande {{.OrderNumber}})"),
 		BusEmailTemplatePath:    getEnv("BUS_EMAIL_TEMPLATE_PATH", "templates/bus_ticket_confirmation.html"),
 		BusEmailSubjectTemplate: getEnv("BUS_EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Votre ticket navette (Commande {{.OrderNumber}})"),

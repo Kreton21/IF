@@ -1,0 +1,11 @@
+<h1>{{.FestivalName}}</h1>
+<p><b>Commande :</b> {{.OrderNumber}}</p>
+<p><b>Client :</b> {{.CustomerName}}</p>
+<p><b>Date :</b> {{.FestivalDate}}</p>
+<hr>
+<h2>Billet : {{.Ticket.TicketTypeName}}</h2>
+{{if .Ticket.AttendeeName}}<p><b>Participant :</b> {{.Ticket.AttendeeName}}</p>{{end}}
+{{if .Ticket.RecipientEmail}}<p><b>Email de réception :</b> {{.Ticket.RecipientEmail}}</p>{{end}}
+<p><b>Référence QR :</b> {{.Ticket.QRToken}}</p>
+<p>Présentez ce billet (PDF) et le QR code à l'entrée. Le QR code est affiché sous ce contenu.</p>
+<p>Contact : {{.SupportEmail}}</p>
