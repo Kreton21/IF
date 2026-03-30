@@ -76,6 +76,9 @@ body {
 	width:100vw;
 	max-width:100vw;
 }
+body.menu-open {
+	overflow:hidden;
+}
 a { text-decoration:none; color:inherit; }
 
 img, video, svg {
@@ -1019,15 +1022,19 @@ footer {
 	#nav{padding:0 14px}
 	.nav-logo{font-size:clamp(1.35rem,8vw,1.75rem);letter-spacing:2px}
 	.nav-links{display:none}
-	.hamburger{display:flex}
+	.hamburger{display:flex;position:relative;z-index:352}
 	.nav-links.open{
 		display:flex;flex-direction:column;
 		position:fixed;inset:0;top:74px;
 		width:100vw;
 		max-width:100vw;
 		background:rgba(30,8,69,.97);backdrop-filter:blur(20px);
-		align-items:center;justify-content:center;gap:18px;z-index:199;
+		align-items:center;justify-content:center;gap:18px;
+		z-index:351;
+		margin:0;
+		padding:20px 18px;
 	}
+	#nav.scrolled .nav-links.open{background:rgba(30,8,69,.97)}
 	.nav-links.open a{font-size:1rem;color:#fff!important;padding:12px 24px}
 
 	/* sections camping avec styles inline en repeat(4,1fr) */

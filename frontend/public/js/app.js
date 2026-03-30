@@ -89,9 +89,35 @@ function initNavScroll() {
 // HAMBURGER MENU
 // ══════════════════════════════════════
 function initHamburger() {
-  document.getElementById('burger').addEventListener('click', () => {
-    document.getElementById('navLinks').classList.toggle('open');
+  const burger = document.getElementById('burger');
+  const navLinks = document.getElementById('navLinks');
+  if (!burger || !navLinks || burger.dataset.ready === '1') return;
+
+  const syncMenuState = () => {
+    const isOpen = navLinks.classList.contains('open');
+    document.body.classList.toggle('menu-open', isOpen);
+  };
+
+  burger.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    syncMenuState();
   });
+
+  navLinks.querySelectorAll('a').forEach((a) => {
+    a.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      syncMenuState();
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      navLinks.classList.remove('open');
+      syncMenuState();
+    }
+  });
+
+  burger.dataset.ready = '1';
 }
 
 // ══════════════════════════════════════
