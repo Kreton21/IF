@@ -274,6 +274,11 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"CustomerName": customerName,
 		"OrderNumber":  orderNumber,
 		"Ticket":       ticket,
+		"TicketTypeName": ticket.TicketTypeName,
+		"AttendeeName":   ticket.AttendeeName,
+		"RecipientEmail": ticket.RecipientEmail,
+		"QRToken":        ticket.QRToken,
+		"QRCodeDataURI":  "data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG),
 		"SupportEmail": s.cfg.SMTPFrom,
 	})
 	if err != nil {
