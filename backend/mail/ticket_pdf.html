@@ -230,6 +230,23 @@
       color: #5a2612;
     }
 
+    .legal-ref {
+      margin-top: 12px;
+      background: #fff8f3;
+      border: 1px solid rgba(216,58,33,.18);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 12px;
+      line-height: 1.65;
+      color: #6a2e17;
+    }
+
+    .legal-ref a {
+      color: #b52a1b;
+      text-decoration: underline;
+      font-weight: 700;
+    }
+
     .footer {
       padding: 20px 28px 26px;
       text-align: center;
@@ -313,7 +330,11 @@
           <strong>La revente de ce billet n’est pas autorisée.</strong><br>
           Toute tentative de revente ou d’utilisation frauduleuse peut entraîner son invalidation.
         </div>
-      </div>
+        <div class="legal-ref">
+          <strong>Cadre juridique :</strong> l'achat et l'utilisation de ce billet impliquent l'acceptation pleine et entière des Conditions Générales de Vente et du règlement intérieur de l'événement.<br>
+          <a href="https://interfilieres.fr/#cgv">Conditions Générales de Vente (CGV)</a> · <a href="https://interfilieres.fr/#mentions">Mentions légales</a><br>
+          Contact : {{.SupportEmail}}
+        </div>      </div>
 
       <div class="footer">
         {{.FestivalName}} — {{.FestivalDate}} — Contact : {{.SupportEmail}}
