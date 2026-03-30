@@ -244,9 +244,11 @@
 <body>
   <div class="page">
     <div class="ticket-shell">
+      {{if .BannerDataURI}}
       <div class="banner-wrap">
-        <img src="img/top_ticket.png" alt="Bannière billet" class="banner" />
+        <img src="{{.BannerDataURI}}" alt="Bannière billet" class="banner" />
       </div>
+      {{end}}
 
       <div class="hero">
         {{if .LogoURL}}
