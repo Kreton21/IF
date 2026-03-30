@@ -280,6 +280,21 @@ func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byt
 		return nil, err
 	}
 
+	htmlFile, err := os.CreateTemp("", "if-ticket-*.html")
+	if err != nil {
+		return nil, fmt.Errorf("impossible de créer un fichier temporaire HTML: %w", err)
+	}
+	htmlPath := htmlFile.Name()
+	defer os.Remove(htmlPath)
+
+	if _, err := htmlFile.WriteString(htmlContent); err != nil {
+		_ = htmlFile.Close()
+		return nil, fmt.Errorf("impossible d'écrire le HTML temporaire: %w", err)
+	}
+	if err := htmlFile.Close(); err != nil {
+		return nil, fmt.Errorf("impossible de finaliser le HTML temporaire: %w", err)
+	}
+
 	cmd := exec.Command(
 		bin,
 		"--encoding", "utf-8",
@@ -288,10 +303,12 @@ func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byt
 		"--margin-right", "12",
 		"--margin-bottom", "12",
 		"--margin-left", "12",
-		"-",
+		"--enable-local-file-access",
+		"--load-error-handling", "ignore",
+		"--load-media-error-handling", "ignore",
+		htmlPath,
 		"-",
 	)
-	cmd.Stdin = strings.NewReader(htmlContent)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
