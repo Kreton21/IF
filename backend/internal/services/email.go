@@ -266,12 +266,31 @@ func (s *EmailService) renderTicketPDF(htmlContent string, ticket TicketEmailDat
 		fmt.Printf("WARN: wkhtmltopdf indisponible, fallback fpdf (%v)\n", err)
 		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
 	case "wkhtmltopdf":
-		return s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+		pdfData, err := s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+		if err == nil {
+			return pdfData, nil
+		}
+		if isWKHTMLRecoverableError(err) {
+			fmt.Printf("WARN: wkhtmltopdf a échoué (fallback fpdf) (%v)\n", err)
+			return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
+		}
+		return nil, err
 	case "fpdf":
 		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
 	default:
 		return nil, fmt.Errorf("moteur PDF inconnu '%s' (attendu: auto, wkhtmltopdf, fpdf)", s.cfg.TicketPDFEngine)
 	}
+}
+
+func isWKHTMLRecoverableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "contentnotfounderror") ||
+		strings.Contains(msg, "protocolunknownerror") ||
+		strings.Contains(msg, "failed to load") ||
+		strings.Contains(msg, "blocked access to file")
 }
 
 func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byte, error) {
