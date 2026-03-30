@@ -645,7 +645,7 @@ function setupCheckoutForm() {
       customer_email: (state.customerEmail || document.getElementById('email').value).trim(),
       customer_phone: document.getElementById('phone').value.trim(),
       date_of_birth: document.getElementById('dateOfBirth').value,
-      wants_camping: document.getElementById('wants-camping')?.checked || false,
+      wants_camping: false,
       wants_refund_insurance: document.getElementById('wants-refund-insurance')?.checked || false,
       items: items,
     };
