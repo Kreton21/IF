@@ -423,7 +423,10 @@ func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID
 		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity)
 		VALUES ($1, $2, $3, $4)`
 
-	legacyMode := false
+	hasAttendeesJSON, err := r.orderItemsHasAttendeesJSONColumn(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("erreur détection schéma order_items: %w", err)
+	}
 
 	for _, item := range items {
 		var categoryID interface{}
@@ -431,26 +434,19 @@ func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID
 			categoryID = item.CategoryID
 		}
 
-		attendeesJSON, err := json.Marshal(item.Attendees)
-		if err != nil {
-			return fmt.Errorf("erreur sérialisation attendees order_item: %w", err)
-		}
-
-		if legacyMode {
+		if !hasAttendeesJSON {
 			if _, err := tx.Exec(ctx, queryLegacy, orderID, item.TicketTypeID, categoryID, item.Quantity); err != nil {
 				return fmt.Errorf("erreur insertion order_item: %w", err)
 			}
 			continue
 		}
 
+		attendeesJSON, err := json.Marshal(item.Attendees)
+		if err != nil {
+			return fmt.Errorf("erreur sérialisation attendees order_item: %w", err)
+		}
+
 		if _, err := tx.Exec(ctx, queryWithAttendees, orderID, item.TicketTypeID, categoryID, item.Quantity, attendeesJSON); err != nil {
-			if isMissingAttendeesJSONColumn(err) {
-				legacyMode = true
-				if _, legacyErr := tx.Exec(ctx, queryLegacy, orderID, item.TicketTypeID, categoryID, item.Quantity); legacyErr != nil {
-					return fmt.Errorf("erreur insertion order_item (legacy): %w", legacyErr)
-				}
-				continue
-			}
 			return fmt.Errorf("erreur insertion order_item: %w", err)
 		}
 	}
@@ -513,6 +509,23 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 	}
 
 	return items, nil
+}
+
+func (r *OrderRepository) orderItemsHasAttendeesJSONColumn(ctx context.Context, tx pgx.Tx) (bool, error) {
+	var exists bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM information_schema.columns
+			WHERE table_schema = 'public'
+			  AND table_name = 'order_items'
+			  AND column_name = 'attendees_json'
+		)
+	`).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 func isMissingAttendeesJSONColumn(err error) bool {
