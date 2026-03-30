@@ -455,6 +455,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 
 	var buf bytes.Buffer
 	qrDataURI := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(ticket.QRCodePNG))
+	bannerDataURI := s.resolveTicketBannerDataURI()
 	err = t.Execute(&buf, map[string]interface{}{
 		"FestivalName": s.cfg.FestivalName,
 		"FestivalDate": s.cfg.FestivalDate,
@@ -466,6 +467,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"RecipientEmail": ticket.RecipientEmail,
 		"QRToken":        ticket.QRToken,
 		"QRCodeDataURI":  qrDataURI,
+		"BannerDataURI":  bannerDataURI,
 		"SupportEmail": s.cfg.SMTPFrom,
 	})
 	if err != nil {
@@ -473,6 +475,54 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 	}
 
 	return buf.String(), nil
+}
+
+func (s *EmailService) resolveTicketBannerDataURI() template.URL {
+	candidates := make([]string, 0, 8)
+
+	if templatePath := strings.TrimSpace(s.cfg.TicketPDFTemplatePath); templatePath != "" {
+		baseDir := filepath.Dir(templatePath)
+		candidates = append(candidates,
+			filepath.Join(baseDir, "img", "top_ticket.svg"),
+			filepath.Join(baseDir, "img", "top_ticket.jpg"),
+			filepath.Join(baseDir, "img", "top_ticket.jpeg"),
+			filepath.Join(baseDir, "img", "top_ticket.png"),
+		)
+	}
+
+	candidates = append(candidates,
+		"mail/img/top_ticket.svg",
+		"mail/img/top_ticket.jpg",
+		"backend/mail/img/top_ticket.svg",
+		"backend/mail/img/top_ticket.jpg",
+		"frontend/public/img/top_ticket.jpg",
+	)
+
+	seen := make(map[string]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		path := strings.TrimSpace(candidate)
+		if path == "" {
+			continue
+		}
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+
+		data, err := os.ReadFile(path)
+		if err != nil || len(data) == 0 {
+			continue
+		}
+
+		mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(path)))
+		if mimeType == "" {
+			mimeType = "image/png"
+		}
+
+		return template.URL("data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data))
+	}
+
+	return ""
 }
 
 func sanitizeFilename(value string) string {
