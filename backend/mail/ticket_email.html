@@ -7,10 +7,10 @@
   <title>{{.FestivalName}} - Confirmation</title>
   <!--[if mso]><style>table,td{font-family:Arial,Helvetica,sans-serif!important;}</style><![endif]-->
 </head>
-<body style="margin:0;padding:0;width:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#FBF7FF;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;width:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#f4f0eb;font-family:Arial,Helvetica,sans-serif;">
 
 <!-- Wrapper -->
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(180deg,#0087ff 0%,#4b7ff0 30%,#ce6ed6 60%,#ffc933 82%,#ffe9c7 100%);background-color:#FBF7FF;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f0eb;">
   <tr>
     <td align="center" style="padding:24px 12px;">
 
@@ -20,7 +20,7 @@
         <!-- Banner -->
         {{if .BannerDataURI}}
         <tr>
-          <td align="center" bgcolor="#1E0845" style="background-color:#1E0845;padding:0;line-height:0;font-size:0;">
+          <td align="center" bgcolor="#2b1a0e" style="background-color:#2b1a0e;padding:0;line-height:0;font-size:0;">
             <img src="{{.BannerDataURI}}" alt="{{.FestivalName}}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border:0;">
           </td>
         </tr>
@@ -28,20 +28,20 @@
 
         <!-- Header -->
         <tr>
-          <td align="center" bgcolor="#1E0845" style="background:linear-gradient(145deg,#1E0845 0%,#7B3FA8 58%,#ce6ed6 100%);background-color:#1E0845;padding:30px 24px;text-align:center;">
+          <td align="center" bgcolor="#7f1713" style="background-color:#7f1713;padding:30px 24px;text-align:center;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
               <tr>
-                <td align="center" style="font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#F4EEFF;padding-bottom:10px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td align="center" style="font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#ffd5c6;padding-bottom:10px;font-family:Arial,Helvetica,sans-serif;">
                   CONFIRMATION DE COMMANDE
                 </td>
               </tr>
               <tr>
-                <td align="center" style="font-size:32px;font-weight:900;text-transform:uppercase;color:#ffffff;padding-bottom:8px;line-height:1.1;font-family:'Paytone One',Montserrat,Arial,Helvetica,sans-serif;letter-spacing:1px;">
+                <td align="center" style="font-size:32px;font-weight:bold;text-transform:uppercase;color:#ffffff;padding-bottom:8px;line-height:1.1;font-family:Arial,Helvetica,sans-serif;">
                   {{.FestivalName}}
                 </td>
               </tr>
               <tr>
-                <td align="center" style="font-size:16px;font-weight:bold;color:#FFE9C7;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td align="center" style="font-size:16px;font-weight:bold;color:#ffe9d2;font-family:Arial,Helvetica,sans-serif;">
                   {{.EventDateText}}
                 </td>
               </tr>
@@ -51,20 +51,20 @@
 
         <!-- Body -->
         <tr>
-          <td bgcolor="#FFF5EC" style="background-color:#FFF5EC;padding:28px 30px 8px;">
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:28px 30px 8px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
               <tr>
-                <td style="font-size:15px;line-height:24px;color:#220850;padding-bottom:12px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
                   Bonjour <strong>{{.CustomerName}}</strong>,
                 </td>
               </tr>
               <tr>
-                <td style="font-size:15px;line-height:24px;color:#220850;padding-bottom:12px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
                   Votre commande <strong>{{.OrderNumber}}</strong> a bien &eacute;t&eacute; confirm&eacute;e.
                 </td>
               </tr>
               <tr>
-                <td style="font-size:15px;line-height:24px;color:#220850;padding-bottom:16px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;padding-bottom:16px;font-family:Arial,Helvetica,sans-serif;">
                   Vos billets sont joints &agrave; cet email en PDF. Merci de les conserver et de les pr&eacute;senter &agrave; l'entr&eacute;e de l'&eacute;v&eacute;nement.
                 </td>
               </tr>
@@ -74,35 +74,35 @@
 
         <!-- Infos événement -->
         <tr>
-          <td bgcolor="#FFF5EC" style="background-color:#FFF5EC;padding:0 30px 16px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E5D8F6;">
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
               <tr>
                 <td bgcolor="#ffffff" style="background-color:#ffffff;padding:18px 20px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                     <tr>
-                      <td style="font-size:16px;font-weight:bold;color:#7B3FA8;padding-bottom:12px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:16px;font-weight:bold;color:#d83a21;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
                         Informations &eacute;v&eacute;nement
                       </td>
                     </tr>
                     <tr>
-                      <td style="font-size:14px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
                         <strong>Date :</strong> {{.EventDateText}}
                       </td>
                     </tr>
                     {{if .VenueName}}
                     <tr>
-                      <td style="font-size:14px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
                         <strong>Lieu :</strong> {{.VenueName}}{{if .VenueAddress}}, {{.VenueAddress}}{{end}}
                       </td>
                     </tr>
                     {{end}}
                     <tr>
-                      <td style="font-size:14px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
                         <strong>Commande :</strong> {{.OrderNumber}}
                       </td>
                     </tr>
                     <tr>
-                      <td style="font-size:14px;line-height:22px;color:#220850;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;font-family:Arial,Helvetica,sans-serif;">
                         <strong>Client :</strong> {{.CustomerName}} &lt;{{.CustomerEmail}}&gt;
                       </td>
                     </tr>
@@ -116,19 +116,19 @@
         <!-- Billets -->
         {{if .Tickets}}
         <tr>
-          <td bgcolor="#FFF5EC" style="background-color:#FFF5EC;padding:0 30px 16px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E5D8F6;">
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
               <tr>
                 <td bgcolor="#ffffff" style="background-color:#ffffff;padding:18px 20px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                     <tr>
-                      <td style="font-size:16px;font-weight:bold;color:#7B3FA8;padding-bottom:12px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:16px;font-weight:bold;color:#d83a21;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
                         Vos billets
                       </td>
                     </tr>
                     {{range $ticket := .Tickets}}
                     <tr>
-                      <td style="font-size:14px;line-height:22px;color:#220850;padding-bottom:6px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:6px;font-family:Arial,Helvetica,sans-serif;">
                         &#127915; <strong>{{$ticket.TicketTypeName}}</strong>{{if $ticket.AttendeeName}} &mdash; {{$ticket.AttendeeName}}{{end}}
                       </td>
                     </tr>
@@ -143,20 +143,20 @@
 
         <!-- Conditions d'accès -->
         <tr>
-          <td bgcolor="#FFF5EC" style="background-color:#FFF5EC;padding:0 30px 16px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #F6D8E9;">
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
               <tr>
-                <td bgcolor="#FBF7FF" style="background-color:#FBF7FF;padding:18px 20px;">
+                <td bgcolor="#fff6ef" style="background-color:#fff6ef;padding:18px 20px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                     <tr>
-                      <td style="font-size:15px;font-weight:bold;color:#D4145A;padding-bottom:10px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:15px;font-weight:bold;color:#7f1713;padding-bottom:10px;font-family:Arial,Helvetica,sans-serif;">
                         Conditions d'acc&egrave;s
                       </td>
                     </tr>
-                    <tr><td style="font-size:13px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">&bull; Pr&eacute;senter un billet valide avec QR code</td></tr>
-                    <tr><td style="font-size:13px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">&bull; Une pi&egrave;ce d'identit&eacute; peut &ecirc;tre demand&eacute;e</td></tr>
-                    <tr><td style="font-size:13px;line-height:22px;color:#220850;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">&bull; Chaque billet est personnel et valable pour une seule entr&eacute;e</td></tr>
-                    <tr><td style="font-size:13px;line-height:22px;color:#220850;font-family:Montserrat,Arial,Helvetica,sans-serif;">&bull; Toute fraude, duplication ou revente non autoris&eacute;e peut entra&icirc;ner l'invalidation du billet</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Pr&eacute;senter un billet valide avec QR code</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Une pi&egrave;ce d'identit&eacute; peut &ecirc;tre demand&eacute;e</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Chaque billet est personnel et valable pour une seule entr&eacute;e</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;font-family:Arial,Helvetica,sans-serif;">&bull; Toute fraude, duplication ou revente non autoris&eacute;e peut entra&icirc;ner l'invalidation du billet</td></tr>
                   </table>
                 </td>
               </tr>
@@ -166,29 +166,29 @@
 
         <!-- Informations légales -->
         <tr>
-          <td bgcolor="#FFF5EC" style="background-color:#FFF5EC;padding:0 30px 24px;">
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 24px;">
             <!--[if mso]><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td width="4" bgcolor="#d83a21" style="background-color:#d83a21;"></td><td><![endif]-->
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-left:4px solid #F97FA0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-left:4px solid #d83a21;">
               <tr>
                 <td bgcolor="#ffffff" style="background-color:#ffffff;padding:16px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                     <tr>
-                      <td style="font-size:14px;font-weight:bold;color:#7B3FA8;padding-bottom:10px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:14px;font-weight:bold;color:#7f1713;padding-bottom:10px;font-family:Arial,Helvetica,sans-serif;">
                         Informations l&eacute;gales
                       </td>
                     </tr>
                     <tr>
-                      <td style="font-size:12px;line-height:20px;color:#220850;padding-bottom:8px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:12px;line-height:20px;color:#422917;padding-bottom:8px;font-family:Arial,Helvetica,sans-serif;">
                         Cet &eacute;v&eacute;nement est film&eacute; et photographi&eacute; &agrave; des fins d'information, de communication et de promotion. En participant &agrave; l'&eacute;v&eacute;nement, vous reconnaissez &ecirc;tre susceptible d'appara&icirc;tre sur des supports photo, vid&eacute;o ou audiovisuels li&eacute;s &agrave; l'organisation et &agrave; la communication de l'&eacute;v&eacute;nement.
                       </td>
                     </tr>
                     <tr>
-                      <td style="font-size:12px;line-height:20px;color:#220850;padding-bottom:8px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:12px;line-height:20px;color:#422917;padding-bottom:8px;font-family:Arial,Helvetica,sans-serif;">
                         Les billets sont strictement personnels. L'organisateur se r&eacute;serve le droit de refuser l'acc&egrave;s ou d'exclure toute personne ne respectant pas les r&egrave;gles de s&eacute;curit&eacute;, le r&egrave;glement int&eacute;rieur ou les conditions d'acc&egrave;s applicables &agrave; l'&eacute;v&eacute;nement.
                       </td>
                     </tr>
                     <tr>
-                      <td style="font-size:12px;line-height:20px;color:#220850;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                      <td style="font-size:12px;line-height:20px;color:#422917;font-family:Arial,Helvetica,sans-serif;">
                         Contact : <strong>{{.SupportEmail}}</strong>
                       </td>
                     </tr>
@@ -202,20 +202,20 @@
 
         <!-- Footer -->
         <tr>
-          <td align="center" bgcolor="#1E0845" style="background:linear-gradient(145deg,#1E0845 0%,#7B3FA8 58%,#ce6ed6 100%);background-color:#1E0845;padding:22px 26px;text-align:center;">
+          <td align="center" bgcolor="#7f1713" style="background-color:#7f1713;padding:22px 26px;text-align:center;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
               <tr>
-                <td align="center" style="font-size:22px;font-weight:bold;text-transform:uppercase;color:#FFC933;padding-bottom:6px;font-family:'Paytone One',Montserrat,Arial,Helvetica,sans-serif;">
+                <td align="center" style="font-size:22px;font-weight:bold;text-transform:uppercase;color:#ff8b2b;padding-bottom:6px;font-family:Arial,Helvetica,sans-serif;">
                   {{.FestivalName}}
                 </td>
               </tr>
               <tr>
-                <td align="center" style="font-size:13px;color:#F4EEFF;padding-bottom:4px;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td align="center" style="font-size:13px;color:#ffe9d2;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
                   {{.EventDateText}}
                 </td>
               </tr>
               <tr>
-                <td align="center" style="font-size:12px;color:#FFE9C7;font-family:Montserrat,Arial,Helvetica,sans-serif;">
+                <td align="center" style="font-size:12px;color:#ffcba4;font-family:Arial,Helvetica,sans-serif;">
                   Contact : {{.SupportEmail}}
                 </td>
               </tr>
