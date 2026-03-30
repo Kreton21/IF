@@ -1,11 +1,32 @@
-<h1>{{.FestivalName}}</h1>
-<p><b>Commande :</b> {{.OrderNumber}}</p>
-<p><b>Client :</b> {{.CustomerName}}</p>
-<p><b>Date :</b> {{.FestivalDate}}</p>
-<hr>
-<h2>Billet : {{.Ticket.TicketTypeName}}</h2>
-{{if .Ticket.AttendeeName}}<p><b>Participant :</b> {{.Ticket.AttendeeName}}</p>{{end}}
-{{if .Ticket.RecipientEmail}}<p><b>Email de réception :</b> {{.Ticket.RecipientEmail}}</p>{{end}}
-<p><b>Référence QR :</b> {{.Ticket.QRToken}}</p>
-<p>Présentez ce billet (PDF) et le QR code à l'entrée. Le QR code est affiché sous ce contenu.</p>
-<p>Contact : {{.SupportEmail}}</p>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>{{.FestivalName}} - Billet</title>
+</head>
+<body>
+  <h1>🎵 {{.FestivalName}}</h1>
+  <p><b>{{.FestivalDate}}</b></p>
+  <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
+
+  <h2>🎫 Billet festival</h2>
+  <p><b>Type :</b> {{.Ticket.TicketTypeName}}</p>
+  <p><b>Commande :</b> {{.OrderNumber}}</p>
+  <p><b>Client :</b> {{.CustomerName}}</p>
+  {{if .Ticket.AttendeeName}}<p><b>Participant :</b> {{.Ticket.AttendeeName}}</p>{{end}}
+  {{if .Ticket.RecipientEmail}}<p><b>Email :</b> {{.Ticket.RecipientEmail}}</p>{{end}}
+  <p><b>Référence QR :</b> {{.Ticket.QRToken}}</p>
+
+  <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
+  <h3>Conditions d’accès</h3>
+  <p>• Présenter ce billet (imprimé ou mobile)</p>
+  <p>• Présenter le QR code ci-dessous à l’entrée</p>
+  <p>• Le QR code est valide une seule fois</p>
+  <p>• Pièce d’identité possible à l’entrée</p>
+
+  <p><b>Important :</b> La revente de ce billet n’est pas autorisée.</p>
+  <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
+  <p>{{.FestivalName}} — {{.FestivalDate}}</p>
+  <p>Contact : {{.SupportEmail}}</p>
+</body>
+</html>
