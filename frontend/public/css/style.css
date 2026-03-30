@@ -1031,6 +1031,12 @@ footer {
 	.sec{padding:64px 16px}
 	.checkout-card{padding:28px 20px}
 	.hero{padding:80px 14px 44px}
+	.hero-video{
+		height:130vh;
+		width:231.11vh;
+		min-width:100vw;
+		min-height:130vh;
+	}
 	.hero-content{padding-inline:4px}
 	.hero-content h1{margin:12px 0; letter-spacing:.25px}
 	.hero-content h1 em{letter-spacing:.25px}
