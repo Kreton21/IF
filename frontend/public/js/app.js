@@ -509,12 +509,8 @@ function renderAttendeeForms() {
     const attendees = state.attendees[typeId] || [];
 
     for (let idx = 0; idx < qty; idx++) {
-      const attendee = attendees[idx] || { first_name: '', last_name: '', email: '' };
+      const attendee = attendees[idx] || { first_name: '', last_name: '' };
       const fieldsetTitle = `${tt.name} — Billet ${idx + 1}`;
-      const lockedEmail = !!tt.one_ticket_per_email;
-      const emailValue = lockedEmail
-        ? (state.customerEmail || document.getElementById('email')?.value || '').trim().toLowerCase()
-        : (attendee.email || '').trim().toLowerCase();
 
       lines.push(`
         <div class="attendee-card">
@@ -528,11 +524,6 @@ function renderAttendeeForms() {
               <label>Nom du participant *</label>
               <input type="text" value="${escapeHTML(attendee.last_name || '')}" oninput="updateAttendeeField('${typeId}', ${idx}, 'last_name', this.value)" required>
             </div>
-          </div>
-          <div class="form-group">
-            <label>Email du participant *</label>
-            <input type="email" value="${escapeHTML(emailValue)}" oninput="updateAttendeeField('${typeId}', ${idx}, 'email', this.value)" ${lockedEmail ? 'readonly' : ''} required>
-            ${lockedEmail ? '<small>Ce billet est limité à 1 ticket par email: adresse figée sur l\'email validé.</small>' : ''}
           </div>
           ${categories.length > 0 ? `<div class="form-group">
             <label>Catégorie du participant *</label>
@@ -592,6 +583,7 @@ function setupCheckoutForm() {
     e.preventDefault();
     if (state.loading) return;
 
+    const customerEmailNormalized = (state.customerEmail || document.getElementById('email').value).trim().toLowerCase();
     const grouped = new Map();
 
     for (const [typeId, qty] of Object.entries(state.cart)) {
@@ -602,7 +594,7 @@ function setupCheckoutForm() {
       const attendees = (state.attendees[typeId] || []).slice(0, qty).map(a => ({
         first_name: (a.first_name || '').trim(),
         last_name: (a.last_name || '').trim(),
-        email: (a.email || '').trim().toLowerCase(),
+        email: customerEmailNormalized,
         category_id: (a.category_id || '').trim(),
       }));
 
@@ -625,10 +617,9 @@ function setupCheckoutForm() {
       }
 
       if (tt?.one_ticket_per_email) {
-        const forcedEmail = (state.customerEmail || document.getElementById('email').value).trim().toLowerCase();
         for (const item of grouped.values()) {
           if (item.ticket_type_id !== typeId) continue;
-          if (item.attendees[0]) item.attendees[0].email = forcedEmail;
+          if (item.attendees[0]) item.attendees[0].email = customerEmailNormalized;
         }
       }
     }
@@ -669,8 +660,8 @@ function setupCheckoutForm() {
       }
 
       for (const attendee of item.attendees) {
-        if (!attendee.first_name || !attendee.last_name || !attendee.email || !attendee.email.includes('@')) {
-          showNotification('Chaque billet doit avoir prénom, nom et email valide', 'warning');
+        if (!attendee.first_name || !attendee.last_name) {
+          showNotification('Chaque billet doit avoir prénom et nom', 'warning');
           return;
         }
       }
