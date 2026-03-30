@@ -187,7 +187,7 @@ a { text-decoration:none; color:inherit; }
 }
 
 .hero-content { position:relative; z-index:10; }
-.hero-eyebrow { font-size:3rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.75); }
+.hero-eyebrow { font-size:2rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.75); }
 .hero-content h1 {
 	font-family: var(--font-primary), sans-serif;
 	font-size:125px; letter-spacing:6px;
