@@ -369,7 +369,7 @@ a { text-decoration:none; color:inherit; }
 	display:block;
 	margin:0 auto;
 }
-.opts-grid { display:grid; grid-template-columns:1fr; gap:16px; margin-top:20px; max-width:720px; }
+.opts-grid { display:grid; grid-template-columns:1fr; gap:16px; margin:20px auto 0; max-width:720px; }
 .opt-card {
 	background:#fff; border-radius:14px; padding:20px 24px;
 	display:flex; align-items:center; justify-content:space-between;
