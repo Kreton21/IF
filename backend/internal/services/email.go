@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"html/template"
+	"mime"
 	"net/smtp"
 	"os"
 	"os/exec"
@@ -150,11 +152,25 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, at
 	altBoundary := "==FESTIVAL_ALT_BOUNDARY=="
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	messageID := fmt.Sprintf("<if-%d@%s>", time.Now().UnixNano(), senderDomain(s.cfg.SMTPFrom))
+	decodedFromName := html.UnescapeString(strings.TrimSpace(s.cfg.SMTPFromName))
+	decodedSubject := html.UnescapeString(strings.TrimSpace(subject))
+	encodedFromName := decodedFromName
+	encodedSubject := decodedSubject
+	if decodedFromName != "" {
+		encodedFromName = mime.BEncoding.Encode("UTF-8", decodedFromName)
+	}
+	if decodedSubject != "" {
+		encodedSubject = mime.BEncoding.Encode("UTF-8", decodedSubject)
+	}
 
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", s.cfg.SMTPFromName, s.cfg.SMTPFrom))
+	if encodedFromName != "" {
+		msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", encodedFromName, s.cfg.SMTPFrom))
+	} else {
+		msg.WriteString(fmt.Sprintf("From: %s\r\n", s.cfg.SMTPFrom))
+	}
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", encodedSubject))
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
 	msg.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
 	msg.WriteString("MIME-Version: 1.0\r\n")
@@ -499,7 +515,7 @@ func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) 
 		return "", err
 	}
 
-	return strings.TrimSpace(buf.String()), nil
+	return html.UnescapeString(strings.TrimSpace(buf.String())), nil
 }
 
 const defaultTicketEmailTemplate = `<!DOCTYPE html>

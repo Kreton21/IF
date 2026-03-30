@@ -255,7 +255,7 @@
 		<div class="camping-opt-in">
 		  <label>
 			<input type="checkbox" id="wants-camping" name="wants-camping">
-			Je souhaite camper (option gratuite)
+			Je m'engage à camper
 		  </label>
 		</div>
 
@@ -294,7 +294,7 @@
 		<div class="recap-card rv"><div class="rc-ico">🎵</div><div class="rc-label">2 Scènes</div><div class="rc-sub">Scène principale et scène secondaire</div></div>
 		<div class="recap-card rv2"><div class="rc-ico">🏘</div><div class="rc-label">Village associatif</div><div class="rc-sub">stand & animations</div></div>
 		<div class="recap-card rv3"><div class="rc-ico">🍔</div><div class="rc-label">Food trucks</div><div class="rc-sub">Restauration variée</div></div>
-		<div class="recap-card rv"><div class="rc-ico">🏕</div><div class="rc-label">Camping</div><div class="rc-sub">gratuit sous réservation</div></div>
+		<div class="recap-card rv"><div class="rc-ico">🏕</div><div class="rc-label">Camping</div><div class="rc-sub">Sous réservation</div></div>
 		<div class="anim-banner rv2">
 		  <div class="ab-ico">🎉</div>
 		  <div>
@@ -506,7 +506,7 @@
     <div>
       <p class="ph-eyebrow">Nuit du 30 au 31 mai 2026</p>
       <h1 class="ph-title">CAMPING</h1>
-      <p class="ph-sub">Gratuit · Sur réservation</p>
+      <p class="ph-sub"> · Sur réservation</p>
     </div>
   </div>
 
@@ -519,15 +519,14 @@
       <div class="rv" style="background:linear-gradient(135deg,var(--night) 0%,var(--purple) 60%,var(--magenta) 100%);border-radius:18px;padding:32px 36px;margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 12px 40px rgba(30,8,69,.22);position:relative;overflow:hidden;">
         <span style="position:absolute;right:-10px;top:-10px;font-size:110px;opacity:.06;line-height:1;pointer-events:none">🏕</span>
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping gratuit sur réservation</div>
-          <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">400 places disponibles · premier arrivé premier servi</p>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping sur réservation</div>
+          <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">200 emplacements disponibles · premier arrivé premier servi</p>
         </div>
         <button class="btn-rose" style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap" onclick="goCampingForm()">🏕 Réserver le camping</button>
       </div>
 
       <div class="rv2" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px">
-        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">400</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Places</div></div>
-        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">0€</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Gratuit</div></div>
+        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">200</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Emplacements</div></div>
         <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Nuit</div></div>
         <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">∞</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Musique</div></div>
       </div>
@@ -539,7 +538,7 @@
 
       <div class="camping-section rv" id="camping-section" style="margin-top:26px;">
         <h3>Activation camping par email</h3>
-        <p>Tu as déjà ton billet l'Interfilières ? Active gratuitement l'option camping ici.</p>
+        <p>Tu as déjà ton billet l'Interfilières ? Active l'option camping ici.</p>
         <form id="camping-claim-form" class="camping-claim-form">
           <div class="form-group" style="margin-bottom:10px;">
             <label for="camping-claim-email">Email de la commande</label>

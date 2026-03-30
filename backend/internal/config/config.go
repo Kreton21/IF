@@ -102,7 +102,7 @@ func Load() (*Config, error) {
 		SMTPUser:     getEnv("SMTP_USER", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
-		SMTPFromName: getEnv("SMTP_FROM_NAME", "IF Festival"),
+		SMTPFromName: getEnv("SMTP_FROM_NAME", "L'Interfilières"),
 		EnableAdminTestEmail: enableAdminTestEmail,
 		EmailTemplatePath:    getEnv("EMAIL_TEMPLATE_PATH", "mail/ticket_email.html"),
 		TicketPDFTemplatePath: getEnv("TICKET_PDF_TEMPLATE_PATH", "mail/ticket_pdf.html"),
@@ -112,8 +112,8 @@ func Load() (*Config, error) {
 		BusEmailTemplatePath:    getEnv("BUS_EMAIL_TEMPLATE_PATH", "templates/bus_ticket_confirmation.html"),
 		BusEmailSubjectTemplate: getEnv("BUS_EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Votre ticket navette (Commande {{.OrderNumber}})"),
 
-		FestivalName: getEnv("FESTIVAL_NAME", "IF Festival"),
-		FestivalDate: getEnv("FESTIVAL_DATE", "2026-07-15"),
+		FestivalName: getEnv("FESTIVAL_NAME", "L'Interfilières"),
+		FestivalDate: getEnv("FESTIVAL_DATE", "2026-05-30"),
 	}
 
 	return cfg, nil
