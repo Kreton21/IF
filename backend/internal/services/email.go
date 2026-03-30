@@ -266,7 +266,15 @@ func (s *EmailService) renderTicketPDF(htmlContent string, ticket TicketEmailDat
 		fmt.Printf("WARN: wkhtmltopdf indisponible, fallback fpdf (%v)\n", err)
 		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
 	case "wkhtmltopdf":
-		return s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+		pdfData, err := s.renderTicketPDFWithWKHTMLToPDF(htmlContent)
+		if err == nil {
+			return pdfData, nil
+		}
+		if isWKHTMLRecoverableError(err) {
+			fmt.Printf("WARN: wkhtmltopdf a échoué (fallback fpdf) (%v)\n", err)
+			return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
+		}
+		return nil, err
 	case "fpdf":
 		return s.renderTicketPDFWithFPDF(htmlContent, ticket, idx)
 	default:
@@ -274,10 +282,36 @@ func (s *EmailService) renderTicketPDF(htmlContent string, ticket TicketEmailDat
 	}
 }
 
+func isWKHTMLRecoverableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "contentnotfounderror") ||
+		strings.Contains(msg, "protocolunknownerror") ||
+		strings.Contains(msg, "failed to load") ||
+		strings.Contains(msg, "blocked access to file")
+}
+
 func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byte, error) {
 	bin, err := resolveWKHTMLToPDFBinary(strings.TrimSpace(s.cfg.WKHTMLTOPDFBin))
 	if err != nil {
 		return nil, err
+	}
+
+	htmlFile, err := os.CreateTemp("", "if-ticket-*.html")
+	if err != nil {
+		return nil, fmt.Errorf("impossible de créer un fichier temporaire HTML: %w", err)
+	}
+	htmlPath := htmlFile.Name()
+	defer os.Remove(htmlPath)
+
+	if _, err := htmlFile.WriteString(htmlContent); err != nil {
+		_ = htmlFile.Close()
+		return nil, fmt.Errorf("impossible d'écrire le HTML temporaire: %w", err)
+	}
+	if err := htmlFile.Close(); err != nil {
+		return nil, fmt.Errorf("impossible de finaliser le HTML temporaire: %w", err)
 	}
 
 	cmd := exec.Command(
@@ -288,10 +322,12 @@ func (s *EmailService) renderTicketPDFWithWKHTMLToPDF(htmlContent string) ([]byt
 		"--margin-right", "12",
 		"--margin-bottom", "12",
 		"--margin-left", "12",
-		"-",
+		"--enable-local-file-access",
+		"--load-error-handling", "ignore",
+		"--load-media-error-handling", "ignore",
+		htmlPath,
 		"-",
 	)
-	cmd.Stdin = strings.NewReader(htmlContent)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
