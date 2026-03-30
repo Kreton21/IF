@@ -78,7 +78,9 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 	}
 
 	htmlBody, err := s.buildEmailHTML(customerName, orderNumber, tickets, templatePath)
-	_ = htmlBody
+	if err != nil {
+		return fmt.Errorf("erreur génération HTML email: %w", err)
+	}
 	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, s.cfg.SMTPFrom)
 
 	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
@@ -86,7 +88,7 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 		return fmt.Errorf("erreur génération PDF billets: %w", err)
 	}
 
-	if err := s.sendMIMEEmail(to, subject, plainBody, attachments); err != nil {
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, attachments); err != nil {
 		return err
 	}
 
@@ -140,8 +142,9 @@ type EmailAttachment struct {
 	Data        []byte
 }
 
-func (s *EmailService) sendMIMEEmail(to, subject, plainBody string, attachments []EmailAttachment) error {
-	boundary := "==FESTIVAL_MIXED_BOUNDARY=="
+func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, attachments []EmailAttachment) error {
+	mixedBoundary := "==FESTIVAL_MIXED_BOUNDARY=="
+	altBoundary := "==FESTIVAL_ALT_BOUNDARY=="
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	messageID := fmt.Sprintf("<if-%d@%s>", time.Now().UnixNano(), senderDomain(s.cfg.SMTPFrom))
 
@@ -152,16 +155,30 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody string, attachments 
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
 	msg.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
 	msg.WriteString("MIME-Version: 1.0\r\n")
-	msg.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", boundary))
+	msg.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", mixedBoundary))
 	msg.WriteString("\r\n")
 
-	// Plain text part
-	msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	// multipart/alternative part
+	msg.WriteString(fmt.Sprintf("--%s\r\n", mixedBoundary))
+	msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altBoundary))
+	msg.WriteString("\r\n")
+
+	// Plain text version
+	msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
 	msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 7bit\r\n")
+	msg.WriteString("Content-Transfer-Encoding: 8bit\r\n")
 	msg.WriteString("\r\n")
 	msg.WriteString(plainBody)
 	msg.WriteString("\r\n")
+
+	// HTML version
+	msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
+	msg.WriteString("Content-Type: text/html; charset=utf-8\r\n")
+	msg.WriteString("Content-Transfer-Encoding: 8bit\r\n")
+	msg.WriteString("\r\n")
+	msg.WriteString(htmlBody)
+	msg.WriteString("\r\n")
+	msg.WriteString(fmt.Sprintf("--%s--\r\n", altBoundary))
 
 	for _, attachment := range attachments {
 		if len(attachment.Data) == 0 {
@@ -176,7 +193,7 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody string, attachments 
 			filename = "attachment.bin"
 		}
 
-		msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		msg.WriteString(fmt.Sprintf("--%s\r\n", mixedBoundary))
 		msg.WriteString(fmt.Sprintf("Content-Type: %s; name=\"%s\"\r\n", contentType, filename))
 		msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 		msg.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", filename))
@@ -185,7 +202,7 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody string, attachments 
 		msg.WriteString("\r\n")
 	}
 
-	msg.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+	msg.WriteString(fmt.Sprintf("--%s--\r\n", mixedBoundary))
 
 	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
@@ -197,35 +214,27 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 	attachments := make([]EmailAttachment, 0, len(tickets))
 
 	for idx, ticket := range tickets {
-		if len(ticket.QRCodePNG) == 0 {
-			continue
-		}
-
 		pdf := fpdf.New("P", "mm", "A4", "")
 		pdf.SetMargins(15, 15, 15)
 		pdf.AddPage()
 
-		pdf.SetFont("Arial", "B", 18)
-		pdf.CellFormat(0, 10, s.cfg.FestivalName, "", 1, "L", false, 0, "")
-
-		pdf.SetFont("Arial", "", 12)
-		pdf.CellFormat(0, 8, fmt.Sprintf("Commande: %s", orderNumber), "", 1, "L", false, 0, "")
-		pdf.CellFormat(0, 8, fmt.Sprintf("Client: %s", customerName), "", 1, "L", false, 0, "")
-
-		label := ticket.TicketTypeName
-		if strings.TrimSpace(ticket.AttendeeName) != "" {
-			label = fmt.Sprintf("%s - %s", ticket.TicketTypeName, ticket.AttendeeName)
+		htmlContent, err := s.buildTicketPDFHTML(customerName, orderNumber, ticket)
+		if err != nil {
+			return nil, fmt.Errorf("erreur génération HTML PDF billet: %w", err)
 		}
-		pdf.CellFormat(0, 8, fmt.Sprintf("Billet: %s", label), "", 1, "L", false, 0, "")
-		pdf.Ln(6)
 
-		imageKey := fmt.Sprintf("qr-%d", idx)
-		pdf.RegisterImageOptionsReader(imageKey, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
-		pdf.ImageOptions(imageKey, 55, 65, 100, 100, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
-
-		pdf.SetY(180)
 		pdf.SetFont("Arial", "", 11)
-		pdf.MultiCell(0, 7, "Presentez ce QR code a l'entree du festival. Ce billet est personnel et ne peut etre valide qu'une seule fois.", "", "L", false)
+		html := pdf.HTMLBasicNew()
+		html.Write(6.0, htmlContent)
+
+		if len(ticket.QRCodePNG) > 0 {
+			pdf.Ln(6)
+			imageKey := fmt.Sprintf("qr-%d", idx)
+			pdf.RegisterImageOptionsReader(imageKey, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(ticket.QRCodePNG))
+			currentY := pdf.GetY()
+			pdf.ImageOptions(imageKey, 55, currentY, 100, 100, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+			pdf.SetY(currentY + 106)
+		}
 
 		var out bytes.Buffer
 		if err := pdf.Output(&out); err != nil {
@@ -241,6 +250,28 @@ func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber strin
 	}
 
 	return attachments, nil
+}
+
+func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, ticket TicketEmailData) (string, error) {
+	t, err := template.New("ticket-pdf").Parse(defaultTicketPDFTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	err = t.Execute(&buf, map[string]interface{}{
+		"FestivalName": s.cfg.FestivalName,
+		"FestivalDate": s.cfg.FestivalDate,
+		"CustomerName": customerName,
+		"OrderNumber":  orderNumber,
+		"Ticket":       ticket,
+		"SupportEmail": s.cfg.SMTPFrom,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func sanitizeFilename(value string) string {
@@ -358,6 +389,20 @@ const defaultTicketEmailTemplate = `<!DOCTYPE html>
 	</p>
 </body>
 </html>`
+
+const defaultTicketPDFTemplate = `
+<h1>{{.FestivalName}}</h1>
+<p><b>Commande :</b> {{.OrderNumber}}</p>
+<p><b>Client :</b> {{.CustomerName}}</p>
+<p><b>Date :</b> {{.FestivalDate}}</p>
+<hr>
+<h2>Billet : {{.Ticket.TicketTypeName}}</h2>
+{{if .Ticket.AttendeeName}}<p><b>Participant :</b> {{.Ticket.AttendeeName}}</p>{{end}}
+{{if .Ticket.RecipientEmail}}<p><b>Email de réception :</b> {{.Ticket.RecipientEmail}}</p>{{end}}
+<p><b>Référence QR :</b> {{.Ticket.QRToken}}</p>
+<p>Présentez ce billet (PDF) et le QR code à l'entrée. Le QR code est affiché ci-dessous.</p>
+<p>Contact : {{.SupportEmail}}</p>
+`
 
 func (s *EmailService) SendAdminTestEmail(to string) error {
 	if strings.TrimSpace(to) == "" {
