@@ -82,7 +82,7 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 		return fmt.Errorf("erreur génération sujet email: %w", err)
 	}
 
-	htmlBody, err := s.buildEmailHTML(customerName, orderNumber, tickets, templatePath)
+	htmlBody, err := s.buildEmailHTML(to, customerName, orderNumber, tickets, templatePath)
 	if err != nil {
 		return fmt.Errorf("erreur génération HTML email: %w", err)
 	}
@@ -110,7 +110,7 @@ type TicketEmailData struct {
 	CID            string
 }
 
-func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets []TicketEmailData, templatePath string) (string, error) {
+func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber string, tickets []TicketEmailData, templatePath string) (string, error) {
 	templateContent := defaultTicketEmailTemplate
 	if path := strings.TrimSpace(templatePath); path != "" {
 		if data, err := os.ReadFile(path); err == nil {
@@ -125,14 +125,22 @@ func (s *EmailService) buildEmailHTML(customerName, orderNumber string, tickets 
 		return "", err
 	}
 
+	bannerDataURI := s.resolveTicketBannerDataURI()
+	eventDateText := formatFrenchDate(s.cfg.FestivalDate)
+
 	var buf bytes.Buffer
 	err = t.Execute(&buf, map[string]interface{}{
-		"FestivalName": s.cfg.FestivalName,
-		"FestivalDate": s.cfg.FestivalDate,
-		"CustomerName": customerName,
-		"OrderNumber":  orderNumber,
-		"Tickets":      tickets,
-		"SupportEmail": s.cfg.SMTPFrom,
+		"FestivalName":  s.cfg.FestivalName,
+		"FestivalDate":  s.cfg.FestivalDate,
+		"EventDateText": eventDateText,
+		"CustomerName":  customerName,
+		"CustomerEmail": customerEmail,
+		"OrderNumber":   orderNumber,
+		"Tickets":       tickets,
+		"SupportEmail":  s.cfg.SMTPFrom,
+		"VenueName":     s.cfg.VenueName,
+		"VenueAddress":  s.cfg.VenueAddress,
+		"BannerDataURI": bannerDataURI,
 	})
 	if err != nil {
 		return "", err
@@ -545,6 +553,16 @@ func (s *EmailService) resolveTicketBannerDataURI() template.URL {
 	return ""
 }
 
+func formatFrenchDate(dateStr string) string {
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return dateStr
+	}
+	months := []string{"", "janvier", "février", "mars", "avril", "mai", "juin",
+		"juillet", "août", "septembre", "octobre", "novembre", "décembre"}
+	return fmt.Sprintf("%d %s %d", t.Day(), months[t.Month()], t.Year())
+}
+
 func sanitizeFilename(value string) string {
 	replacer := strings.NewReplacer(" ", "_", "/", "-", "\\", "-", ":", "-", "*", "", "?", "", "\"", "", "<", "", ">", "", "|", "")
 	cleaned := replacer.Replace(strings.TrimSpace(value))
@@ -625,39 +643,30 @@ func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) 
 }
 
 const defaultTicketEmailTemplate = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-	<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; color: white; text-align: center;">
-		<h1 style="margin: 0;">🎵 {{.FestivalName}}</h1>
-		<p style="margin: 10px 0 0 0; font-size: 18px;">Vos billets sont prêts !</p>
-	</div>
-
-	<div style="padding: 20px 0;">
-		<p>Bonjour <strong>{{.CustomerName}}</strong>,</p>
-		<p>Merci pour votre achat ! Voici vos billets pour le <strong>{{.FestivalName}}</strong>.</p>
-		<p style="color: #666;">Commande : <strong>{{.OrderNumber}}</strong></p>
-	</div>
-
-	{{range $ticket := .Tickets}}
-	<div style="border: 2px solid #667eea; border-radius: 10px; padding: 20px; margin: 15px 0; text-align: center;">
-		<h3 style="color: #667eea; margin-top: 0;">🎫 {{$ticket.TicketTypeName}}</h3>
-		{{if $ticket.AttendeeName}}<p>Participant : <strong>{{$ticket.AttendeeName}}</strong></p>{{end}}
-		<p style="font-size: 12px; color: #999;">Présentez ce QR code à l'entrée du festival</p>
-		<img src="cid:{{$ticket.CID}}" alt="QR Code" style="max-width: 250px;" />
-	</div>
-	{{end}}
-
-	<div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
-		<p style="margin: 0; font-size: 13px; color: #666;">
-			<strong>📱 Important :</strong> Présentez ce QR code (imprimé ou sur mobile) à l'entrée du festival.
-			Chaque QR code ne peut être utilisé qu'une seule fois.
-		</p>
-	</div>
-
-	<p style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-		{{.FestivalName}} — {{.FestivalDate}} — Contact : {{.SupportEmail}}
-	</p>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#FBF7FF;font-family:Arial,Helvetica,sans-serif;color:#220850;">
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FBF7FF;padding:24px 12px;">
+<tr><td align="center">
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:700px;background:#FFF5EC;border-radius:24px;overflow:hidden;">
+<tr><td style="background:linear-gradient(160deg,#1E0845 0%,#7B3FA8 52%,#F97FA0 100%);padding:38px 24px;text-align:center;">
+<div style="font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.74);margin-bottom:10px;">Confirmation de commande</div>
+<div style="font-size:38px;font-weight:900;letter-spacing:2px;color:#FFF5EC;margin-bottom:12px;">{{.FestivalName}}</div>
+<div style="font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.6;">{{.FestivalDate}}</div>
+</td></tr>
+<tr><td style="padding:30px 26px 12px;">
+<p style="margin:0 0 14px;font-size:16px;line-height:1.75;">Bonjour <strong>{{.CustomerName}}</strong>,</p>
+<p style="margin:0 0 14px;font-size:16px;line-height:1.75;">Votre commande <strong>{{.OrderNumber}}</strong> a bien été confirmée.</p>
+<p style="margin:0 0 18px;font-size:16px;line-height:1.75;">Vos billets sont joints à cet email en PDF.</p>
+</td></tr>
+<tr><td style="background:#1E0845;padding:26px;text-align:center;">
+<div style="font-size:26px;font-weight:900;color:#FFC933;margin-bottom:8px;">{{.FestivalName}}</div>
+<div style="font-size:13px;color:rgba(255,255,255,.68);margin-bottom:6px;">{{.FestivalDate}}</div>
+<div style="font-size:12px;color:rgba(255,255,255,.42);">Contact : {{.SupportEmail}}</div>
+</td></tr>
+</table>
+</td></tr>
+</table>
 </body>
 </html>`
 

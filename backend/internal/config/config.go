@@ -57,8 +57,10 @@ type Config struct {
 	BusEmailSubjectTemplate string
 
 	// Festival
-	FestivalName string
-	FestivalDate string
+	FestivalName    string
+	FestivalDate    string
+	VenueName       string
+	VenueAddress    string
 }
 
 func Load() (*Config, error) {
@@ -112,8 +114,10 @@ func Load() (*Config, error) {
 		BusEmailTemplatePath:    getEnv("BUS_EMAIL_TEMPLATE_PATH", "templates/bus_ticket_confirmation.html"),
 		BusEmailSubjectTemplate: getEnv("BUS_EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Votre ticket navette (Commande {{.OrderNumber}})"),
 
-		FestivalName: getEnv("FESTIVAL_NAME", "L'Interfilières"),
-		FestivalDate: getEnv("FESTIVAL_DATE", "2026-05-30"),
+		FestivalName:    getEnv("FESTIVAL_NAME", "L'Interfilières"),
+		FestivalDate:    getEnv("FESTIVAL_DATE", "2026-05-30"),
+		VenueName:       getEnv("VENUE_NAME", ""),
+		VenueAddress:    getEnv("VENUE_ADDRESS", ""),
 	}
 
 	return cfg, nil

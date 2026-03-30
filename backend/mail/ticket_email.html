@@ -1,37 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.FestivalName}} - Confirmation</title>
 </head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; color: white; text-align: center;">
-    <h1 style="margin: 0;">🎵 {{.FestivalName}}</h1>
-    <p style="margin: 10px 0 0 0; font-size: 18px;">Vos billets sont prêts !</p>
-  </div>
+<body style="margin:0;padding:0;background:#FBF7FF;font-family:Arial,Helvetica,sans-serif;color:#220850;">
 
-  <div style="padding: 20px 0;">
-    <p>Bonjour <strong>{{.CustomerName}}</strong>,</p>
-    <p>Merci pour votre achat ! Voici vos billets pour le <strong>{{.FestivalName}}</strong>.</p>
-    <p style="color: #666;">Commande : <strong>{{.OrderNumber}}</strong></p>
-  </div>
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(to bottom,#0087ff 0%,#4b7ff0 22%,#ce6ed6 46%,#ffc933 72%,#ffe9c7 100%);padding:24px 12px;">
+  <tr>
+    <td align="center">
 
-  {{range $ticket := .Tickets}}
-  <div style="border: 2px solid #667eea; border-radius: 10px; padding: 20px; margin: 15px 0; text-align: center;">
-    <h3 style="color: #667eea; margin-top: 0;">🎫 {{$ticket.TicketTypeName}}</h3>
-    {{if $ticket.AttendeeName}}<p>Participant : <strong>{{$ticket.AttendeeName}}</strong></p>{{end}}
-  </div>
-  {{end}}
+      <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:700px;background:#FFF5EC;border-radius:24px;overflow:hidden;box-shadow:0 10px 40px rgba(30,8,69,.16);">
 
-  <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
-    <p style="margin: 0; font-size: 13px; color: #666;">
-      <strong>📱 Important :</strong> Présentez ce QR code (imprimé ou sur mobile) à l'entrée du festival.
-      Chaque QR code ne peut être utilisé qu'une seule fois.
-    </p>
-  </div>
+        {{if .BannerDataURI}}
+        <tr>
+          <td style="padding:0;line-height:0;">
+            <img src="{{.BannerDataURI}}" alt="Bannière {{.FestivalName}}" style="width:100%;display:block;">
+          </td>
+        </tr>
+        {{end}}
 
-  <p style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-    {{.FestivalName}} — {{.FestivalDate}} — Contact : {{.SupportEmail}}
-  </p>
+        <tr>
+          <td style="background:linear-gradient(160deg,#1E0845 0%,#7B3FA8 52%,#F97FA0 100%);padding:38px 24px;text-align:center;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.74);margin-bottom:10px;">
+              Confirmation de commande
+            </div>
+
+            <div style="font-size:38px;font-weight:900;letter-spacing:2px;color:#FFF5EC;margin-bottom:12px;">
+              {{.FestivalName}}
+            </div>
+
+            <div style="font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.6;">
+              {{.FestivalDate}}
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:30px 26px 12px;">
+            <p style="margin:0 0 14px;font-size:16px;line-height:1.75;color:#220850;">
+              Bonjour <strong>{{.CustomerName}}</strong>,
+            </p>
+
+            <p style="margin:0 0 14px;font-size:16px;line-height:1.75;color:#220850;">
+              Votre commande <strong>{{.OrderNumber}}</strong> a bien été confirmée.
+            </p>
+
+            <p style="margin:0 0 18px;font-size:16px;line-height:1.75;color:#220850;">
+              Vos billets sont joints à cet email en PDF. Merci de les conserver et de les présenter à l'entrée de l'événement.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 26px 18px;">
+            <div style="background:#FFFFFF;border-radius:18px;padding:20px;border:1px solid rgba(123,63,168,.12);box-shadow:0 4px 20px rgba(30,8,69,.08);">
+              <div style="font-size:18px;font-weight:800;color:#F97FA0;margin-bottom:12px;">Informations événement</div>
+
+              <p style="margin:0 0 8px;font-size:14px;line-height:1.7;"><strong>Date :</strong> {{.EventDateText}}</p>
+              {{if .VenueName}}<p style="margin:0 0 8px;font-size:14px;line-height:1.7;"><strong>Lieu :</strong> {{.VenueName}}{{if .VenueAddress}}, {{.VenueAddress}}{{end}}</p>{{end}}
+              <p style="margin:0 0 8px;font-size:14px;line-height:1.7;"><strong>Commande :</strong> {{.OrderNumber}}</p>
+              <p style="margin:0;font-size:14px;line-height:1.7;"><strong>Client :</strong> {{.CustomerName}} &lt;{{.CustomerEmail}}&gt;</p>
+            </div>
+          </td>
+        </tr>
+
+        {{if .Tickets}}
+        <tr>
+          <td style="padding:0 26px 18px;">
+            <div style="background:#FFFFFF;border-radius:18px;padding:20px;border:1px solid rgba(123,63,168,.12);box-shadow:0 4px 20px rgba(30,8,69,.08);">
+              <div style="font-size:18px;font-weight:800;color:#F97FA0;margin-bottom:12px;">Vos billets</div>
+              {{range $ticket := .Tickets}}
+              <p style="margin:0 0 6px;font-size:14px;line-height:1.7;">🎫 <strong>{{$ticket.TicketTypeName}}</strong>{{if $ticket.AttendeeName}} — {{$ticket.AttendeeName}}{{end}}</p>
+              {{end}}
+            </div>
+          </td>
+        </tr>
+        {{end}}
+
+        <tr>
+          <td style="padding:0 26px 18px;">
+            <div style="background:linear-gradient(135deg,rgba(249,127,160,.10),rgba(255,201,51,.16));border-radius:18px;padding:20px;border:1px solid rgba(249,127,160,.18);">
+              <div style="font-size:17px;font-weight:800;color:#220850;margin-bottom:10px;">Conditions d'accès</div>
+
+              <p style="margin:0 0 6px;font-size:14px;line-height:1.75;color:#422917;">• Présenter un billet valide avec QR code</p>
+              <p style="margin:0 0 6px;font-size:14px;line-height:1.75;color:#422917;">• Une pièce d'identité peut être demandée</p>
+              <p style="margin:0 0 6px;font-size:14px;line-height:1.75;color:#422917;">• Chaque billet est personnel et valable pour une seule entrée</p>
+              <p style="margin:0;font-size:14px;line-height:1.75;color:#422917;">• Toute fraude, duplication ou revente non autorisée peut entraîner l'invalidation du billet</p>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 26px 28px;">
+            <div style="background:#FFFFFF;border-left:4px solid #F97FA0;border-radius:12px;padding:18px;">
+              <div style="font-size:16px;font-weight:800;color:#220850;margin-bottom:10px;">Informations légales</div>
+
+              <p style="margin:0 0 10px;font-size:13px;line-height:1.8;color:#422917;">
+                Cet événement est filmé et photographié à des fins d'information, de communication et de promotion. En participant à l'événement, vous reconnaissez être susceptible d'apparaître sur des supports photo, vidéo ou audiovisuels liés à l'organisation et à la communication de l'événement.
+              </p>
+
+              <p style="margin:0 0 10px;font-size:13px;line-height:1.8;color:#422917;">
+                Les billets sont strictement personnels. L'organisateur se réserve le droit de refuser l'accès ou d'exclure toute personne ne respectant pas les règles de sécurité, le règlement intérieur ou les conditions d'accès applicables à l'événement.
+              </p>
+
+              <p style="margin:0;font-size:13px;line-height:1.8;color:#422917;">
+                Contact : <strong>{{.SupportEmail}}</strong>
+              </p>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#1E0845;padding:26px;text-align:center;border-radius:0 0 24px 24px;">
+            <div style="font-size:26px;font-weight:900;color:#FFC933;margin-bottom:8px;">
+              {{.FestivalName}}
+            </div>
+            <div style="font-size:13px;color:rgba(255,255,255,.68);margin-bottom:6px;">
+              {{.FestivalDate}}
+            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,.42);">
+              Contact : {{.SupportEmail}}
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
 </body>
 </html>
