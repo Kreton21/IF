@@ -547,6 +547,10 @@ function updateAttendeeField(typeId, index, field, value) {
     attendees[index] = { first_name: '', last_name: '', email: '', category_id: '' };
   }
   attendees[index][field] = value;
+  // Mark first attendee as manually touched so auto-fill stops overwriting
+  if (index === 0 && (field === 'first_name' || field === 'last_name')) {
+    attendees[0]._nameTouched = true;
+  }
   state.attendees[typeId] = attendees;
 }
 
@@ -642,6 +646,30 @@ function updateOrderSummary() {
 function setupCheckoutForm() {
   const form = document.getElementById('checkout-form');
   if (!form) return;
+
+  // Auto-fill first attendee of each ticket type when customer name changes
+  const fnInput = document.getElementById('firstName');
+  const lnInput = document.getElementById('lastName');
+
+  function prefillFirstAttendees() {
+    const fn = (fnInput?.value || '').trim();
+    const ln = (lnInput?.value || '').trim();
+    let changed = false;
+    for (const typeId of Object.keys(state.cart)) {
+      const list = state.attendees[typeId];
+      if (!Array.isArray(list) || list.length === 0) continue;
+      if (list[0]._nameTouched) continue;
+      if (list[0].first_name !== fn || list[0].last_name !== ln) {
+        list[0].first_name = fn;
+        list[0].last_name = ln;
+        changed = true;
+      }
+    }
+    if (changed) renderAttendeeForms();
+  }
+
+  if (fnInput) fnInput.addEventListener('input', prefillFirstAttendees);
+  if (lnInput) lnInput.addEventListener('input', prefillFirstAttendees);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
