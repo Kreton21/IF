@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>L'Interfilières 2026 — Festival Paris-Saclay · 30 Mai</title>
+<title>L'Interfilières 2026 — Evenement Paris-Saclay · 30 Mai</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -14,7 +14,12 @@
 
 <!-- ════ NAV ════ -->
 <nav id="nav">
-  <div class="nav-logo" onclick="go('home')">L'INTERFILIÈRES</div>
+	<div class="nav-logo" onclick="go('home')">
+		<span style="display:flex;align-items:center;gap:18px;">
+			<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:64px; width:auto; display:block;">
+			<span style="display:flex;align-items:center;height:64px;line-height:64px;">L'INTERFILIÈRES</span>
+		</span>
+	</div>
   <ul class="nav-links" id="navLinks">
 	<li><a href="#" onclick="go('home');return false">Accueil</a></li>
 	<li><a href="#" onclick="go('anims');return false">Animations</a></li>
@@ -45,22 +50,6 @@
 	  referrerpolicy="strict-origin-when-cross-origin"
 	  allowfullscreen>
 	</iframe>
-
-	<!-- Nuages -->
-	<div class="clouds">
-	  <div class="cloud" style="top:12%;left:-200px;width:320px;height:auto;animation-duration:32s;animation-delay:0s">
-		<img src="img/nuage2.svg" alt="Nuage" style="width:100%;height:100%;object-fit:cover;opacity:.3">
-	  </div>
-	  <div class="cloud" style="top:22%;left:-200px;width:200px;height:auto;animation-duration:44s;animation-delay:-12s;opacity:.4">
-		<img src="img/nuage1.svg" alt="Nuage" style="width:100%;height:100%;object-fit:cover;opacity:.3">
-	  </div>
-	  <div class="cloud" style="top:8%;left:-200px;width:260px;height:auto;animation-duration:38s;animation-delay:-22s;opacity:.5">
-		<img src="img/nuage1.svg" alt="Nuage" style="width:100%;height:100%;object-fit:cover;opacity:.3">
-	  </div>
-	  <div class="cloud" style="top:30%;left:-200px;width:180px;height:auto;animation-duration:50s;animation-delay:-6s;opacity:.35">
-		<img src="img/nuage2.svg" alt="Nuage" style="width:100%;height:100%;object-fit:cover;opacity:.3">
-	  </div>
-	</div>
 
 	<!-- Particules -->
 	<div class="particles" id="particles"></div>
@@ -156,7 +145,7 @@
 	  <!-- Options (static from design) -->
 	  <div class="opts-grid" id="opts-grid">
 		<div class="opt-card rv2">
-		  <div><div class="opt-name">🚌 Billet Navette</div><div class="opt-desc">Aller / Retour gare ↔ festival</div></div>
+		  <div><div class="opt-name">🚌 Billet Navette</div><div class="opt-desc">Aller / Retour gare ↔ l'Interfilières</div></div>
 		  <button type="button" class="btn-otl bus-open-btn" disabled>Coming soon</button>
 		</div>
 	  </div>
@@ -169,8 +158,8 @@
 			<div class="form-group">
 			  <label for="bus-trip-type">Type de trajet *</label>
 			  <select id="bus-trip-type" required>
-				<option value="outbound">Aller vers le festival</option>
-				<option value="return">Retour depuis le festival</option>
+				<option value="outbound">Aller vers l'Interfilières</option>
+				<option value="return">Retour depuis l'Interfilières</option>
 				<option value="round_trip">Aller-retour</option>
 			  </select>
 			</div>
@@ -291,14 +280,14 @@
   <!-- RECAP -->
   <section class="sec recap-sec">
 	<div class="inner">
-	  <span class="tag rv">✦ Le festival</span>
+	  <span class="tag rv">✦ L'Interfilières</span>
 	  <h2 class="title rv">En un coup d'œil</h2>
 	  <div class="bar rv"></div>
 	  <div class="recap-grid">
-		<div class="recap-card rv"><div class="rc-ico">🎵</div><div class="rc-label">2 Scènes</div><div class="rc-sub">Grande scène + Scène 2</div></div>
-		<div class="recap-card rv2"><div class="rc-ico">🏘</div><div class="rc-label">Village associatif</div><div class="rc-sub">Stands & activités asso</div></div>
+		<div class="recap-card rv"><div class="rc-ico">🎵</div><div class="rc-label">2 Scènes</div><div class="rc-sub">Scène principale et scène secondaire</div></div>
+		<div class="recap-card rv2"><div class="rc-ico">🏘</div><div class="rc-label">Village associatif</div><div class="rc-sub">stand & animations</div></div>
 		<div class="recap-card rv3"><div class="rc-ico">🍔</div><div class="rc-label">Food trucks</div><div class="rc-sub">Restauration variée</div></div>
-		<div class="recap-card rv"><div class="rc-ico">🏕</div><div class="rc-label">Camping</div><div class="rc-sub">Zone camping sur site</div></div>
+		<div class="recap-card rv"><div class="rc-ico">🏕</div><div class="rc-label">Camping</div><div class="rc-sub">gratuit sous réservation</div></div>
 		<div class="anim-banner rv2">
 		  <div class="ab-ico">🎉</div>
 		  <div>
@@ -313,10 +302,9 @@
   <!-- QUICK NAV -->
   <section class="qnav-sec">
 	<div class="inner">
-	  <h2 class="title on-dark rv" style="text-align:center">Tout savoir sur le festival</h2>
+	  <h2 class="title on-dark rv" style="text-align:center">Tout savoir sur l'Interfilières</h2>
 	  <div class="qnav-grid">
 		<div class="qnav-btn rv" onclick="go('anims')"><div class="qn-ico">🎪</div><div class="qn-lbl">Nos animations</div><div class="qn-sub">Village, et pleins de surprises à venir :)</div></div>
-		<div class="qnav-btn rv2" onclick="go('prog')"><div class="qn-ico">🎧</div><div class="qn-lbl">Programmation</div><div class="qn-sub">Timeline musicale complète</div></div>
 		<div class="qnav-btn rv3" onclick="go('camping')"><div class="qn-ico">🏕</div><div class="qn-lbl">Camping</div><div class="qn-sub">Infos, règles et réservation</div></div>
 		<div class="qnav-btn rv" onclick="go('staff')"><div class="qn-ico">🙋</div><div class="qn-lbl">Venir staffer</div><div class="qn-sub">Rejoins l'équipe 2026</div></div>
 	  </div>
@@ -324,7 +312,10 @@
   </section>
 
   <footer>
-	<div class="f-logo">L'INTERFILIÈRES 2026</div>
+	<div class="f-logo">
+		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
+		L'INTERFILIÈRES 2026
+	</div>
 	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
 	<div class="f-socs">
 	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
@@ -341,7 +332,53 @@
 	  <a href="#">Mentions légales</a>
 	</div>
 	<p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié pour des fins promotionnelles et de communication.</p>
+	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
+  </footer>
+</div>
+
+<!-- ════════════════════════════════════════
+  PROGRAMMATION
+════════════════════════════════════════ -->
+<div class="page" id="page-prog">
+  <div class="ph ph-anim">
+	<div>
+	  <p class="ph-eyebrow">30 mai 2026</p>
+	  <h1 class="ph-title">PROGRAMMATION</h1>
+	  <p class="ph-sub">Line-up complète à venir</p>
+	</div>
+  </div>
+  <section class="sec anim-sec">
+	<div class="inner">
+	  <span class="tag rv">✦ Line-up</span>
+	  <h2 class="title rv">L'Interfilières vous réserve bien des surprises...</h2>
+	  <div class="bar rv"></div>
+	  <div class="anim-coming-soon">
+		<button class="btn-coming-soon">À VENIR 🤫</button>
+	  </div>
+	</div>
+  </section>
+  <footer>
+	<div class="f-logo">
+		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
+		L'INTERFILIÈRES 2026
+	</div>
+	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
+	<div class="f-socs">
+	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
+	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
+	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
+	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
+	</div>
+	<div class="f-links">
+	  <a href="#" onclick="go('prog');return false">Programmation</a>
+	  <a href="#" onclick="go('transport');return false">Transports</a>
+	  <a href="#" onclick="go('camping');return false">Camping</a>
+	  <a href="#" onclick="go('staff');return false">Staff</a>
+	  <a href="#">Contact</a>
+	  <a href="#">Mentions légales</a>
+	</div>
+	<p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
+	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
   </footer>
 </div>
 
@@ -359,7 +396,7 @@
   <section class="sec anim-sec">
 	<div class="inner">
 	  <span class="tag rv">✦ Programme complet</span>
-	  <h2 class="title rv">L'Inrerfilières vous reserve bien des surprises...</h2>
+	  <h2 class="title rv">L'Interfilières vous réserve bien des surprises...</h2>
 	  <div class="bar rv"></div>
 	  <div class="anim-coming-soon">
 		<button class="btn-coming-soon">À VENIR 🤫</button>
@@ -367,7 +404,10 @@
 	</div>
   </section>
   <footer>
-	<div class="f-logo">L'INTERFILIÈRES 2026</div>
+	<div class="f-logo">
+		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
+		L'INTERFILIÈRES 2026
+	</div>
 	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
 	<div class="f-socs">
 	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
@@ -384,7 +424,7 @@
 	  <a href="#">Mentions légales</a>
 	</div>
 	<p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié pour des fins promotionnelles et de communication.</p>
+	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
   </footer>
 </div>
 
@@ -396,14 +436,14 @@
     <div>
       <p class="ph-eyebrow">Accès au site</p>
       <h1 class="ph-title">TRANSPORTS</h1>
-      <p class="ph-sub">Toutes les options pour venir au festival</p>
+      <p class="ph-sub">Toutes les options pour venir à l'Interfilières</p>
     </div>
   </div>
 
   <section class="sec trans-sec">
     <div class="inner">
       <span class="tag rv">✦ Accès au site</span>
-      <h2 class="title rv">Venir au festival</h2>
+      <h2 class="title rv">Comment venir ?</h2>
       <div class="bar rv"></div>
 
       <div class="t3 rv2">
@@ -413,10 +453,10 @@
           <ul class="t-list">
             <li><strong>Ligne</strong> RER B</li>
             <li><strong>Gare</strong> Massy-Palaiseau ou Orsay</li>
-            <li><strong>Puis</strong> Navette festival</li>
+            <li><strong>Puis</strong> Navette l'Interfilières</li>
             <li><strong>Durée</strong> ~20 min depuis Paris</li>
           </ul>
-          <a href="https://www.iledefrance-mobilites.fr/" target="_blank" class="btn-otl btn-center" style="margin-top:10px;">🚆 Planifier mon trajet</a>
+          <a href="#" class="btn-otl btn-center" style="pointer-events:none; opacity:0.5;">🚆 Planifier mon trajet</a>
         </div>
 
         <div class="t-card">
@@ -436,10 +476,10 @@
         <div class="t-card" style="border:2px solid var(--rose);position:relative">
           <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;border-radius:50px;padding:3px 16px;font-size:.62rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;white-space:nowrap">⚡ Recommandé</div>
           <div class="t-ico">🚌</div>
-          <div class="t-title">Navettes festival</div>
+          <div class="t-title">Navettes l'Interfilières</div>
           <ul class="t-list">
             <li><strong>Départ</strong> Gare Massy-Palaiseau | Plateau de Saclay | Saint Quentin-en-Yvelines | Evry-Courcouronnes</li>
-            <li><strong>Retour</strong> Jusqu'à la fin du festival</li>
+            <li><strong>Retour</strong> Jusqu'à la fin de l'Interfilières</li>
           </ul>
           <a href="#" class="btn-center" style="margin-top:16px;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;border:none;border-radius:50px;padding:12px 20px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 4px 18px rgba(249,127,160,.38);transition:all .22s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(249,127,160,.52)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 18px rgba(249,127,160,.38)'">Comming soon</a>
         </div>
@@ -456,21 +496,21 @@
     <div>
       <p class="ph-eyebrow">Nuit du 30 au 31 mai 2026</p>
       <h1 class="ph-title">CAMPING</h1>
-      <p class="ph-sub">Gratuit · Sur réservation · Bar & scène DJ toute la nuit</p>
+      <p class="ph-sub">Gratuit · Sur réservation</p>
     </div>
   </div>
 
   <section class="sec" style="background:#fff">
     <div class="inner">
       <span class="tag rv">✦ Infos essentielles</span>
-      <h2 class="title rv">Le camping Interfilières</h2>
+      <h2 class="title rv">Le camping de l'Interfilières</h2>
       <div class="bar rv"></div>
 
       <div class="rv" style="background:linear-gradient(135deg,var(--night) 0%,var(--purple) 60%,var(--magenta) 100%);border-radius:18px;padding:32px 36px;margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 12px 40px rgba(30,8,69,.22);position:relative;overflow:hidden;">
         <span style="position:absolute;right:-10px;top:-10px;font-size:110px;opacity:.06;line-height:1;pointer-events:none">🏕</span>
         <div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping gratuit sur réservation</div>
-          <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">400 places disponibles · Première arrivée, première servie</p>
+          <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">400 places disponibles · premier arrivé premier servi</p>
         </div>
         <button class="btn-rose" style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap" onclick="goCampingForm()">🏕 Réserver le camping</button>
       </div>
@@ -482,16 +522,14 @@
         <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--purple),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">∞</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Musique</div></div>
       </div>
 
-      <div class="rv3" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:20px">
-        <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 18px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--magenta)"><div style="font-size:2.2rem;margin-bottom:10px">🍹</div><div style="font-weight:800;font-size:.88rem">Bar sur place</div><p style="font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.6">Bar ouvert toute la nuit directement dans la zone camping.</p></div>
-        <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 18px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--magenta)"><div style="font-size:2.2rem;margin-bottom:10px">🎧</div><div style="font-weight:800;font-size:.88rem">Scène DJ</div><p style="font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.6">Une scène DJ dédiée pour continuer la fête toute la nuit.</p></div>
+      <div class="rv3" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px">
         <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 18px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--magenta)"><div style="font-size:2.2rem;margin-bottom:10px">🚻</div><div style="font-weight:800;font-size:.88rem">Toilettes H/F</div><p style="font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.6">Sanitaires séparés hommes et femmes sur la zone camping.</p></div>
         <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 18px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--magenta)"><div style="font-size:2.2rem;margin-bottom:10px">🚑</div><div style="font-weight:800;font-size:.88rem">Poste de secours</div><p style="font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.6">Secouristes présents toute la nuit pour votre sécurité.</p></div>
       </div>
 
       <div class="camping-section rv" id="camping-section" style="margin-top:26px;">
         <h3>Activation camping par email</h3>
-        <p>Tu as déjà ton billet festival ? Active gratuitement l'option camping ici.</p>
+        <p>Tu as déjà ton billet l'Interfilières ? Active gratuitement l'option camping ici.</p>
         <form id="camping-claim-form" class="camping-claim-form">
           <div class="form-group" style="margin-bottom:10px;">
             <label for="camping-claim-email">Email de la commande</label>
@@ -504,7 +542,10 @@
     </div>
   </section>
   <footer>
-	<div class="f-logo">L'INTERFILIÈRES 2026</div>
+	<div class="f-logo">
+		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
+		L'INTERFILIÈRES 2026
+	</div>
 	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
 	<div class="f-socs">
 	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
@@ -521,7 +562,7 @@
 	  <a href="#">Mentions légales</a>
 	</div>
 	<p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié pour des fins promotionnelles et de communication.</p>
+	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
   </footer>
 </div>
 
@@ -568,30 +609,29 @@
         </a>
       </div>
 
-      <!-- Pourquoi nous rejoindre -->
       <span class="tag rv">✦ Pourquoi nous rejoindre ?</span>
-      <h2 class="title rv">Ce que tu vas gagner</h2>
+      <h2 class="title rv">Ce que tu vas y gagner</h2>
       <div class="bar rv"></div>
       <div class="why-grid rv2" style="margin-top:28px">
         <div class="why-card">
           <div class="why-ico">🤝</div>
           <div class="why-t">Équipe soudée &amp; ouverte</div>
-          <p class="why-d">Une ambiance festive et conviviale, des liens qui durent bien après le festival. Le vrai travail d'équipe.</p>
+          <p class="why-d">Une ambiance festive et conviviale, des liens qui durent bien après l'Interfilières.</p>
         </div>
         <div class="why-card">
           <div class="why-ico">⭐</div>
-          <div class="why-t">Rôle clé dans l'événement</div>
-          <p class="why-d">Sans les staffeurs, pas de festival. Tu es au cœur de la machine, indispensable à la réussite de la journée.</p>
+          <div class="why-t">Pas de Staffer = Pas d'événement</div>
+          <p class="why-d">Sans les staffeurs, pas d'Interfilières. Tu es au cœur de la machine, indispensable à la réussite de la journée.</p>
         </div>
         <div class="why-card">
           <div class="why-ico">🚀</div>
-          <div class="why-t">Expérience valorisante</div>
+          <div class="why-t">Une expérience valorisante</div>
           <p class="why-d">Organisation, gestion terrain, communication, travail d'équipe : des compétences concrètes pour ton CV.</p>
         </div>
         <div class="why-card">
           <div class="why-ico">🎉</div>
-          <div class="why-t">Vivre l'Interfilières autrement</div>
-          <p class="why-d">Vue backstage, accès privilégié, ambiance unique. Tu vis le festival de l'intérieur, pas juste en spectateur.</p>
+          <div class="why-t">Tu vis l'événement de l'intérieur</div>
+          <p class="why-d">Vue backstage, accès privilégié, ambiance unique. Tu vis l'Interfilières de l'intérieur, pas juste en spectateur.</p>
         </div>
       </div>
 
@@ -599,7 +639,7 @@
       <span class="tag rv" style="margin-top:64px;display:block">✦ Les postes</span>
       <h2 class="title rv">Quel rôle pour toi ?</h2>
       <div class="bar rv"></div>
-      <p class="sub rv">Tu indiques tes préférences, on fait le reste. Chaque poste est briefé avant le festival.</p>
+      <p class="sub rv">Tu indiques tes préférences, on fait le reste. Chaque poste est briefé avant l'Interfilières.</p>
 
       <div class="rv2" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:28px">
 
@@ -662,7 +702,7 @@
       <div class="expect-grid rv2" style="margin-top:24px">
         <div class="expect-card"><div class="ex-ico">✅</div><div class="ex-t">Fiabilité</div><p class="ex-d">Ponctualité, respect des horaires. On compte sur toi.</p></div>
         <div class="expect-card"><div class="ex-ico">🤝</div><div class="ex-t">Travail d'équipe</div><p class="ex-d">Esprit collectif, entraide et cohésion. Ensemble on est meilleurs.</p></div>
-        <div class="expect-card"><div class="ex-ico">💛</div><div class="ex-t">Bienveillance</div><p class="ex-d">Ambiance safe, inclusive et positive. Respect de chacun.</p></div>
+        <div class="expect-card"><div class="ex-ico">💛</div><div class="ex-t">Bienveillance</div><p class="ex-d">Ambiance safe, inclusive et positive. Respect de chacun.e.</p></div>
         <div class="expect-card"><div class="ex-ico">📢</div><div class="ex-t">Communication</div><p class="ex-d">Tout problème remonte vite et calmement à l'équipe.</p></div>
       </div>
 
@@ -693,7 +733,10 @@
     </div>
   </section>
   <footer>
-	<div class="f-logo">L'INTERFILIÈRES 2026</div>
+	<div class="f-logo">
+		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
+		L'INTERFILIÈRES 2026
+	</div>
 	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
 	<div class="f-socs">
 	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
@@ -710,7 +753,7 @@
 	  <a href="#">Mentions légales</a>
 	</div>
 	<p class="f-copy">© 2026 L'Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié pour des fins promotionnelles et de communication.</p>
+	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
   </footer>
 </div>
 
@@ -724,7 +767,7 @@
 	  <p>Votre commande <strong class="order-num" id="success-order-number"></strong> a été validée.</p>
 	  <div id="qr-codes-container"></div>
 	  <p style="margin-top:16px">Vos billets avec QR codes ont également été envoyés à votre adresse email.</p>
-	  <div class="result-note">📱 Présentez le QR code (imprimé ou sur mobile) à l'entrée du festival.</div>
+	  <div class="result-note">📱 Présentez le QR code (imprimé ou sur mobile) à l'entrée de l'Interfilières.</div>
 	  <button class="btn-rose" style="margin-top:28px" onclick="go('home')">Retour à l'accueil</button>
 	</div>
   </section>

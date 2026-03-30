@@ -1118,7 +1118,7 @@ func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (
 	if totalTickets == 0 {
 		return &models.CampingClaimResponse{
 			UpdatedTickets: 0,
-			Message:        "Pas de ticket acheté avec ce mail, veuillez acheter un ticket auparavant.",
+			Message:        "Il n'y a pas de billet acheté. Veuillez prendre un billet.",
 		}, nil
 	}
 

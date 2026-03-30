@@ -100,7 +100,7 @@ iframe:not(.hero-video) {
 }
 .nav-logo {
 	font-family:var(--font-primary);
-	font-size:1.75rem; letter-spacing:3px;
+	font-size:2.2rem; letter-spacing:3px;
 	flex:1;
 	min-width:0;
 	white-space:nowrap;
@@ -109,6 +109,9 @@ iframe:not(.hero-video) {
 	background:linear-gradient(135deg,var(--cream),var(--light));
 	-webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 	cursor:pointer; user-select:none;
+	display:flex;
+	align-items:center;
+	height:66px;
 }
 #nav.scrolled .nav-logo {
 	background:linear-gradient(135deg,var(--rose),var(--warm));
@@ -798,7 +801,7 @@ iframe:not(.hero-video) {
 		#F9A97C 68%, #F97FA0 85%, #C97DC8 100%);
 }
 .ph-soft {
-	background:linear-gradient(160deg,#EDE0FF 0%,#D4BFFF 30%,#FAB8D0 70%,#FFC89A 100%);
+	background:linear-gradient(160deg,#4A148C 0%,#6A1B9A 30%,#8E24AA 70%,#BA68C8 100%);
 }
 .ph-light {
 	background:linear-gradient(160deg,#A8D8F0 0%,#C9B8FF 40%,#F97FA0 100%);
