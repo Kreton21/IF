@@ -152,11 +152,23 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, at
 	altBoundary := "==FESTIVAL_ALT_BOUNDARY=="
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	messageID := fmt.Sprintf("<if-%d@%s>", time.Now().UnixNano(), senderDomain(s.cfg.SMTPFrom))
-	encodedFromName := mime.BEncoding.Encode("UTF-8", html.UnescapeString(strings.TrimSpace(s.cfg.SMTPFromName)))
-	encodedSubject := mime.BEncoding.Encode("UTF-8", html.UnescapeString(strings.TrimSpace(subject)))
+	decodedFromName := html.UnescapeString(strings.TrimSpace(s.cfg.SMTPFromName))
+	decodedSubject := html.UnescapeString(strings.TrimSpace(subject))
+	encodedFromName := decodedFromName
+	encodedSubject := decodedSubject
+	if decodedFromName != "" {
+		encodedFromName = mime.BEncoding.Encode("UTF-8", decodedFromName)
+	}
+	if decodedSubject != "" {
+		encodedSubject = mime.BEncoding.Encode("UTF-8", decodedSubject)
+	}
 
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", encodedFromName, s.cfg.SMTPFrom))
+	if encodedFromName != "" {
+		msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", encodedFromName, s.cfg.SMTPFrom))
+	} else {
+		msg.WriteString(fmt.Sprintf("From: %s\r\n", s.cfg.SMTPFrom))
+	}
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", encodedSubject))
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
