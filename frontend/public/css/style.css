@@ -769,7 +769,7 @@ iframe:not(.hero-video) {
 }
 .ab-ico { font-size:2rem; flex-shrink:0; }
 .ab-title { font-family:var(--font-primary); font-size:1.55rem; color:#fff; letter-spacing:1px; }
-.ab-tags { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.ab-tags { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; color:rgba(255,255,255,.9); }
 .ab-tag {
 	background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.22);
 	color:rgba(255,255,255,.88); border-radius:50px; padding:5px 15px;
