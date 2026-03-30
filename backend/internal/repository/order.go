@@ -416,9 +416,14 @@ func (r *OrderRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 }
 
 func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID string, items []models.CheckoutItem) error {
-	query := `
+	queryWithAttendees := `
 		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity, attendees_json)
 		VALUES ($1, $2, $3, $4, $5)`
+	queryLegacy := `
+		INSERT INTO order_items (order_id, ticket_type_id, category_id, quantity)
+		VALUES ($1, $2, $3, $4)`
+
+	legacyMode := false
 
 	for _, item := range items {
 		var categoryID interface{}
@@ -431,7 +436,21 @@ func (r *OrderRepository) SaveOrderItems(ctx context.Context, tx pgx.Tx, orderID
 			return fmt.Errorf("erreur sérialisation attendees order_item: %w", err)
 		}
 
-		if _, err := tx.Exec(ctx, query, orderID, item.TicketTypeID, categoryID, item.Quantity, attendeesJSON); err != nil {
+		if legacyMode {
+			if _, err := tx.Exec(ctx, queryLegacy, orderID, item.TicketTypeID, categoryID, item.Quantity); err != nil {
+				return fmt.Errorf("erreur insertion order_item: %w", err)
+			}
+			continue
+		}
+
+		if _, err := tx.Exec(ctx, queryWithAttendees, orderID, item.TicketTypeID, categoryID, item.Quantity, attendeesJSON); err != nil {
+			if isMissingAttendeesJSONColumn(err) {
+				legacyMode = true
+				if _, legacyErr := tx.Exec(ctx, queryLegacy, orderID, item.TicketTypeID, categoryID, item.Quantity); legacyErr != nil {
+					return fmt.Errorf("erreur insertion order_item (legacy): %w", legacyErr)
+				}
+				continue
+			}
 			return fmt.Errorf("erreur insertion order_item: %w", err)
 		}
 	}
@@ -445,7 +464,32 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 		FROM order_items
 		WHERE order_id = $1`, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("erreur query order_items: %w", err)
+		if !isMissingAttendeesJSONColumn(err) {
+			return nil, fmt.Errorf("erreur query order_items: %w", err)
+		}
+
+		legacyRows, legacyErr := r.pool.Query(ctx, `
+			SELECT ticket_type_id, COALESCE(category_id::text, ''), quantity
+			FROM order_items
+			WHERE order_id = $1`, orderID)
+		if legacyErr != nil {
+			return nil, fmt.Errorf("erreur query order_items (legacy): %w", legacyErr)
+		}
+		defer legacyRows.Close()
+
+		items := make([]models.CheckoutItem, 0)
+		for legacyRows.Next() {
+			var item models.CheckoutItem
+			if scanErr := legacyRows.Scan(&item.TicketTypeID, &item.CategoryID, &item.Quantity); scanErr != nil {
+				return nil, fmt.Errorf("erreur scan order_item (legacy): %w", scanErr)
+			}
+			items = append(items, item)
+		}
+		if legacyRowsErr := legacyRows.Err(); legacyRowsErr != nil {
+			return nil, fmt.Errorf("erreur lecture order_items (legacy): %w", legacyRowsErr)
+		}
+
+		return items, nil
 	}
 	defer rows.Close()
 
@@ -469,6 +513,14 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 	}
 
 	return items, nil
+}
+
+func isMissingAttendeesJSONColumn(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "attendees_json") && strings.Contains(msg, "42703")
 }
 
 func (r *OrderRepository) CountFestivalTicketsByEmail(ctx context.Context, email string) (int, error) {
