@@ -50,21 +50,52 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCheckoutForm();
   setupBusForm();
   setupCampingClaimForm();
+
+  initHashRouting();
+  if (!goFromHash(false)) {
+    go('home', { updateHash: false, smoothScroll: false });
+  }
 });
 
 // ══════════════════════════════════════
 // NAVIGATION (from design)
 // ══════════════════════════════════════
-function go(id) {
+function go(id, options = {}) {
+  const { updateHash = true, smoothScroll = true } = options;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const page = document.getElementById('page-' + id);
   if (page) {
     page.classList.remove('hidden');
     page.classList.add('active');
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (updateHash) {
+    const nextHash = '#' + id;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+    }
+  }
+  window.scrollTo({ top: 0, behavior: smoothScroll ? 'smooth' : 'auto' });
   setMenuOpen(false);
   setTimeout(initReveal, 80);
+}
+
+function initHashRouting() {
+  window.addEventListener('hashchange', () => {
+    if (!goFromHash(true)) {
+      go('home', { updateHash: false, smoothScroll: true });
+    }
+  });
+}
+
+function goFromHash(smoothScroll) {
+  const id = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
+  if (!id) return false;
+
+  const page = document.getElementById('page-' + id);
+  if (!page) return false;
+
+  go(id, { updateHash: false, smoothScroll });
+  return true;
 }
 
 function goTickets() {
