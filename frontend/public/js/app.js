@@ -18,6 +18,13 @@ const state = {
   busLoading: false,
 };
 
+function setMenuOpen(open) {
+  const navLinks = document.getElementById('navLinks');
+  if (navLinks) navLinks.classList.toggle('open', open);
+  document.body.classList.toggle('menu-open', open);
+  document.documentElement.classList.toggle('menu-open', open);
+}
+
 // ══════════════════════════════════════
 // Initialisation
 // ══════════════════════════════════════
@@ -56,7 +63,7 @@ function go(id) {
     page.classList.add('active');
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  document.getElementById('navLinks').classList.remove('open');
+  setMenuOpen(false);
   setTimeout(initReveal, 80);
 }
 
@@ -93,27 +100,19 @@ function initHamburger() {
   const navLinks = document.getElementById('navLinks');
   if (!burger || !navLinks || burger.dataset.ready === '1') return;
 
-  const syncMenuState = () => {
-    const isOpen = navLinks.classList.contains('open');
-    document.body.classList.toggle('menu-open', isOpen);
-  };
-
   burger.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
-    syncMenuState();
+    setMenuOpen(!navLinks.classList.contains('open'));
   });
 
   navLinks.querySelectorAll('a').forEach((a) => {
     a.addEventListener('click', () => {
-      navLinks.classList.remove('open');
-      syncMenuState();
+      setMenuOpen(false);
     });
   });
 
   window.addEventListener('resize', () => {
     if (window.innerWidth > 768) {
-      navLinks.classList.remove('open');
-      syncMenuState();
+      setMenuOpen(false);
     }
   });
 
