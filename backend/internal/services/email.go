@@ -478,24 +478,44 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 }
 
 func (s *EmailService) resolveTicketBannerDataURI() template.URL {
-	candidates := make([]string, 0, 8)
+	candidates := make([]string, 0, 16)
 
-	if templatePath := strings.TrimSpace(s.cfg.TicketPDFTemplatePath); templatePath != "" {
-		baseDir := filepath.Dir(templatePath)
+	if frontendDir := strings.TrimSpace(os.Getenv("FRONTEND_DIR")); frontendDir != "" {
 		candidates = append(candidates,
-			filepath.Join(baseDir, "img", "top_ticket.svg"),
-			filepath.Join(baseDir, "img", "top_ticket.jpg"),
-			filepath.Join(baseDir, "img", "top_ticket.jpeg"),
-			filepath.Join(baseDir, "img", "top_ticket.png"),
+			filepath.Join(frontendDir, "img", "top_ticket.jpg"),
+			filepath.Join(frontendDir, "img", "top_ticket.jpeg"),
+			filepath.Join(frontendDir, "img", "top_ticket.png"),
 		)
 	}
 
 	candidates = append(candidates,
-		"mail/img/top_ticket.svg",
-		"mail/img/top_ticket.jpg",
-		"backend/mail/img/top_ticket.svg",
-		"backend/mail/img/top_ticket.jpg",
+		filepath.Join("..", "frontend", "public", "img", "top_ticket.jpg"),
+		filepath.Join("..", "frontend", "public", "img", "top_ticket.jpeg"),
+		filepath.Join("..", "frontend", "public", "img", "top_ticket.png"),
 		"frontend/public/img/top_ticket.jpg",
+		"frontend/public/img/top_ticket.jpeg",
+		"frontend/public/img/top_ticket.png",
+	)
+
+	if templatePath := strings.TrimSpace(s.cfg.TicketPDFTemplatePath); templatePath != "" {
+		baseDir := filepath.Dir(templatePath)
+		candidates = append(candidates,
+			filepath.Join(baseDir, "img", "top_ticket.jpg"),
+			filepath.Join(baseDir, "img", "top_ticket.jpeg"),
+			filepath.Join(baseDir, "img", "top_ticket.png"),
+			filepath.Join(baseDir, "img", "top_ticket.svg"),
+		)
+	}
+
+	candidates = append(candidates,
+		"mail/img/top_ticket.jpg",
+		"mail/img/top_ticket.jpeg",
+		"mail/img/top_ticket.png",
+		"mail/img/top_ticket.svg",
+		"backend/mail/img/top_ticket.jpg",
+		"backend/mail/img/top_ticket.jpeg",
+		"backend/mail/img/top_ticket.png",
+		"backend/mail/img/top_ticket.svg",
 	)
 
 	seen := make(map[string]struct{}, len(candidates))
