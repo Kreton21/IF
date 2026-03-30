@@ -28,6 +28,17 @@
       border: 1px solid rgba(123, 63, 168, 0.12);
     }
 
+    .banner-wrap {
+      background: linear-gradient(145deg, #1E0845 0%, #7B3FA8 55%, #CE6ED6 100%);
+      line-height: 0;
+    }
+
+    .banner {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
     .hero {
       padding: 28px 30px;
       color: #fff5ec;
@@ -229,6 +240,11 @@
 <body>
   <div class="page">
     <div class="ticket-shell">
+
+      <div class="banner-wrap">
+        <img src="/top_ticket.svg" alt="Bannière billet" class="banner" />
+      </div>
+
       <div class="hero">
         {{if .LogoURL}}
         <img src="{{.LogoURL}}" alt="Logo {{.FestivalName}}" class="logo" />
