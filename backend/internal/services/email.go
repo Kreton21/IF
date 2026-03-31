@@ -24,6 +24,8 @@ type EmailService struct {
 	cfg *config.Config
 }
 
+const ticketSupportEmail = "sav@interfilieres.fr"
+
 func NewEmailService(cfg *config.Config) *EmailService {
 	return &EmailService{cfg: cfg}
 }
@@ -88,7 +90,7 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 		return fmt.Errorf("erreur génération HTML email: %w", err)
 	}
 	fmt.Printf("DEBUG: email HTML generated (%d bytes) for order=%s\n", len(htmlBody), orderNumber)
-	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, s.cfg.SMTPFrom)
+	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, ticketSupportEmail)
 
 	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
 	if err != nil {
@@ -152,7 +154,7 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 		"CustomerEmail": customerEmail,
 		"OrderNumber":   orderNumber,
 		"Tickets":       tickets,
-		"SupportEmail":  s.cfg.SMTPFrom,
+		"SupportEmail":  ticketSupportEmail,
 		"VenueName":     s.cfg.VenueName,
 		"VenueAddress":  s.cfg.VenueAddress,
 		"BannerDataURI": bannerDataURI,
@@ -493,7 +495,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"QRToken":        ticket.QRToken,
 		"QRCodeDataURI":  qrDataURI,
 		"BannerDataURI":  bannerDataURI,
-		"SupportEmail": s.cfg.SMTPFrom,
+		"SupportEmail": ticketSupportEmail,
 	})
 	if err != nil {
 		return "", err
