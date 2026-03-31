@@ -143,7 +143,10 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 		return "", err
 	}
 
-	bannerDataURI := s.resolveTicketBannerDataURI()
+	bannerURL := ""
+	if s.cfg.BaseURL != "" {
+		bannerURL = strings.TrimRight(s.cfg.BaseURL, "/") + "/img/top_ticket.png"
+	}
 	eventDateText := formatFrenchDate(s.cfg.FestivalDate)
 
 	var buf bytes.Buffer
@@ -158,7 +161,7 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 		"SupportEmail":  ticketSupportEmail,
 		"VenueName":     s.cfg.VenueName,
 		"VenueAddress":  s.cfg.VenueAddress,
-		"BannerDataURI": bannerDataURI,
+		"BannerDataURI": bannerURL,
 	})
 	if err != nil {
 		return "", err
