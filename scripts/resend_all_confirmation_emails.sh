@@ -66,9 +66,16 @@ fetch_ids_for_status() {
     local ids
     ids=$(python3 - <<'PY' "$body"
 import json, sys
-data = json.loads(sys.argv[1])
-orders = data.get("orders", [])
+  try:
+    data = json.loads(sys.argv[1])
+  except Exception:
+    data = {}
+  orders = data.get("orders") or []
+  if not isinstance(orders, list):
+    orders = []
 for o in orders:
+    if not isinstance(o, dict):
+      continue
     oid = o.get("id")
     if oid:
         print(oid)
@@ -78,8 +85,15 @@ PY
     local count
     count=$(python3 - <<'PY' "$body"
 import json, sys
-data = json.loads(sys.argv[1])
-print(len(data.get("orders", [])))
+  try:
+    data = json.loads(sys.argv[1])
+  except Exception:
+    print(0)
+    raise SystemExit(0)
+  orders = data.get("orders") or []
+  if not isinstance(orders, list):
+    orders = []
+  print(len(orders))
 PY
 )
 
