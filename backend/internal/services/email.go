@@ -81,11 +81,13 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 	if err != nil {
 		return fmt.Errorf("erreur génération sujet email: %w", err)
 	}
+	fmt.Printf("DEBUG: email kind=%s, template_path=%q\n", emailKind, strings.TrimSpace(templatePath))
 
 	htmlBody, err := s.buildEmailHTML(to, customerName, orderNumber, tickets, templatePath)
 	if err != nil {
 		return fmt.Errorf("erreur génération HTML email: %w", err)
 	}
+	fmt.Printf("DEBUG: email HTML generated (%d bytes) for order=%s\n", len(htmlBody), orderNumber)
 	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, s.cfg.SMTPFrom)
 
 	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
@@ -112,12 +114,25 @@ type TicketEmailData struct {
 
 func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber string, tickets []TicketEmailData, templatePath string) (string, error) {
 	templateContent := defaultTicketEmailTemplate
-	if path := strings.TrimSpace(templatePath); path != "" {
+	templateSource := "default-fallback"
+	path := strings.TrimSpace(templatePath)
+	if path != "" {
+		cwd, _ := os.Getwd()
+		absPath, absErr := filepath.Abs(path)
+		if absErr != nil {
+			absPath = "(abs path unavailable)"
+		}
+		fmt.Printf("DEBUG: buildEmailHTML try template path=%q abs=%q cwd=%q\n", path, absPath, cwd)
+
 		if data, err := os.ReadFile(path); err == nil {
 			templateContent = string(data)
+			templateSource = fmt.Sprintf("file:%s", path)
+			fmt.Printf("DEBUG: email template loaded from %q (%d bytes)\n", path, len(data))
 		} else {
 			fmt.Printf("WARN: impossible de lire template email=%s, fallback template interne (%v)\n", path, err)
 		}
+	} else {
+		fmt.Printf("DEBUG: buildEmailHTML no template path configured; using fallback template\n")
 	}
 
 	t, err := template.New("ticket").Parse(templateContent)
@@ -145,6 +160,8 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Printf("DEBUG: buildEmailHTML source=%s, rendered_bytes=%d, has_banner=%t\n", templateSource, buf.Len(), strings.Contains(buf.String(), "Bannière"))
 
 	return buf.String(), nil
 }
