@@ -95,6 +95,10 @@ func main() {
 		}
 	}
 
+	// Analytics
+	analyticsRepo := repository.NewAnalyticsRepository(pgPool)
+	analyticsHandler := handlers.NewAnalyticsHandler(analyticsRepo)
+
 	// 6. Initialiser les handlers
 	ticketHandler := handlers.NewTicketHandler(ticketService)
 	webhookHandler := handlers.NewWebhookHandler(ticketService, adminService)
@@ -120,7 +124,7 @@ func main() {
 		log.Printf("✓ Public directory found")
 	}
 	
-	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, adminService, redisClient, frontendDir)
+	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, analyticsHandler, adminService, redisClient, frontendDir)
 
 	// 8. Créer les comptes par défaut si nécessaire
 	go func() {

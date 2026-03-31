@@ -21,6 +21,7 @@ func NewRouter(
 	ticketHandler *handlers.TicketHandler,
 	webhookHandler *handlers.WebhookHandler,
 	adminHandler *handlers.AdminHandler,
+	analyticsHandler *handlers.AnalyticsHandler,
 	adminService *services.AdminService,
 	redisClient *redis.Client,
 	frontendDir string,
@@ -85,6 +86,9 @@ func NewRouter(
 		// --- Public : QR Code image ---
 		r.Get("/tickets/{qrToken}/qr", ticketHandler.GetTicketQRCode)
 
+		// --- Public : Analytics ingest ---
+		r.Post("/analytics/events", analyticsHandler.Ingest)
+
 		// --- Webhooks HelloAsso ---
 		r.Post("/webhooks/helloasso", webhookHandler.HandleHelloAssoWebhook)
 		r.Post("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
@@ -123,6 +127,7 @@ func NewRouter(
 			r.Get("/bus/tickets", adminHandler.ListBusTickets)
 			r.Get("/referrals", adminHandler.ListReferralLinks)
 			r.Post("/referrals", adminHandler.CreateReferralLink)
+			r.Get("/analytics/kpi", analyticsHandler.GetKPI)
 		})
 	})
 

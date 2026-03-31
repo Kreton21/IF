@@ -98,6 +98,7 @@
             <button class="tab" data-tab="tickets" onclick="switchTab('tickets')">🎟 Tickets</button>
             <button class="tab" data-tab="bus" onclick="switchTab('bus')">🚌 Navettes</button>
             <button class="tab" data-tab="referral" onclick="switchTab('referral')">🤝 Parrainage</button>
+            <button class="tab" data-tab="kpi" onclick="switchTab('kpi')">📈 KPI Site</button>
             <button class="tab" data-tab="scanner" onclick="switchTab('scanner')">📱 Scanner QR</button>
         </nav>
 
@@ -375,6 +376,46 @@
             <div class="card">
                 <h3>🔎 Performance des liens</h3>
                 <div id="referral-links-table" class="table-container"></div>
+            </div>
+        </section>
+
+        <!-- Tab: KPI Site -->
+        <section id="tab-kpi" class="tab-content">
+            <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button id="kpi-range-1h" class="btn btn-sm" onclick="loadKPI('1h')">1h</button>
+                <button id="kpi-range-1j" class="btn btn-sm btn-primary" onclick="loadKPI('1j')">1 jour</button>
+                <button id="kpi-range-1semaine" class="btn btn-sm" onclick="loadKPI('1semaine')">1 semaine</button>
+                <button id="kpi-range-1mois" class="btn btn-sm" onclick="loadKPI('1mois')">1 mois</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-sessions">-</div>
+                    <div class="stat-label">Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-clicks">-</div>
+                    <div class="stat-label">Clics</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-avg-duration">-</div>
+                    <div class="stat-label">Durée moyenne</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📈 Sessions par période</h3>
+                <div id="kpi-sessions-chart" style="position:relative;height:280px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>🖱 Clics par période</h3>
+                <div id="kpi-clicks-chart" style="position:relative;height:280px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>📄 Pages les plus visitées</h3>
+                <div id="kpi-top-pages" class="table-container"></div>
             </div>
         </section>
 

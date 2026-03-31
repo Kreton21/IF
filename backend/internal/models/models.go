@@ -438,3 +438,36 @@ type ReferralPublicInfo struct {
 	Name     string `json:"name"`
 	IsActive bool   `json:"is_active"`
 }
+
+// ══════════════════════════════════════
+// Analytics
+// ══════════════════════════════════════
+
+type AnalyticsEvent struct {
+	SessionID string           `json:"session_id"`
+	Type      string           `json:"type"` // "session_start", "click", "session_end"
+	Page      string           `json:"page"`
+	Target    string           `json:"target,omitempty"`
+	Referrer  string           `json:"referrer,omitempty"`
+	Duration  int64            `json:"duration_ms,omitempty"`
+}
+
+type AnalyticsKPI struct {
+	TotalSessions      int                    `json:"total_sessions"`
+	TotalClicks        int                    `json:"total_clicks"`
+	AvgSessionDuration float64                `json:"avg_session_duration_s"`
+	ClicksTimeline     []AnalyticsTimePoint   `json:"clicks_timeline"`
+	SessionsTimeline   []AnalyticsTimePoint   `json:"sessions_timeline"`
+	TopPages           []AnalyticsPageStat    `json:"top_pages"`
+}
+
+type AnalyticsTimePoint struct {
+	Bucket string `json:"bucket"`
+	Count  int    `json:"count"`
+}
+
+type AnalyticsPageStat struct {
+	Page     string `json:"page"`
+	Sessions int    `json:"sessions"`
+	Clicks   int    `json:"clicks"`
+}
