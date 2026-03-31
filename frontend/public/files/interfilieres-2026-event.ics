@@ -1,0 +1,21 @@
+BEGIN:VCALENDAR
+PRODID:-//Interfilieres//Festival 2026//FR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:L'Interfilières
+X-WR-TIMEZONE:Europe/Paris
+
+BEGIN:VEVENT
+UID:interfilieres-2026@interfilieres.fr
+DTSTAMP:20260331T120000Z
+DTSTART:20260530T130000Z
+DTEND:20260531T100000Z
+SUMMARY:L'Interfilières 2026
+LOCATION:Château de Saint-Jean-de-Beauregard, Rue du Château, 91940 Saint-Jean-de-Beauregard, France
+DESCRIPTION:Le plus grand évenement de Paris-Saclay fête ses 5 ans pour une édition exceptionnelle !\n\nRetrouvez toutes les informations (programmation, billetterie, accès, camping, navettes) sur : https://interfilieres.fr\n\nSuivez toute l’actualité du festival sur Instagram : https://instagram.com/interfilieres_upslacay et Facebook : https://facebook.com/interfilieres\n\nTous nos liens : https://linktr.ee/interfilieres
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+
+END:VCALENDAR

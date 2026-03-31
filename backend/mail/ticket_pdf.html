@@ -272,6 +272,7 @@
         <img src="{{.LogoURL}}" alt="Logo {{.FestivalName}}" class="logo" />
         {{end}}
         <h1 class="festival-name">{{.FestivalName}}</h1>
+        <p class="festival-date" style="font-size:13px;font-weight:600;letter-spacing:1px;color:#ffc9ae;text-transform:uppercase;margin:0 0 4px;">Interfilieres</p>
         <p class="festival-date">{{.FestivalDate}}</p>
       </div>
 
@@ -281,22 +282,19 @@
             <div class="pill">Billet festival</div>
             <h2 class="ticket-type">{{.TicketTypeName}}</h2>
 
+            <!-- Nom du participant en grand -->
+            <div style="margin:0 0 20px 0;">
+              <div style="font-size:28px;font-weight:900;color:#ffffff;line-height:1.1;letter-spacing:.5px;">
+                {{if .AttendeeName}}{{.AttendeeName}}{{else}}{{.CustomerName}}{{end}}
+              </div>
+              {{if .DateOfBirth}}<div style="font-size:14px;font-weight:600;color:#ffe6d8;margin-top:5px;">Né(e) le {{.DateOfBirth}}</div>{{end}}
+              {{if and .AttendeeName (ne .AttendeeName .CustomerName)}}<div style="font-size:12px;color:#ffc4a8;margin-top:4px;">Commande passée par {{.CustomerName}}</div>{{end}}
+            </div>
+
             <table class="meta-table">
-              <tr>
-                <td class="meta-label">Client</td>
-                <td class="meta-value">{{.CustomerName}}</td>
-              </tr>
               <tr>
                 <td class="meta-label">Commande</td>
                 <td class="meta-value">{{.OrderNumber}}</td>
-              </tr>
-              <tr>
-                <td class="meta-label">Participant</td>
-                <td class="meta-value">{{if .AttendeeName}}{{.AttendeeName}}{{else}}{{.CustomerName}}{{end}}</td>
-              </tr>
-              <tr>
-                <td class="meta-label">Date</td>
-                <td class="meta-value">{{.FestivalDate}}</td>
               </tr>
             </table>
 
@@ -318,7 +316,8 @@
               <strong>Conditions d’accès</strong>
               <ul>
                 <li>Présenter son billet</li>
-                <li>Pièce d’identité possible à l’entrée</li>
+                <li>Pièce d'identité valide obligatoire à l'entrée</li>
+                <li>Carte étudiante requise pour les tarifs étudiants</li>
                 <li>Respect et bienveillance</li>
               </ul>
               <div style="margin-top:10px;">L’événement est filmé et photographié.</div>
@@ -328,7 +327,7 @@
 
         <div class="notice">
           <strong>La revente de ce billet n’est pas autorisée.</strong><br>
-          Toute tentative de revente ou d’utilisation frauduleuse peut entraîner son invalidation.
+          Toute tentative de revente ou d'utilisation frauduleuse entraîne son invalidation.
         </div>
         <div class="legal-ref">
           <strong>Cadre juridique :</strong> l'achat et l'utilisation de ce billet impliquent l'acceptation pleine et entière des Conditions Générales de Vente et du règlement intérieur de l'événement.<br>

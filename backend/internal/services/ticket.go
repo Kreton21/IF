@@ -361,6 +361,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		CustomerFirstName: req.CustomerFirstName,
 		CustomerLastName:  req.CustomerLastName,
 		CustomerPhone:     req.CustomerPhone,
+		DateOfBirth:       req.DateOfBirth,
 		WantsCamping:      req.WantsCamping,
 		WantsRefundInsurance: req.WantsRefundInsurance,
 		TotalCents:        totalCents,
@@ -881,6 +882,7 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 			emailTickets = append(emailTickets, TicketEmailData{
 				TicketTypeName: tt.Name,
 				AttendeeName:   attendeeName,
+				DateOfBirth:    order.DateOfBirth,
 				RecipientEmail: attendeeEmail,
 				QRToken:        qrToken,
 				QRCodePNG:      qrPNG,

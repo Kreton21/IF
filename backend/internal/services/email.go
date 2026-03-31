@@ -106,6 +106,7 @@ func (s *EmailService) sendTicketEmailWithTemplate(
 type TicketEmailData struct {
 	TicketTypeName string
 	AttendeeName   string
+	DateOfBirth    string
 	RecipientEmail string
 	QRToken        string
 	QRCodePNG      []byte
@@ -489,6 +490,7 @@ func (s *EmailService) buildTicketPDFHTML(customerName, orderNumber string, tick
 		"Ticket":       ticket,
 		"TicketTypeName": ticket.TicketTypeName,
 		"AttendeeName":   ticket.AttendeeName,
+		"DateOfBirth":    ticket.DateOfBirth,
 		"RecipientEmail": ticket.RecipientEmail,
 		"QRToken":        ticket.QRToken,
 		"QRCodeDataURI":  qrDataURI,
@@ -640,7 +642,7 @@ func encodeBase64RFC2045(data []byte) string {
 func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) (string, error) {
 	tpl := strings.TrimSpace(subjectTemplate)
 	if tpl == "" {
-		tpl = "{{.FestivalName}} - Vos billets (Commande {{.OrderNumber}})"
+		tpl = "L'Interfilières 2026 — {{.EventDate}} — Vos billets (Commande {{.OrderNumber}})"
 	}
 
 	t, err := template.New("subject").Parse(tpl)
@@ -652,6 +654,7 @@ func (s *EmailService) buildSubject(orderNumber string, subjectTemplate string) 
 	if err := t.Execute(&buf, map[string]string{
 		"FestivalName": s.cfg.FestivalName,
 		"OrderNumber":  orderNumber,
+		"EventDate":    formatFrenchDate(s.cfg.FestivalDate),
 	}); err != nil {
 		return "", err
 	}

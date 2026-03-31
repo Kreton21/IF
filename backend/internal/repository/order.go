@@ -33,13 +33,13 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, tx pgx.Tx, order *mod
 
 	query := `
 		INSERT INTO orders (order_number, customer_email, customer_first_name, customer_last_name,
-		                     customer_phone, wants_camping, wants_refund_insurance, total_cents, status, ip_address, user_agent)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::inet, $11)
+		                     customer_phone, date_of_birth, wants_camping, wants_refund_insurance, total_cents, status, ip_address, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::inet, $12)
 		RETURNING id, created_at, updated_at`
 
 	return tx.QueryRow(ctx, query,
 		order.OrderNumber, order.CustomerEmail, order.CustomerFirstName, order.CustomerLastName,
-		order.CustomerPhone, order.WantsCamping, order.WantsRefundInsurance, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
+		order.CustomerPhone, order.DateOfBirth, order.WantsCamping, order.WantsRefundInsurance, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
 	).Scan(&order.ID, &order.CreatedAt, &order.UpdatedAt)
 }
 
@@ -72,7 +72,7 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), wants_camping, wants_refund_insurance, total_cents, status,
+		       COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -81,7 +81,7 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*mo
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, orderID).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), wants_camping, wants_refund_insurance, total_cents, status,
+		       COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -111,7 +111,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, ref).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -126,7 +126,7 @@ func (r *OrderRepository) GetOrderByReference(ctx context.Context, ref string) (
 func (r *OrderRepository) GetOrderByCheckoutID(ctx context.Context, checkoutID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), wants_camping, wants_refund_insurance, total_cents, status,
+		       COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders
@@ -135,7 +135,7 @@ func (r *OrderRepository) GetOrderByCheckoutID(ctx context.Context, checkoutID s
 	var o models.Order
 	err := r.pool.QueryRow(ctx, query, checkoutID).Scan(
 		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 	)
 	if err != nil {
@@ -200,7 +200,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, params models.OrderLis
 	offset := (params.Page - 1) * params.PageSize
 	dataQuery := fmt.Sprintf(`
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), wants_camping, wants_refund_insurance, total_cents, status,
+		       COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
 		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
 		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
 		FROM orders %s
@@ -219,7 +219,7 @@ func (r *OrderRepository) ListOrders(ctx context.Context, params models.OrderLis
 		var o models.Order
 		err := rows.Scan(
 			&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-			&o.CustomerPhone, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+			&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
 			&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
 		)
 		if err != nil {
