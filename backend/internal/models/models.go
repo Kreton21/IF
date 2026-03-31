@@ -74,7 +74,6 @@ type Order struct {
 	CustomerFirstName    string      `json:"customer_first_name"`
 	CustomerLastName     string      `json:"customer_last_name"`
 	CustomerPhone        string      `json:"customer_phone,omitempty"`
-	DateOfBirth          string      `json:"date_of_birth,omitempty"`
 	WantsCamping         bool        `json:"wants_camping,omitempty"`
 	WantsRefundInsurance bool        `json:"wants_refund_insurance,omitempty"`
 	TotalCents           int         `json:"total_cents"`
@@ -444,30 +443,22 @@ type ReferralPublicInfo struct {
 // Analytics
 // ══════════════════════════════════════
 
-type AnalyticsKPI struct {
-	// Trafic
-	TotalSessions      int                    `json:"total_sessions"`
-	NewSessions        int                    `json:"new_sessions"`
-	SessionsTimeline   []AnalyticsTimePoint   `json:"sessions_timeline"`
-	NewSessionsTimeline []AnalyticsTimePoint  `json:"new_sessions_timeline"`
+type AnalyticsEvent struct {
+	SessionID string           `json:"session_id"`
+	Type      string           `json:"type"` // "session_start", "click", "session_end"
+	Page      string           `json:"page"`
+	Target    string           `json:"target,omitempty"`
+	Referrer  string           `json:"referrer,omitempty"`
+	Duration  int64            `json:"duration_ms,omitempty"`
+}
 
-	// Comportement
+type AnalyticsKPI struct {
+	TotalSessions      int                    `json:"total_sessions"`
 	TotalClicks        int                    `json:"total_clicks"`
 	AvgSessionDuration float64                `json:"avg_session_duration_s"`
-	BounceRate         float64                `json:"bounce_rate"`
-	PagesPerSession    float64                `json:"pages_per_session"`
 	ClicksTimeline     []AnalyticsTimePoint   `json:"clicks_timeline"`
+	SessionsTimeline   []AnalyticsTimePoint   `json:"sessions_timeline"`
 	TopPages           []AnalyticsPageStat    `json:"top_pages"`
-	TopSources         []AnalyticsSourceStat  `json:"top_sources"`
-
-	// Conversion
-	ConversionRate     float64                `json:"conversion_rate"`
-	TotalConversions   int                    `json:"total_conversions"`
-
-	// Coût d'acquisition
-	MarketingCosts     []MarketingCostEntry   `json:"marketing_costs"`
-	TotalMarketingCost float64                `json:"total_marketing_cost_eur"`
-	CostPerConversion  float64                `json:"cost_per_conversion_eur"`
 }
 
 type AnalyticsTimePoint struct {
@@ -476,40 +467,7 @@ type AnalyticsTimePoint struct {
 }
 
 type AnalyticsPageStat struct {
-	Page       string  `json:"page"`
-	Sessions   int     `json:"sessions"`
-	Clicks     int     `json:"clicks"`
-	Percentage float64 `json:"percentage"`
-}
-
-type AnalyticsSourceStat struct {
-	Source   string `json:"source"`
+	Page     string `json:"page"`
 	Sessions int    `json:"sessions"`
-}
-
-type MarketingCostEntry struct {
-	ID        int64   `json:"id"`
-	CostDate  string  `json:"cost_date"`
-	AmountEur float64 `json:"amount_eur"`
-	Label     string  `json:"label"`
-}
-
-type CreateMarketingCostRequest struct {
-	CostDate  string  `json:"cost_date"`
-	AmountEur float64 `json:"amount_eur"`
-	Label     string  `json:"label,omitempty"`
-}
-
-type AnalyticsEvent struct {
-	SessionID  string `json:"session_id"`
-	Type       string `json:"type"`
-	Page       string `json:"page,omitempty"`
-	Target     string `json:"target,omitempty"`
-	Referrer   string `json:"referrer,omitempty"`
-	Duration   int64  `json:"duration_ms,omitempty"`
-	IsNew      bool   `json:"is_new,omitempty"`
-	UtmSource  string `json:"utm_source,omitempty"`
-	UtmMedium  string `json:"utm_medium,omitempty"`
-	UtmCampaign string `json:"utm_campaign,omitempty"`
-	DurationPage int64 `json:"duration_page_ms,omitempty"`
+	Clicks   int    `json:"clicks"`
 }

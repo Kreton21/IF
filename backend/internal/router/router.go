@@ -128,8 +128,6 @@ func NewRouter(
 			r.Get("/referrals", adminHandler.ListReferralLinks)
 			r.Post("/referrals", adminHandler.CreateReferralLink)
 			r.Get("/analytics/kpi", analyticsHandler.GetKPI)
-			r.Post("/analytics/marketing-costs", analyticsHandler.CreateMarketingCost)
-			r.Delete("/analytics/marketing-costs/{id}", analyticsHandler.DeleteMarketingCost)
 		})
 	})
 

@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
 )
@@ -53,18 +51,13 @@ func (h *AnalyticsHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 
 		switch ev.Type {
 		case "session_start":
-			utmSource := strings.TrimSpace(ev.UtmSource)
-			utmMedium := strings.TrimSpace(ev.UtmMedium)
-			utmCampaign := strings.TrimSpace(ev.UtmCampaign)
-			_ = h.repo.InsertSessionStart(r.Context(), sid, page, ev.Referrer, ua, ip, ev.IsNew, utmSource, utmMedium, utmCampaign)
+			_ = h.repo.InsertSessionStart(r.Context(), sid, page, ev.Referrer, ua, ip)
 		case "click":
 			target := strings.TrimSpace(ev.Target)
 			if len(target) > 512 {
 				target = target[:512]
 			}
 			_ = h.repo.InsertClick(r.Context(), sid, target, page)
-		case "page_view":
-			_ = h.repo.InsertPageView(r.Context(), sid, page, ev.DurationPage)
 		case "session_end":
 			if ev.Duration > 0 {
 				_ = h.repo.UpdateSessionEnd(r.Context(), sid, ev.Duration)
@@ -91,48 +84,3 @@ func (h *AnalyticsHandler) GetKPI(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, kpi)
 }
-
-// CreateMarketingCost adds a marketing cost entry (admin-only)
-func (h *AnalyticsHandler) CreateMarketingCost(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateMarketingCostRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
-		return
-	}
-	if req.AmountEur < 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Le montant doit être positif"})
-		return
-	}
-	if req.CostDate == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "La date est requise"})
-		return
-	}
-
-	entry, err := h.repo.CreateMarketingCost(r.Context(), req)
-	if err != nil {
-		log.Printf("Erreur création coût marketing: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, entry)
-}
-
-// DeleteMarketingCost removes a marketing cost entry (admin-only)
-func (h *AnalyticsHandler) DeleteMarketingCost(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || id <= 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID invalide"})
-		return
-	}
-
-	if err := h.repo.DeleteMarketingCost(r.Context(), id); err != nil {
-		log.Printf("Erreur suppression coût marketing: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
