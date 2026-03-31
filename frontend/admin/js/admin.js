@@ -1760,8 +1760,10 @@ document.querySelectorAll('#create-tt-form input[id$="-time"]').forEach(input =>
 /* ── KPI Analytics ───────────────────────────────────────── */
 
 let kpiSessionsChart = null;
+let kpiNewSessionsChart = null;
 let kpiClicksChart = null;
 let kpiCurrentRange = '1j';
+let kpiLastData = null;
 
 async function loadKPI(range) {
     range = range || kpiCurrentRange;
@@ -1776,17 +1778,64 @@ async function loadKPI(range) {
     try {
         const response = await apiFetch(`${API_BASE}/admin/analytics/kpi?range=${encodeURIComponent(range)}`);
         const kpi = await response.json();
-
-        document.getElementById('kpi-sessions').textContent = kpi.total_sessions ?? '-';
-        document.getElementById('kpi-clicks').textContent = kpi.total_clicks ?? '-';
-        document.getElementById('kpi-avg-duration').textContent = formatDurationShort(kpi.avg_session_duration_s);
-
-        renderKPIChart('kpi-sessions-chart', kpi.sessions_timeline || [], 'Sessions', '#667eea', c => { kpiSessionsChart = c; }, kpiSessionsChart);
-        renderKPIChart('kpi-clicks-chart', kpi.clicks_timeline || [], 'Clics', '#ed8936', c => { kpiClicksChart = c; }, kpiClicksChart);
-        renderKPITopPages(kpi.top_pages || []);
+        kpiLastData = kpi;
+        renderKPIData(kpi);
     } catch (error) {
         console.error('Erreur chargement KPI:', error);
     }
+}
+
+function loadKPICustom() {
+    const dateInput = document.getElementById('kpi-custom-date');
+    if (!dateInput || !dateInput.value) return;
+    loadKPI('custom:' + dateInput.value);
+}
+
+function renderKPIData(kpi) {
+    // ── Trafic ──────────────────────────────────────────────
+    document.getElementById('kpi-sessions').textContent = kpi.total_sessions ?? '-';
+    document.getElementById('kpi-new-sessions').textContent = kpi.new_sessions ?? '-';
+    const newPct = kpi.total_sessions > 0
+        ? ((kpi.new_sessions / kpi.total_sessions) * 100).toFixed(1) + '%'
+        : '-';
+    document.getElementById('kpi-new-sessions-pct').textContent = newPct;
+
+    renderKPIChart('kpi-sessions-chart', kpi.sessions_timeline || [], 'Sessions', '#667eea',
+        c => { kpiSessionsChart = c; }, kpiSessionsChart);
+    renderKPIChart('kpi-new-sessions-chart', kpi.new_sessions_timeline || [], 'Nouvelles sessions', '#9f7aea',
+        c => { kpiNewSessionsChart = c; }, kpiNewSessionsChart);
+
+    renderKPISources(kpi.top_sources || []);
+
+    // ── Comportement ────────────────────────────────────────
+    document.getElementById('kpi-bounce-rate').textContent =
+        kpi.bounce_rate != null ? kpi.bounce_rate.toFixed(1) + '%' : '-';
+    document.getElementById('kpi-pages-per-session').textContent =
+        kpi.pages_per_session != null ? kpi.pages_per_session.toFixed(2) : '-';
+    document.getElementById('kpi-avg-duration').textContent =
+        formatDurationShort(kpi.avg_session_duration_s);
+    document.getElementById('kpi-clicks').textContent = kpi.total_clicks ?? '-';
+
+    renderKPIChart('kpi-clicks-chart', kpi.clicks_timeline || [], 'Clics', '#ed8936',
+        c => { kpiClicksChart = c; }, kpiClicksChart);
+    renderKPITopPages(kpi.top_pages || [], kpi.total_sessions);
+
+    // ── Conversion ──────────────────────────────────────────
+    document.getElementById('kpi-conversion-rate').textContent =
+        kpi.conversion_rate != null ? kpi.conversion_rate.toFixed(2) + '%' : '-';
+    document.getElementById('kpi-conversions').textContent = kpi.total_conversions ?? '-';
+
+    // ── CAC ─────────────────────────────────────────────────
+    document.getElementById('kpi-total-cost').textContent =
+        kpi.total_marketing_cost_eur != null
+            ? kpi.total_marketing_cost_eur.toFixed(2) + ' €'
+            : '-';
+    document.getElementById('kpi-cac').textContent =
+        kpi.cost_per_conversion_eur != null && kpi.cost_per_conversion_eur > 0
+            ? kpi.cost_per_conversion_eur.toFixed(2) + ' €'
+            : '-';
+
+    renderKPICostsList(kpi.marketing_costs || []);
 }
 
 function formatDurationShort(seconds) {
@@ -1809,7 +1858,7 @@ function renderKPIChart(containerId, points, label, color, setter, existing) {
 
     if (!points.length) {
         if (existing) { existing.destroy(); setter(null); }
-        container.innerHTML = '<p style="color:#718096;">Aucune donnée</p>';
+        container.innerHTML = '<p style="color:#718096;font-size:.85rem;">Aucune donnée</p>';
         return;
     }
 
@@ -1830,7 +1879,7 @@ function renderKPIChart(containerId, points, label, color, setter, existing) {
                 label,
                 data,
                 borderColor: color,
-                backgroundColor: color + '1f',
+                backgroundColor: color + '22',
                 pointBackgroundColor: color,
                 pointRadius: 3,
                 tension: 0.3,
@@ -1841,14 +1890,7 @@ function renderKPIChart(containerId, points, label, color, setter, existing) {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        title: items => items[0]?.label || '',
-                    },
-                },
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: { ticks: { maxTicksLimit: 12, font: { size: 11 } } },
                 y: { beginAtZero: true, ticks: { precision: 0 } },
@@ -1867,20 +1909,169 @@ function formatKPIBucketLabel(bucket) {
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
 
-function renderKPITopPages(pages) {
+function renderKPITopPages(pages, totalSessions) {
     const container = document.getElementById('kpi-top-pages');
     if (!container) return;
 
     if (!pages.length) {
-        container.innerHTML = '<p style="color:#718096;">Aucune donnée</p>';
+        container.innerHTML = '<p style="color:#718096;font-size:.85rem;">Aucune donnée</p>';
         return;
     }
 
-    let html = '<table><thead><tr><th>Page</th><th>Sessions</th><th>Clics</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Page</th><th>Sessions</th><th>% du total</th><th>Clics</th></tr></thead><tbody>';
     pages.forEach(p => {
-        html += `<tr><td>${escapeHtml(p.page)}</td><td>${p.sessions}</td><td>${p.clicks}</td></tr>`;
+        const pct = totalSessions > 0 ? ((p.sessions / totalSessions) * 100).toFixed(1) + '%' : '-';
+        html += `<tr>
+            <td>${escapeHtml(p.page)}</td>
+            <td>${p.sessions}</td>
+            <td>${pct}</td>
+            <td>${p.clicks}</td>
+        </tr>`;
     });
     container.innerHTML = html + '</tbody></table>';
+}
+
+function renderKPISources(sources) {
+    const container = document.getElementById('kpi-sources');
+    if (!container) return;
+
+    if (!sources.length) {
+        container.innerHTML = '<p style="color:#718096;font-size:.85rem;">Aucune donnée de source</p>';
+        return;
+    }
+
+    const total = sources.reduce((s, r) => s + r.sessions, 0);
+    let html = '<table><thead><tr><th>Source</th><th>Sessions</th><th>%</th></tr></thead><tbody>';
+    sources.forEach(s => {
+        const pct = total > 0 ? ((s.sessions / total) * 100).toFixed(1) + '%' : '-';
+        html += `<tr><td>${escapeHtml(s.source)}</td><td>${s.sessions}</td><td>${pct}</td></tr>`;
+    });
+    container.innerHTML = html + '</tbody></table>';
+}
+
+function renderKPICostsList(costs) {
+    const container = document.getElementById('kpi-costs-list');
+    if (!container) return;
+
+    if (!costs.length) {
+        container.innerHTML = '<p style="color:#718096;font-size:.85rem;">Aucun coût enregistré pour cette période</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Date</th><th>Montant</th><th>Libellé</th><th></th></tr></thead><tbody>';
+    costs.forEach(c => {
+        html += `<tr>
+            <td>${escapeHtml(c.cost_date)}</td>
+            <td>${parseFloat(c.amount_eur).toFixed(2)} €</td>
+            <td>${escapeHtml(c.label || '')}</td>
+            <td><button class="btn btn-sm" style="background:#e53e3e;color:#fff;" onclick="deleteMarketingCost(${c.id})">🗑</button></td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</tbody></table>';
+}
+
+async function submitMarketingCost(e) {
+    e.preventDefault();
+    const msg = document.getElementById('kpi-cost-msg');
+    const costDate = document.getElementById('kpi-cost-date').value;
+    const amount = parseFloat(document.getElementById('kpi-cost-amount').value);
+    const label = document.getElementById('kpi-cost-label').value.trim();
+
+    if (!costDate || isNaN(amount) || amount < 0) {
+        msg.textContent = '❌ Date et montant valides requis';
+        msg.style.color = '#e53e3e';
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/analytics/marketing-costs`, {
+            method: 'POST',
+            body: JSON.stringify({ cost_date: costDate, amount_eur: amount, label }),
+        });
+        if (!response.ok) throw new Error((await response.json()).error || 'Erreur');
+        msg.textContent = '✅ Coût ajouté';
+        msg.style.color = '#38a169';
+        document.getElementById('kpi-cost-form').reset();
+        loadKPI(kpiCurrentRange);
+    } catch (err) {
+        msg.textContent = '❌ ' + err.message;
+        msg.style.color = '#e53e3e';
+    }
+}
+
+async function deleteMarketingCost(id) {
+    if (!confirm('Supprimer ce coût marketing ?')) return;
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/analytics/marketing-costs/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Erreur suppression');
+        loadKPI(kpiCurrentRange);
+    } catch (err) {
+        alert('Erreur : ' + err.message);
+    }
+}
+
+function exportKPICSV() {
+    if (!kpiLastData) { alert('Chargez d\'abord les KPI.'); return; }
+    const kpi = kpiLastData;
+
+    let csv = 'sep=;\n';
+
+    csv += '\n;; TRAFIC DU SITE\n';
+    csv += 'Métrique;Valeur\n';
+    csv += `Visites totales;${kpi.total_sessions ?? ''}\n`;
+    csv += `Nouvelles sessions;${kpi.new_sessions ?? ''}\n`;
+    const newPct = kpi.total_sessions > 0 ? ((kpi.new_sessions / kpi.total_sessions) * 100).toFixed(1) : '';
+    csv += `% nouvelles sessions;${newPct}\n`;
+
+    csv += '\n;; SESSIONS TIMELINE\n';
+    csv += 'Période;Sessions\n';
+    (kpi.sessions_timeline || []).forEach(p => { csv += `${p.bucket};${p.count}\n`; });
+
+    csv += '\n;; NOUVELLES SESSIONS TIMELINE\n';
+    csv += 'Période;Nouvelles sessions\n';
+    (kpi.new_sessions_timeline || []).forEach(p => { csv += `${p.bucket};${p.count}\n`; });
+
+    csv += '\n;; SOURCES DE TRAFIC\n';
+    csv += 'Source;Sessions\n';
+    (kpi.top_sources || []).forEach(s => { csv += `${s.source};${s.sessions}\n`; });
+
+    csv += '\n;; COMPORTEMENT\n';
+    csv += 'Métrique;Valeur\n';
+    csv += `Taux de rebond (%);${kpi.bounce_rate != null ? kpi.bounce_rate.toFixed(1) : ''}\n`;
+    csv += `Pages / session;${kpi.pages_per_session != null ? kpi.pages_per_session.toFixed(2) : ''}\n`;
+    csv += `Durée moyenne session (s);${kpi.avg_session_duration_s != null ? kpi.avg_session_duration_s.toFixed(1) : ''}\n`;
+    csv += `Clics totaux;${kpi.total_clicks ?? ''}\n`;
+
+    csv += '\n;; PAGES LES PLUS VISITÉES\n';
+    csv += 'Page;Sessions;% du total;Clics\n';
+    (kpi.top_pages || []).forEach(p => {
+        const pct = kpi.total_sessions > 0 ? ((p.sessions / kpi.total_sessions) * 100).toFixed(1) : '';
+        csv += `${p.page};${p.sessions};${pct};${p.clicks}\n`;
+    });
+
+    csv += '\n;; CONVERSION\n';
+    csv += 'Métrique;Valeur\n';
+    csv += `Taux de conversion (%);${kpi.conversion_rate != null ? kpi.conversion_rate.toFixed(2) : ''}\n`;
+    csv += `Commandes payées;${kpi.total_conversions ?? ''}\n`;
+
+    csv += '\n;; COÛT D\'ACQUISITION\n';
+    csv += 'Métrique;Valeur\n';
+    csv += `Budget marketing total (€);${kpi.total_marketing_cost_eur != null ? kpi.total_marketing_cost_eur.toFixed(2) : ''}\n`;
+    csv += `Coût par conversion (€);${kpi.cost_per_conversion_eur != null ? kpi.cost_per_conversion_eur.toFixed(2) : ''}\n`;
+
+    csv += '\n;; COÛTS MARKETING DÉTAILLÉS\n';
+    csv += 'Date;Montant (€);Libellé\n';
+    (kpi.marketing_costs || []).forEach(c => {
+        csv += `${c.cost_date};${parseFloat(c.amount_eur).toFixed(2)};${c.label || ''}\n`;
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kpi_${kpiCurrentRange}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function escapeHtml(str) {

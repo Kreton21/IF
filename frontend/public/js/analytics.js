@@ -1,5 +1,5 @@
 // ══════════════════════════════════════
-// Analytics — click tracking & session duration
+// Analytics — click tracking, session duration, page views, UTM source
 // ══════════════════════════════════════
 (function () {
   'use strict';
@@ -7,8 +7,9 @@
   var ENDPOINT = '/api/v1/analytics/events';
   var FLUSH_INTERVAL = 15000; // 15s
   var SESSION_KEY = 'if_analytics_sid';
+  var NEW_VISITOR_KEY = 'if_analytics_visited';
 
-  // Generate or retrieve session ID
+  // ── Helpers ──────────────────────────────────────────────
   function getSessionId() {
     var sid = sessionStorage.getItem(SESSION_KEY);
     if (!sid) {
@@ -18,12 +19,29 @@
     return sid;
   }
 
+  function isNewVisitor() {
+    if (localStorage.getItem(NEW_VISITOR_KEY)) return false;
+    localStorage.setItem(NEW_VISITOR_KEY, '1');
+    return true;
+  }
+
+  function getUtmParams() {
+    var params = new URLSearchParams(location.search);
+    return {
+      utm_source:   params.get('utm_source')   || '',
+      utm_medium:   params.get('utm_medium')   || '',
+      utm_campaign: params.get('utm_campaign') || '',
+    };
+  }
+
+  // ── State ─────────────────────────────────────────────────
   var sid = getSessionId();
   var queue = [];
   var sessionStart = Date.now();
   var currentPage = location.hash ? location.hash.replace('#', '/') : '/';
+  var pageEnterTime = Date.now();
 
-  // Push event to queue
+  // ── Queue helpers ─────────────────────────────────────────
   function track(type, extra) {
     var ev = { session_id: sid, type: type, page: currentPage };
     if (extra) {
@@ -32,7 +50,6 @@
     queue.push(ev);
   }
 
-  // Flush queue to backend
   function flush() {
     if (!queue.length) return;
     var batch = queue.splice(0, 50);
@@ -48,10 +65,32 @@
     } catch (e) { /* silent */ }
   }
 
-  // Session start
-  track('session_start', { referrer: document.referrer || '' });
+  // ── Page view tracking ────────────────────────────────────
+  function trackPageView(page, durationMs) {
+    track('page_view', { page: page, duration_page_ms: durationMs || 0 });
+  }
 
-  // Click tracking
+  function onPageChange(newPage) {
+    var elapsed = Date.now() - pageEnterTime;
+    trackPageView(currentPage, elapsed);
+    currentPage = newPage;
+    pageEnterTime = Date.now();
+    flush();
+  }
+
+  // ── Session start ─────────────────────────────────────────
+  var utm = getUtmParams();
+  track('session_start', {
+    referrer: document.referrer || '',
+    is_new: isNewVisitor(),
+    utm_source:   utm.utm_source,
+    utm_medium:   utm.utm_medium,
+    utm_campaign: utm.utm_campaign,
+  });
+  // First page view (enter)
+  trackPageView(currentPage, 0);
+
+  // ── Click tracking ────────────────────────────────────────
   document.addEventListener('click', function (e) {
     var el = e.target.closest('a, button, [onclick], .btn, .tkt-card, .nav-links a, .qnav-card');
     if (!el) return;
@@ -64,16 +103,19 @@
     track('click', { target: target });
   }, true);
 
-  // Track SPA page changes via hash
+  // ── SPA hash-based page changes ───────────────────────────
   window.addEventListener('hashchange', function () {
-    currentPage = location.hash ? location.hash.replace('#', '/') : '/';
+    var newPage = location.hash ? location.hash.replace('#', '/') : '/';
+    onPageChange(newPage);
   });
 
-  // Periodic flush
+  // ── Periodic flush ────────────────────────────────────────
   setInterval(flush, FLUSH_INTERVAL);
 
-  // Session end on page unload
+  // ── Session end on page unload ────────────────────────────
   function endSession() {
+    var elapsed = Date.now() - pageEnterTime;
+    trackPageView(currentPage, elapsed);
     var duration = Date.now() - sessionStart;
     track('session_end', { duration_ms: duration });
     flush();
@@ -86,3 +128,4 @@
     }
   });
 })();
+
