@@ -283,6 +283,7 @@ function switchTab(tabName) {
         case 'tickets': loadTicketTypesAdmin(); break;
         case 'bus': loadBusAdminData(); break;
         case 'referral': loadReferralLinks(); break;
+        case 'kpi': loadKPI(); break;
         case 'scanner':
             document.getElementById('qr-input').focus();
             loadValidationStats();
@@ -1755,3 +1756,135 @@ document.querySelectorAll('#create-tt-form input[id$="-time"]').forEach(input =>
         this.value = v;
     });
 });
+
+/* ── KPI Analytics ───────────────────────────────────────── */
+
+let kpiSessionsChart = null;
+let kpiClicksChart = null;
+let kpiCurrentRange = '1j';
+
+async function loadKPI(range) {
+    range = range || kpiCurrentRange;
+    kpiCurrentRange = range;
+
+    // Toggle active range button
+    ['1h', '1j', '1semaine', '1mois'].forEach(r => {
+        const btn = document.getElementById('kpi-range-' + r);
+        if (btn) btn.classList.toggle('btn-primary', r === range);
+    });
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/analytics/kpi?range=${encodeURIComponent(range)}`);
+        const kpi = await response.json();
+
+        document.getElementById('kpi-sessions').textContent = kpi.total_sessions ?? '-';
+        document.getElementById('kpi-clicks').textContent = kpi.total_clicks ?? '-';
+        document.getElementById('kpi-avg-duration').textContent = formatDurationShort(kpi.avg_session_duration_s);
+
+        renderKPIChart('kpi-sessions-chart', kpi.sessions_timeline || [], 'Sessions', '#667eea', c => { kpiSessionsChart = c; }, kpiSessionsChart);
+        renderKPIChart('kpi-clicks-chart', kpi.clicks_timeline || [], 'Clics', '#ed8936', c => { kpiClicksChart = c; }, kpiClicksChart);
+        renderKPITopPages(kpi.top_pages || []);
+    } catch (error) {
+        console.error('Erreur chargement KPI:', error);
+    }
+}
+
+function formatDurationShort(seconds) {
+    if (seconds == null || isNaN(seconds)) return '-';
+    seconds = Math.round(seconds);
+    if (seconds < 60) return seconds + 's';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m + 'min ' + (s > 0 ? s + 's' : '');
+}
+
+function renderKPIChart(containerId, points, label, color, setter, existing) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (typeof Chart === 'undefined') {
+        container.innerHTML = '<p style="color:#e53e3e;">Chart.js non chargé</p>';
+        return;
+    }
+
+    if (!points.length) {
+        if (existing) { existing.destroy(); setter(null); }
+        container.innerHTML = '<p style="color:#718096;">Aucune donnée</p>';
+        return;
+    }
+
+    const ordered = [...points].sort((a, b) => new Date(a.bucket) - new Date(b.bucket));
+    const labels = ordered.map(p => formatKPIBucketLabel(p.bucket));
+    const data = ordered.map(p => p.count || 0);
+
+    container.innerHTML = '<canvas></canvas>';
+    const canvas = container.querySelector('canvas');
+
+    if (existing) { existing.destroy(); setter(null); }
+
+    const chart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label,
+                data,
+                borderColor: color,
+                backgroundColor: color + '1f',
+                pointBackgroundColor: color,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: true,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: items => items[0]?.label || '',
+                    },
+                },
+            },
+            scales: {
+                x: { ticks: { maxTicksLimit: 12, font: { size: 11 } } },
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+            },
+        },
+    });
+
+    setter(chart);
+}
+
+function formatKPIBucketLabel(bucket) {
+    const d = new Date(bucket);
+    if (isNaN(d)) return bucket;
+    if (kpiCurrentRange === '1h') return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    if (kpiCurrentRange === '1j') return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function renderKPITopPages(pages) {
+    const container = document.getElementById('kpi-top-pages');
+    if (!container) return;
+
+    if (!pages.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucune donnée</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Page</th><th>Sessions</th><th>Clics</th></tr></thead><tbody>';
+    pages.forEach(p => {
+        html += `<tr><td>${escapeHtml(p.page)}</td><td>${p.sessions}</td><td>${p.clicks}</td></tr>`;
+    });
+    container.innerHTML = html + '</tbody></table>';
+}
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
