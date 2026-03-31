@@ -66,16 +66,16 @@ fetch_ids_for_status() {
     local ids
     ids=$(python3 - <<'PY' "$body"
 import json, sys
-  try:
+try:
     data = json.loads(sys.argv[1])
-  except Exception:
+except Exception:
     data = {}
-  orders = data.get("orders") or []
-  if not isinstance(orders, list):
+orders = data.get("orders") or []
+if not isinstance(orders, list):
     orders = []
 for o in orders:
     if not isinstance(o, dict):
-      continue
+        continue
     oid = o.get("id")
     if oid:
         print(oid)
@@ -85,15 +85,15 @@ PY
     local count
     count=$(python3 - <<'PY' "$body"
 import json, sys
-  try:
+try:
     data = json.loads(sys.argv[1])
-  except Exception:
+except Exception:
     print(0)
     raise SystemExit(0)
-  orders = data.get("orders") or []
-  if not isinstance(orders, list):
+orders = data.get("orders") or []
+if not isinstance(orders, list):
     orders = []
-  print(len(orders))
+print(len(orders))
 PY
 )
 
@@ -125,10 +125,14 @@ echo "📧 Renvoi des confirmations pour $TOTAL commande(s)..."
 
 success=0
 failed=0
+processed=0
 
 for oid in "${ORDER_IDS[@]}"; do
+  processed=$((processed + 1))
+  echo "➡️ [$processed/$TOTAL] commande=$oid"
   ok=false
   for ((attempt=1; attempt<=RETRIES; attempt++)); do
+    echo "   ↪ tentative $attempt/$RETRIES"
     resp=$(curl -sS -w '\n%{http_code}' -X POST "$BASE_URL/api/v1/admin/orders/$oid/resend-email" \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json")
@@ -137,8 +141,11 @@ for oid in "${ORDER_IDS[@]}"; do
 
     if [[ "$code" == "200" ]]; then
       ok=true
+      echo "   ✅ succès (HTTP 200)"
       break
     fi
+
+    echo "   ⚠️ échec tentative (HTTP $code)"
 
     if [[ "$attempt" -lt "$RETRIES" ]]; then
       sleep 1
@@ -149,8 +156,10 @@ for oid in "${ORDER_IDS[@]}"; do
     success=$((success + 1))
   else
     failed=$((failed + 1))
-    echo "⚠️ Échec renvoi commande $oid (dernier HTTP $code)"
-    echo "$body"
+    echo "❌ échec final commande $oid (dernier HTTP $code)"
+    if [[ -n "${body:-}" ]]; then
+      echo "   réponse: $body"
+    fi
   fi
 
   sleep "$SLEEP_BETWEEN"
