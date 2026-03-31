@@ -722,11 +722,25 @@ func (s *EmailService) SendAdminTestEmail(to string) error {
 
 	subject := fmt.Sprintf("%s - Test SMTP", s.cfg.FestivalName)
 	body := fmt.Sprintf("Bonjour,\r\n\r\nCeci est un email de test SMTP depuis l'interface admin %s.\r\n\r\nSi vous recevez ce message, la configuration email fonctionne.\r\n", s.cfg.FestivalName)
+	decodedFromName := html.UnescapeString(strings.TrimSpace(s.cfg.SMTPFromName))
+	decodedSubject := html.UnescapeString(strings.TrimSpace(subject))
+	encodedFromName := decodedFromName
+	encodedSubject := decodedSubject
+	if decodedFromName != "" {
+		encodedFromName = mime.BEncoding.Encode("UTF-8", decodedFromName)
+	}
+	if decodedSubject != "" {
+		encodedSubject = mime.BEncoding.Encode("UTF-8", decodedSubject)
+	}
 
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", s.cfg.SMTPFromName, s.cfg.SMTPFrom))
+	if encodedFromName != "" {
+		msg.WriteString(fmt.Sprintf("From: %s <%s>\r\n", encodedFromName, s.cfg.SMTPFrom))
+	} else {
+		msg.WriteString(fmt.Sprintf("From: %s\r\n", s.cfg.SMTPFrom))
+	}
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", encodedSubject))
 	msg.WriteString("MIME-Version: 1.0\r\n")
 	msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
 	msg.WriteString("\r\n")
