@@ -108,6 +108,8 @@ func NewRouter(
 			r.Get("/stats", adminHandler.GetStats)
 			r.Get("/stats/export-csv", adminHandler.ExportDatabaseCSV)
 			r.Get("/orders", adminHandler.ListOrders)
+			r.Post("/orders/{id}/resend-email", adminHandler.ResendOrderConfirmationEmail)
+			r.Post("/orders/resend-confirmations", adminHandler.ResendAllConfirmationEmails)
 			r.Post("/validate-qr", adminHandler.ValidateQR)
 			r.Get("/ticket-types", adminHandler.GetTicketTypes)
 			r.Post("/ticket-types", adminHandler.CreateTicketType)

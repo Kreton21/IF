@@ -211,6 +211,45 @@ func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *AdminHandler) ResendOrderConfirmationEmail(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	if strings.TrimSpace(orderID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande requis"})
+		return
+	}
+
+	if err := h.ticketService.ResendOrderConfirmationEmail(r.Context(), orderID); err != nil {
+		log.Printf("Erreur renvoi email commande %s: %v", orderID, err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Email de confirmation renvoyé"})
+}
+
+func (h *AdminHandler) ResendAllConfirmationEmails(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	sent, failed, err := h.ticketService.ResendAllConfirmationEmails(r.Context())
+	if err != nil {
+		log.Printf("Erreur renvoi global emails: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]int{"sent_orders": sent, "failed_orders": failed})
+}
+
 // ValidateQR valide un QR code à l'entrée
 func (h *AdminHandler) ValidateQR(w http.ResponseWriter, r *http.Request) {
 	var req models.ValidateQRRequest
