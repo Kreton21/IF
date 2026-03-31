@@ -381,150 +381,42 @@
 
         <!-- Tab: KPI Site -->
         <section id="tab-kpi" class="tab-content">
-
-            <!-- Sélection de plage temporelle -->
             <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <strong style="margin-right:4px;">Période :</strong>
-                <button id="kpi-range-1h"      class="btn btn-sm" onclick="loadKPI('1h')">1h</button>
-                <button id="kpi-range-1j"       class="btn btn-sm btn-primary" onclick="loadKPI('1j')">1 jour</button>
+                <button id="kpi-range-1h" class="btn btn-sm" onclick="loadKPI('1h')">1h</button>
+                <button id="kpi-range-1j" class="btn btn-sm btn-primary" onclick="loadKPI('1j')">1 jour</button>
                 <button id="kpi-range-1semaine" class="btn btn-sm" onclick="loadKPI('1semaine')">1 semaine</button>
-                <button id="kpi-range-1mois"    class="btn btn-sm" onclick="loadKPI('1mois')">1 mois</button>
-                <span style="margin:0 6px;color:#ccc;">|</span>
-                <label style="font-size:.85rem;color:#718096;">Depuis le :</label>
-                <input type="date" id="kpi-custom-date" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:.85rem;">
-                <button class="btn btn-sm" onclick="loadKPICustom()">Appliquer</button>
-                <button class="btn btn-sm" onclick="exportKPICSV()" style="margin-left:auto;">⬇️ Export CSV</button>
+                <button id="kpi-range-1mois" class="btn btn-sm" onclick="loadKPI('1mois')">1 mois</button>
             </div>
 
-            <!-- ═══════════════════════════════════════════
-                 CATÉGORIE : TRAFIC DU SITE
-            ═══════════════════════════════════════════ -->
-            <div class="card" style="border-left:4px solid #667eea;">
-                <h3 style="margin-top:0;">🌐 Trafic du site</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-sessions">-</div>
-                        <div class="stat-label">Visites (sessions)</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-new-sessions">-</div>
-                        <div class="stat-label">Nouvelles sessions</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-new-sessions-pct">-</div>
-                        <div class="stat-label">% nouvelles sessions</div>
-                    </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-sessions">-</div>
+                    <div class="stat-label">Sessions</div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-                    <div>
-                        <h4 style="margin:0 0 8px;">📈 Sessions par période</h4>
-                        <div id="kpi-sessions-chart" style="position:relative;height:220px;"></div>
-                    </div>
-                    <div>
-                        <h4 style="margin:0 0 8px;">🆕 Nouvelles sessions par période</h4>
-                        <div id="kpi-new-sessions-chart" style="position:relative;height:220px;"></div>
-                    </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-clicks">-</div>
+                    <div class="stat-label">Clics</div>
                 </div>
-                <div style="margin-top:16px;">
-                    <h4 style="margin:0 0 8px;">🔗 Sources de trafic</h4>
-                    <div id="kpi-sources" class="table-container"></div>
+                <div class="stat-card">
+                    <div class="stat-value" id="kpi-avg-duration">-</div>
+                    <div class="stat-label">Durée moyenne</div>
                 </div>
             </div>
 
-            <!-- ═══════════════════════════════════════════
-                 CATÉGORIE : COMPORTEMENT DES UTILISATEURS
-            ═══════════════════════════════════════════ -->
-            <div class="card" style="border-left:4px solid #ed8936;">
-                <h3 style="margin-top:0;">🖱 Comportement des utilisateurs</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-bounce-rate">-</div>
-                        <div class="stat-label">Taux de rebond</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-pages-per-session">-</div>
-                        <div class="stat-label">Pages / session</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-avg-duration">-</div>
-                        <div class="stat-label">Durée moyenne session</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-clicks">-</div>
-                        <div class="stat-label">Clics totaux</div>
-                    </div>
-                </div>
-                <div style="margin-top:16px;">
-                    <h4 style="margin:0 0 8px;">🖱 Clics par période</h4>
-                    <div id="kpi-clicks-chart" style="position:relative;height:220px;"></div>
-                </div>
-                <div style="margin-top:16px;">
-                    <h4 style="margin:0 0 8px;">📄 Pages les plus visitées</h4>
-                    <div id="kpi-top-pages" class="table-container"></div>
-                </div>
+            <div class="card">
+                <h3>📈 Sessions par période</h3>
+                <div id="kpi-sessions-chart" style="position:relative;height:280px;"></div>
             </div>
 
-            <!-- ═══════════════════════════════════════════
-                 CATÉGORIE : CONVERSION
-            ═══════════════════════════════════════════ -->
-            <div class="card" style="border-left:4px solid #48bb78;">
-                <h3 style="margin-top:0;">🎯 Conversion</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-conversion-rate">-</div>
-                        <div class="stat-label">Taux de conversion</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-conversions">-</div>
-                        <div class="stat-label">Commandes payées</div>
-                    </div>
-                </div>
+            <div class="card">
+                <h3>🖱 Clics par période</h3>
+                <div id="kpi-clicks-chart" style="position:relative;height:280px;"></div>
             </div>
 
-            <!-- ═══════════════════════════════════════════
-                 CATÉGORIE : COÛT D'ACQUISITION
-            ═══════════════════════════════════════════ -->
-            <div class="card" style="border-left:4px solid #e53e3e;">
-                <h3 style="margin-top:0;">💰 Coût d'acquisition (CAC)</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-total-cost">-</div>
-                        <div class="stat-label">Budget marketing (période)</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="kpi-cac">-</div>
-                        <div class="stat-label">Coût par conversion</div>
-                    </div>
-                </div>
-
-                <!-- Saisie d'un coût -->
-                <div style="margin-top:16px;padding:16px;background:#f7fafc;border-radius:8px;">
-                    <h4 style="margin:0 0 12px;">➕ Ajouter un coût marketing</h4>
-                    <form id="kpi-cost-form" onsubmit="submitMarketingCost(event)" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-                        <div>
-                            <label style="font-size:.82rem;color:#718096;display:block;margin-bottom:4px;">Date</label>
-                            <input type="date" id="kpi-cost-date" required style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;">
-                        </div>
-                        <div>
-                            <label style="font-size:.82rem;color:#718096;display:block;margin-bottom:4px;">Montant (€)</label>
-                            <input type="number" id="kpi-cost-amount" min="0" step="0.01" placeholder="ex: 150.00" required style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;width:130px;">
-                        </div>
-                        <div style="flex:1;min-width:160px;">
-                            <label style="font-size:.82rem;color:#718096;display:block;margin-bottom:4px;">Libellé (optionnel)</label>
-                            <input type="text" id="kpi-cost-label" placeholder="ex: Pub Instagram" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;width:100%;">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm">Ajouter</button>
-                    </form>
-                    <p id="kpi-cost-msg" style="font-size:.82rem;margin-top:8px;"></p>
-                </div>
-
-                <!-- Liste des coûts dans la période -->
-                <div style="margin-top:16px;">
-                    <h4 style="margin:0 0 8px;">📋 Coûts enregistrés (période sélectionnée)</h4>
-                    <div id="kpi-costs-list" class="table-container"></div>
-                </div>
+            <div class="card">
+                <h3>📄 Pages les plus visitées</h3>
+                <div id="kpi-top-pages" class="table-container"></div>
             </div>
-
         </section>
 
         <!-- Tab: Scanner QR -->

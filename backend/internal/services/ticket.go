@@ -954,6 +954,92 @@ func (s *TicketService) dispatchFestivalTicketEmails(order *models.Order, emailT
 	return firstErr
 }
 
+func (s *TicketService) buildFestivalEmailTicketsForOrder(ctx context.Context, order *models.Order) ([]TicketEmailData, error) {
+	tickets, err := s.ticketRepo.GetTicketsByOrderID(ctx, order.ID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur récupération tickets commande: %w", err)
+	}
+	if len(tickets) == 0 {
+		return nil, fmt.Errorf("aucun ticket pour la commande %s", order.OrderNumber)
+	}
+
+	emailTickets := make([]TicketEmailData, 0, len(tickets))
+	for _, ticket := range tickets {
+		qrPNG, qrErr := s.ticketRepo.GetQRCodeDataByToken(ctx, ticket.QRToken)
+		if qrErr != nil || len(qrPNG) == 0 {
+			qrPNG, qrErr = s.qrService.GenerateQRCode(ticket.QRToken)
+			if qrErr != nil {
+				log.Printf("WARN: QR indisponible pour ticket %s (%s): %v", ticket.ID, ticket.QRToken, qrErr)
+				continue
+			}
+		}
+
+		recipientEmail := strings.TrimSpace(ticket.AttendeeEmail)
+		if recipientEmail == "" {
+			recipientEmail = strings.TrimSpace(order.CustomerEmail)
+		}
+
+		emailTickets = append(emailTickets, TicketEmailData{
+			TicketTypeName: ticket.TicketTypeName,
+			AttendeeName: strings.TrimSpace(strings.TrimSpace(ticket.AttendeeFirstName) + " " + strings.TrimSpace(ticket.AttendeeLastName)),
+			DateOfBirth:    order.DateOfBirth,
+			RecipientEmail: recipientEmail,
+			QRToken:        ticket.QRToken,
+			QRCodePNG:      qrPNG,
+		})
+	}
+
+	if len(emailTickets) == 0 {
+		return nil, fmt.Errorf("aucun ticket envoyable pour la commande %s", order.OrderNumber)
+	}
+
+	return emailTickets, nil
+}
+
+func (s *TicketService) ResendOrderConfirmationEmail(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération commande %s: %w", orderID, err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable: %s", orderID)
+	}
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return fmt.Errorf("commande %s ignorée (statut %s)", order.OrderNumber, order.Status)
+	}
+
+	emailTickets, err := s.buildFestivalEmailTicketsForOrder(ctx, order)
+	if err != nil {
+		return err
+	}
+
+	if err := s.dispatchFestivalTicketEmails(order, emailTickets); err != nil {
+		return fmt.Errorf("échec renvoi emails commande %s: %w", order.OrderNumber, err)
+	}
+
+	return nil
+}
+
+func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, int, error) {
+	orderIDs, err := s.orderRepo.ListPaidConfirmedOrderIDsWithTickets(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	sent := 0
+	failed := 0
+	for _, orderID := range orderIDs {
+		if err := s.ResendOrderConfirmationEmail(ctx, orderID); err != nil {
+			failed++
+			log.Printf("WARN: renvoi email commande %s échoué: %v", orderID, err)
+			continue
+		}
+		sent++
+	}
+
+	return sent, failed, nil
+}
+
 func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {

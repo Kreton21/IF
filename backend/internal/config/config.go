@@ -104,7 +104,7 @@ func Load() (*Config, error) {
 		SMTPUser:     getEnv("SMTP_USER", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
-		SMTPFromName: getEnv("SMTP_FROM_NAME", "L'Interfilière"),
+		SMTPFromName: getEnv("SMTP_FROM_NAME", "L'Interfilières"),
 		EnableAdminTestEmail: enableAdminTestEmail,
 		EmailTemplatePath:    getEnv("EMAIL_TEMPLATE_PATH", "mail/ticket_email.html"),
 		TicketPDFTemplatePath: getEnv("TICKET_PDF_TEMPLATE_PATH", "mail/ticket_pdf.html"),

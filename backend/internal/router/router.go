@@ -108,6 +108,8 @@ func NewRouter(
 			r.Get("/stats", adminHandler.GetStats)
 			r.Get("/stats/export-csv", adminHandler.ExportDatabaseCSV)
 			r.Get("/orders", adminHandler.ListOrders)
+			r.Post("/orders/{id}/resend-email", adminHandler.ResendOrderConfirmationEmail)
+			r.Post("/orders/resend-confirmations", adminHandler.ResendAllConfirmationEmails)
 			r.Post("/validate-qr", adminHandler.ValidateQR)
 			r.Get("/ticket-types", adminHandler.GetTicketTypes)
 			r.Post("/ticket-types", adminHandler.CreateTicketType)
@@ -128,8 +130,6 @@ func NewRouter(
 			r.Get("/referrals", adminHandler.ListReferralLinks)
 			r.Post("/referrals", adminHandler.CreateReferralLink)
 			r.Get("/analytics/kpi", analyticsHandler.GetKPI)
-			r.Post("/analytics/marketing-costs", analyticsHandler.CreateMarketingCost)
-			r.Delete("/analytics/marketing-costs/{id}", analyticsHandler.DeleteMarketingCost)
 		})
 	})
 
