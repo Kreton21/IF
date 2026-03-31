@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -23,13 +24,25 @@ func NewOrderRepository(pool *pgxpool.Pool) *OrderRepository {
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, tx pgx.Tx, order *models.Order) error {
-	// Générer le numéro de commande
-	var seq int
-	err := tx.QueryRow(ctx, `SELECT nextval('order_number_seq')`).Scan(&seq)
-	if err != nil {
-		return fmt.Errorf("erreur génération numéro commande: %w", err)
+	// Générer un numéro de commande aléatoire unique
+	const maxAttempts = 20
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		candidate, err := generateRandomOrderNumber()
+		if err != nil {
+			return fmt.Errorf("erreur génération numéro commande: %w", err)
+		}
+		available, err := r.isOrderNumberAvailable(ctx, tx, candidate)
+		if err != nil {
+			return fmt.Errorf("erreur vérification numéro commande: %w", err)
+		}
+		if available {
+			order.OrderNumber = candidate
+			break
+		}
 	}
-	order.OrderNumber = fmt.Sprintf("IF-2026-%05d", seq)
+	if order.OrderNumber == "" {
+		return fmt.Errorf("impossible de générer un numéro de commande unique")
+	}
 
 	query := `
 		INSERT INTO orders (order_number, customer_email, customer_first_name, customer_last_name,
@@ -41,6 +54,23 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, tx pgx.Tx, order *mod
 		order.OrderNumber, order.CustomerEmail, order.CustomerFirstName, order.CustomerLastName,
 		order.CustomerPhone, order.DateOfBirth, order.WantsCamping, order.WantsRefundInsurance, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
 	).Scan(&order.ID, &order.CreatedAt, &order.UpdatedAt)
+}
+
+func generateRandomOrderNumber() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("IF-2026-%06d", n.Int64()), nil
+}
+
+func (r *OrderRepository) isOrderNumberAvailable(ctx context.Context, tx pgx.Tx, orderNumber string) (bool, error) {
+	var exists bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM orders WHERE order_number = $1)`, orderNumber).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return !exists, nil
 }
 
 func (r *OrderRepository) UpdateOrderHelloAsso(ctx context.Context, orderID string, checkoutID string, checkoutURL string) error {
