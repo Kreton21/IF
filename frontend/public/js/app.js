@@ -613,7 +613,7 @@ function renderAttendeeForms() {
           ${categories.length > 0 ? `${checkboxCategory ? `<div class="camping-opt-in attendee-category-checkbox">
             <label>
               <input type="checkbox" ${isCheckboxChecked ? 'checked' : ''} ${checkboxDisabled ? 'disabled' : ''} onchange="toggleAttendeeCheckboxCategory('${typeId}', ${idx}, '${checkboxCategory.id}', this.checked)">
-              ${escapeHTML(checkboxCategory.name)}
+              Je suis ${escapeHTML(checkboxCategory.name)}
             </label>
           </div>` : ''}
           <div class="form-group attendee-category-select ${isCheckboxChecked ? 'is-disabled' : ''}">
