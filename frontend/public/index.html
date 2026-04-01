@@ -1304,6 +1304,99 @@ L'INTERFILIÈRES 2026
   </footer>
 </div>
 <script src="js/app.js"></script>
-<script src="js/analytics.js"></script>
+
+<!-- ══ Cookie Consent Banner ══ -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:10000;font-family:var(--font-text)">
+  <div style="max-width:640px;margin:0 auto 24px;background:var(--offwhite);border-radius:var(--r);padding:28px 32px;box-shadow:0 10px 50px rgba(30,8,69,.22);border:1px solid rgba(249,127,160,.15)">
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+      <span style="font-size:1.6rem;line-height:1">🍪</span>
+      <div>
+        <p style="font-family:var(--font-primary);font-size:1.05rem;color:var(--text);letter-spacing:1px;margin-bottom:6px">Cookies</p>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.7">Nous utilisons des cookies techniques (obligatoires) et de mesure d'audience. Aucun cookie non essentiel n'est déposé sans votre consentement. <a href="#" onclick="go('mentions');return false" style="color:var(--rose);font-weight:600;text-decoration:none">En savoir plus</a></p>
+      </div>
+    </div>
+    <!-- Customise panel -->
+    <div id="cookie-custom" style="display:none;padding:16px 18px;background:var(--light);border-radius:12px;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:default;opacity:.55">
+        <input type="checkbox" checked disabled style="width:16px;height:16px;accent-color:var(--rose)">
+        <span style="font-size:.82rem;color:var(--text)"><strong>Techniques</strong> — obligatoires</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
+        <input type="checkbox" id="ck-analytics" checked style="width:16px;height:16px;accent-color:var(--rose)">
+        <span style="font-size:.82rem;color:var(--text)"><strong>Mesure d'audience</strong> — améliorer le site</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="ck-marketing" style="width:16px;height:16px;accent-color:var(--rose)">
+        <span style="font-size:.82rem;color:var(--text)"><strong>Marketing</strong> — le cas échéant</span>
+      </label>
+      <button onclick="cookieConsent('save')" style="cursor:pointer;margin-top:14px;padding:10px 24px;border:none;border-radius:50px;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;font-family:var(--font-text);font-weight:800;font-size:.8rem;letter-spacing:.5px;box-shadow:0 4px 14px rgba(249,127,160,.3);transition:all .22s">Enregistrer mes choix</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="cookieConsent('all')" style="cursor:pointer;flex:1;min-width:120px;padding:12px 20px;border:none;border-radius:50px;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;font-family:var(--font-text);font-weight:800;font-size:.82rem;letter-spacing:.5px;box-shadow:0 4px 18px rgba(249,127,160,.35);transition:all .22s">Tout accepter</button>
+      <button onclick="cookieConsent('essential')" style="cursor:pointer;flex:1;min-width:120px;padding:12px 20px;border:2px solid var(--rose);border-radius:50px;background:transparent;color:var(--rose);font-family:var(--font-text);font-weight:800;font-size:.82rem;letter-spacing:.5px;transition:all .22s">Refuser</button>
+      <button onclick="cookieConsent('custom')" style="cursor:pointer;flex:1;min-width:120px;padding:12px 20px;border:2px solid rgba(155,138,180,.3);border-radius:50px;background:transparent;color:var(--muted);font-family:var(--font-text);font-weight:700;font-size:.82rem;letter-spacing:.5px;transition:all .22s">Personnaliser</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Cookie Consent Logic ══
+(function(){
+  var COOKIE_KEY = 'if_cookie_consent';
+  var EXPIRY_DAYS = 395; // 13 months
+
+  function getCookie(name){
+    var m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+    return m ? m[2] : null;
+  }
+  function setCookie(name, val, days){
+    var d = new Date(); d.setTime(d.getTime() + days*864e5);
+    document.cookie = name+'='+val+';expires='+d.toUTCString()+';path=/;SameSite=Lax';
+  }
+
+  function loadAnalytics(){
+    if(document.getElementById('if-analytics-script')) return;
+    var s = document.createElement('script');
+    s.id = 'if-analytics-script';
+    s.src = 'js/analytics.js';
+    document.body.appendChild(s);
+  }
+
+  function applyConsent(consent){
+    try{ var c = JSON.parse(consent); } catch(e){ return; }
+    if(c.analytics) loadAnalytics();
+  }
+
+  window.cookieConsent = function(action){
+    var consent;
+    if(action === 'all'){
+      consent = {essential:true, analytics:true, marketing:true};
+    } else if(action === 'essential'){
+      consent = {essential:true, analytics:false, marketing:false};
+    } else if(action === 'custom'){
+      document.getElementById('cookie-custom').style.display =
+        document.getElementById('cookie-custom').style.display === 'none' ? 'block' : 'none';
+      return;
+    } else if(action === 'save'){
+      consent = {
+        essential: true,
+        analytics: document.getElementById('ck-analytics').checked,
+        marketing: document.getElementById('ck-marketing').checked
+      };
+    }
+    setCookie(COOKIE_KEY, JSON.stringify(consent), EXPIRY_DAYS);
+    document.getElementById('cookie-banner').style.display = 'none';
+    applyConsent(JSON.stringify(consent));
+  };
+
+  // On load: check existing consent
+  var existing = getCookie(COOKIE_KEY);
+  if(existing){
+    applyConsent(existing);
+  } else {
+    document.getElementById('cookie-banner').style.display = 'block';
+  }
+})();
+</script>
 </body>
 </html>
