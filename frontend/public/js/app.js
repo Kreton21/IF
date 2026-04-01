@@ -75,6 +75,10 @@ function go(id, options = {}) {
     }
   }
   window.scrollTo({ top: 0, behavior: smoothScroll ? 'smooth' : 'auto' });
+  // Force white nav on pages without a dark hero header
+  if (page && !page.querySelector('.ph')) {
+    document.getElementById('nav').classList.add('scrolled');
+  }
   setMenuOpen(false);
   setTimeout(initReveal, 80);
 }
@@ -119,7 +123,9 @@ function goCampingForm() {
 // ══════════════════════════════════════
 function initNavScroll() {
   window.addEventListener('scroll', () => {
-    document.getElementById('nav').classList.toggle('scrolled', scrollY > 70);
+    const activePage = document.querySelector('.page.active');
+    const forceScrolled = activePage && !activePage.querySelector('.ph');
+    document.getElementById('nav').classList.toggle('scrolled', forceScrolled || scrollY > 70);
   });
 }
 
