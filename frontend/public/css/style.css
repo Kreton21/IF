@@ -538,6 +538,19 @@ iframe:not(.hero-video) {
 	height:18px;
 }
 
+.attendee-category-checkbox {
+	margin:0 0 10px;
+	font-size:.86rem;
+}
+
+.attendee-category-select.is-disabled select {
+	opacity:.55;
+	background:rgba(232,224,240,.45);
+	color:var(--muted);
+	border-color:#e8e0f0;
+	cursor:not-allowed;
+}
+
 /* ── Ticket quantity controls ── */
 .tkt-qty {
 	display:flex; align-items:center; justify-content:center;

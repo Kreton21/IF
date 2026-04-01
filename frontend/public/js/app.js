@@ -610,13 +610,13 @@ function renderAttendeeForms() {
               <input type="text" value="${escapeHTML(attendee.last_name || '')}" oninput="updateAttendeeField('${typeId}', ${idx}, 'last_name', this.value)" required>
             </div>
           </div>
-          ${categories.length > 0 ? `${checkboxCategory ? `<div class="form-group" style="margin-bottom:10px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          ${categories.length > 0 ? `${checkboxCategory ? `<div class="camping-opt-in attendee-category-checkbox">
+            <label>
               <input type="checkbox" ${isCheckboxChecked ? 'checked' : ''} ${checkboxDisabled ? 'disabled' : ''} onchange="toggleAttendeeCheckboxCategory('${typeId}', ${idx}, '${checkboxCategory.id}', this.checked)">
               ${escapeHTML(checkboxCategory.name)}
             </label>
           </div>` : ''}
-          <div class="form-group">
+          <div class="form-group attendee-category-select ${isCheckboxChecked ? 'is-disabled' : ''}">
             <label>Catégorie du participant *</label>
             <select onchange="updateAttendeeField('${typeId}', ${idx}, 'category_id', this.value)" ${isCheckboxChecked ? 'disabled' : ''} ${!isCheckboxChecked ? 'required' : ''}>
               <option value="">— Sélectionner une catégorie —</option>
