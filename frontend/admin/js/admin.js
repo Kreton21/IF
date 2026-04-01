@@ -1120,16 +1120,20 @@ async function renderTicketTypesAdmin(types) {
                 const remaining = c.quantity_allocated - c.quantity_sold;
                 const catMaskedClass = c.is_masked ? ' cat-masked' : '';
                 const catMaskedBadge = c.is_masked ? ' <span class="badge badge-masked" style="font-size:0.7em;">MASQUÉ</span>' : '';
+                const catCheckboxBadge = c.is_checkbox ? ' <span class="badge" style="font-size:0.7em;background:#3182ce;color:#fff;">CASE</span>' : '';
                 const catMaskBtn = c.is_masked
                     ? `<button class="btn btn-sm btn-success" onclick="toggleCategoryMask('${c.id}')" title="Démasquer">👁</button>`
                     : `<button class="btn btn-sm btn-warning" onclick="toggleCategoryMask('${c.id}')" title="Masquer">🚫</button>`;
+                const catCheckboxBtn = c.is_checkbox
+                    ? `<button class="btn btn-sm btn-primary" onclick="toggleCategoryCheckbox('${c.id}')" title="Retirer de la case">☑</button>`
+                    : `<button class="btn btn-sm" onclick="toggleCategoryCheckbox('${c.id}')" title="Rendre cette catégorie en case">☐</button>`;
                 html += `<tr class="${catMaskedClass}">
-                    <td><strong>${c.name}</strong>${catMaskedBadge}</td>
+                    <td><strong>${c.name}</strong>${catMaskedBadge}${catCheckboxBadge}</td>
                     <td>${c.quantity_allocated}</td>
                     <td>${c.quantity_sold}</td>
                     <td>${remaining}</td>
                     <td>${cDomains}</td>
-                    <td style="display:flex;gap:4px;">${catMaskBtn}${c.quantity_sold === 0 ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory('${c.id}')">×</button>` : ''}</td>
+                    <td style="display:flex;gap:4px;">${catMaskBtn}${catCheckboxBtn}${c.quantity_sold === 0 ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory('${c.id}')">×</button>` : ''}</td>
                 </tr>`;
             });
             html += '</tbody></table>';
@@ -1292,6 +1296,16 @@ async function toggleTicketTypeMask(ticketTypeId) {
 async function toggleCategoryMask(categoryId) {
     try {
         const res = await apiFetch(`${API_BASE}/admin/categories/${categoryId}/mask`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        loadTicketTypesAdmin();
+    } catch (err) {
+        alert(`Erreur: ${err.message}`);
+    }
+}
+
+async function toggleCategoryCheckbox(categoryId) {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/categories/${categoryId}/checkbox`, { method: 'POST' });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
         loadTicketTypesAdmin();
     } catch (err) {

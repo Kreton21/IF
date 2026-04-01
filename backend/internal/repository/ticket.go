@@ -204,16 +204,80 @@ func (r *TicketRepository) ToggleCategoryMask(ctx context.Context, categoryID st
 		UPDATE ticket_categories SET is_masked = NOT is_masked
 		WHERE id = $1
 		RETURNING id, ticket_type_id, name, quantity_allocated, quantity_sold,
-		          is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+		          is_masked, is_checkbox, COALESCE(allowed_domains, '{}'), created_at, updated_at`
 
 	var c models.TicketCategory
 	err := r.pool.QueryRow(ctx, query, categoryID).Scan(
 		&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
-		&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt,
+		&c.QuantitySold, &c.IsMasked, &c.IsCheckbox, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("erreur toggle mask catégorie: %w", err)
 	}
+	return &c, nil
+}
+
+// ToggleCategoryCheckbox toggles checkbox mode for one category (unique per ticket type)
+func (r *TicketRepository) ToggleCategoryCheckbox(ctx context.Context, categoryID string) (*models.TicketCategory, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("erreur début transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var ticketTypeID string
+	var currentlyChecked bool
+	err = tx.QueryRow(ctx,
+		`SELECT ticket_type_id, is_checkbox FROM ticket_categories WHERE id = $1 FOR UPDATE`,
+		categoryID,
+	).Scan(&ticketTypeID, &currentlyChecked)
+	if err != nil {
+		return nil, fmt.Errorf("catégorie introuvable: %w", err)
+	}
+
+	if currentlyChecked {
+		_, err = tx.Exec(ctx,
+			`UPDATE ticket_categories SET is_checkbox = false, updated_at = NOW() WHERE id = $1`,
+			categoryID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("erreur mise à jour catégorie checkbox: %w", err)
+		}
+	} else {
+		_, err = tx.Exec(ctx,
+			`UPDATE ticket_categories SET is_checkbox = false, updated_at = NOW() WHERE ticket_type_id = $1 AND is_checkbox = true`,
+			ticketTypeID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("erreur reset catégorie checkbox: %w", err)
+		}
+
+		_, err = tx.Exec(ctx,
+			`UPDATE ticket_categories SET is_checkbox = true, updated_at = NOW() WHERE id = $1`,
+			categoryID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("erreur activation catégorie checkbox: %w", err)
+		}
+	}
+
+	var c models.TicketCategory
+	err = tx.QueryRow(ctx, `
+		SELECT id, ticket_type_id, name, quantity_allocated, quantity_sold,
+		       is_masked, is_checkbox, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		FROM ticket_categories
+		WHERE id = $1`, categoryID).Scan(
+		&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
+		&c.QuantitySold, &c.IsMasked, &c.IsCheckbox, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("erreur lecture catégorie mise à jour: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("erreur commit transaction: %w", err)
+	}
+
 	return &c, nil
 }
 
@@ -224,7 +288,7 @@ func (r *TicketRepository) ToggleCategoryMask(ctx context.Context, categoryID st
 func (r *TicketRepository) GetCategoriesByTicketType(ctx context.Context, ticketTypeID string) ([]models.TicketCategory, error) {
 	query := `
 		SELECT id, ticket_type_id, name, quantity_allocated, quantity_sold,
-		       is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at
+		       is_masked, is_checkbox, COALESCE(allowed_domains, '{}'), created_at, updated_at
 		FROM ticket_categories
 		WHERE ticket_type_id = $1
 		ORDER BY name ASC`
@@ -239,7 +303,7 @@ func (r *TicketRepository) GetCategoriesByTicketType(ctx context.Context, ticket
 	for rows.Next() {
 		var c models.TicketCategory
 		err := rows.Scan(&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
-			&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
+			&c.QuantitySold, &c.IsMasked, &c.IsCheckbox, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("erreur scan category: %w", err)
 		}
@@ -271,12 +335,12 @@ func (r *TicketRepository) CreateCategory(ctx context.Context, req models.Create
 		INSERT INTO ticket_categories (ticket_type_id, name, quantity_allocated, allowed_domains)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, ticket_type_id, name, quantity_allocated, quantity_sold,
-		          is_masked, COALESCE(allowed_domains, '{}'), created_at, updated_at`
+		          is_masked, is_checkbox, COALESCE(allowed_domains, '{}'), created_at, updated_at`
 
 	var c models.TicketCategory
 	err = r.pool.QueryRow(ctx, query, req.TicketTypeID, req.Name, req.Quantity, req.AllowedDomains).Scan(
 		&c.ID, &c.TicketTypeID, &c.Name, &c.QuantityAllocated,
-		&c.QuantitySold, &c.IsMasked, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
+		&c.QuantitySold, &c.IsMasked, &c.IsCheckbox, &c.AllowedDomains, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("erreur création catégorie: %w", err)
 	}

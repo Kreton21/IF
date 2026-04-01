@@ -121,6 +121,16 @@ func (s *TicketService) ToggleCategoryMask(ctx context.Context, categoryID strin
 	return cat, nil
 }
 
+// ToggleCategoryCheckbox toggles checkbox mode for a category (one per ticket type max)
+func (s *TicketService) ToggleCategoryCheckbox(ctx context.Context, categoryID string) (*models.TicketCategory, error) {
+	cat, err := s.ticketRepo.ToggleCategoryCheckbox(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	s.redis.Del(ctx, "ticket_types:active")
+	return cat, nil
+}
+
 // ============================================
 // Catégories
 // ============================================
@@ -195,6 +205,7 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 				Name:              cat.Name,
 				QuantityAllocated: cat.QuantityAllocated,
 				QuantitySold:      cat.QuantitySold,
+				IsCheckbox:        cat.IsCheckbox,
 			})
 		}
 

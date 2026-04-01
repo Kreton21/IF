@@ -669,6 +669,30 @@ func (h *AdminHandler) ToggleCategoryMask(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, cat)
 }
 
+// ToggleCategoryCheckbox active/désactive le mode "case à cocher" d'une catégorie
+func (h *AdminHandler) ToggleCategoryCheckbox(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	categoryID := chi.URLParam(r, "categoryID")
+	if categoryID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID catégorie manquant"})
+		return
+	}
+
+	cat, err := h.ticketService.ToggleCategoryCheckbox(r.Context(), categoryID)
+	if err != nil {
+		log.Printf("Erreur toggle checkbox catégorie: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, cat)
+}
+
 // DeleteCategory supprime une catégorie vide
 func (h *AdminHandler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())

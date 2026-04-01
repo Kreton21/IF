@@ -34,6 +34,7 @@ type TicketCategory struct {
 	QuantityAllocated int       `json:"quantity_allocated"`
 	QuantitySold      int       `json:"quantity_sold"`
 	IsMasked          bool      `json:"is_masked"`
+	IsCheckbox        bool      `json:"is_checkbox"`
 	AllowedDomains    []string  `json:"allowed_domains"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -329,6 +330,7 @@ type CategoryForEmail struct {
 	Name              string `json:"name"`
 	QuantityAllocated int    `json:"quantity_allocated"`
 	QuantitySold      int    `json:"quantity_sold"`
+	IsCheckbox        bool   `json:"is_checkbox"`
 }
 
 type BusStation struct {

@@ -554,6 +554,22 @@ function updateAttendeeField(typeId, index, field, value) {
   state.attendees[typeId] = attendees;
 }
 
+function toggleAttendeeCheckboxCategory(typeId, index, checkboxCategoryId, checked) {
+  const attendees = Array.isArray(state.attendees[typeId]) ? state.attendees[typeId] : [];
+  if (!attendees[index]) {
+    attendees[index] = { first_name: '', last_name: '', email: '', category_id: '' };
+  }
+
+  if (checked) {
+    attendees[index].category_id = checkboxCategoryId;
+  } else if (attendees[index].category_id === checkboxCategoryId) {
+    attendees[index].category_id = '';
+  }
+
+  state.attendees[typeId] = attendees;
+  renderAttendeeForms();
+}
+
 function renderAttendeeForms() {
   const wrap = document.getElementById('attendees-forms');
   if (!wrap) return;
@@ -564,6 +580,8 @@ function renderAttendeeForms() {
     const tt = state.ticketTypes.find(t => t.id === typeId);
     if (!tt) continue;
     const categories = tt.categories || [];
+    const checkboxCategory = categories.find(c => !!c.is_checkbox) || null;
+    const dropdownCategories = categories.filter(c => !c.is_checkbox);
 
     syncAttendeesForTicket(typeId, qty);
     const attendees = state.attendees[typeId] || [];
@@ -571,6 +589,13 @@ function renderAttendeeForms() {
     for (let idx = 0; idx < qty; idx++) {
       const attendee = attendees[idx] || { first_name: '', last_name: '' };
       const fieldsetTitle = `${tt.name} — Billet ${idx + 1}`;
+      const isCheckboxChecked = !!checkboxCategory && attendee.category_id === checkboxCategory.id;
+      const checkboxRemaining = checkboxCategory ? getCategoryRemaining(checkboxCategory) : 0;
+      const checkboxDisabled = !!checkboxCategory && checkboxRemaining <= 0 && !isCheckboxChecked;
+      const availableDropdownCategories = dropdownCategories.filter(c => {
+        const remaining = getCategoryRemaining(c);
+        return remaining > 0 || attendee.category_id === c.id;
+      });
 
       lines.push(`
         <div class="attendee-card">
@@ -585,17 +610,24 @@ function renderAttendeeForms() {
               <input type="text" value="${escapeHTML(attendee.last_name || '')}" oninput="updateAttendeeField('${typeId}', ${idx}, 'last_name', this.value)" required>
             </div>
           </div>
-          ${categories.length > 0 ? `<div class="form-group">
+          ${categories.length > 0 ? `${checkboxCategory ? `<div class="form-group" style="margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" ${isCheckboxChecked ? 'checked' : ''} ${checkboxDisabled ? 'disabled' : ''} onchange="toggleAttendeeCheckboxCategory('${typeId}', ${idx}, '${checkboxCategory.id}', this.checked)">
+              ${escapeHTML(checkboxCategory.name)}
+            </label>
+          </div>` : ''}
+          <div class="form-group">
             <label>Catégorie du participant *</label>
-            <select onchange="updateAttendeeField('${typeId}', ${idx}, 'category_id', this.value)" required>
+            <select onchange="updateAttendeeField('${typeId}', ${idx}, 'category_id', this.value)" ${isCheckboxChecked ? 'disabled' : ''} ${!isCheckboxChecked ? 'required' : ''}>
               <option value="">— Sélectionner une catégorie —</option>
-              ${categories.map(c => {
+              ${availableDropdownCategories.map(c => {
                 const selected = attendee.category_id === c.id ? 'selected' : '';
                 const remaining = getCategoryRemaining(c);
                 const disabled = remaining <= 0 ? 'disabled' : '';
                 return `<option value="${c.id}" ${selected} ${disabled}>${escapeHTML(c.name)}</option>`;
               }).join('')}
             </select>
+            ${(!isCheckboxChecked && availableDropdownCategories.length === 0) ? '<small style="color:#e53e3e;">Aucune catégorie disponible dans la liste.</small>' : ''}
           </div>` : ''}
         </div>
       `);

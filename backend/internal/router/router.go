@@ -118,6 +118,7 @@ func NewRouter(
 			r.Get("/ticket-types/{ticketTypeID}/categories", adminHandler.GetCategories)
 			r.Post("/ticket-types/{ticketTypeID}/categories", adminHandler.CreateCategory)
 			r.Post("/categories/{categoryID}/mask", adminHandler.ToggleCategoryMask)
+			r.Post("/categories/{categoryID}/checkbox", adminHandler.ToggleCategoryCheckbox)
 			r.Post("/categories/reallocate", adminHandler.ReallocateCategories)
 			r.Delete("/categories/{categoryID}", adminHandler.DeleteCategory)
 			r.Get("/bus/options", adminHandler.GetBusOptions)
