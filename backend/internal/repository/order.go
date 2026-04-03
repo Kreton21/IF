@@ -99,6 +99,44 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID string,
 	return err
 }
 
+func (r *OrderRepository) UpdateSuccessfulOrderDetails(ctx context.Context, orderID string, req models.UpdateSuccessfulOrderRequest) (*models.Order, error) {
+	query := `
+		UPDATE orders
+		SET customer_first_name = $1,
+		    customer_last_name = $2,
+		    customer_email = $3,
+		    wants_camping = $4,
+		    wants_refund_insurance = $5,
+		    updated_at = NOW()
+		WHERE id = $6
+		RETURNING id, order_number, customer_email, customer_first_name, customer_last_name,
+		          COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
+		          COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
+		          COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at`
+
+	var o models.Order
+	err := r.pool.QueryRow(ctx, query,
+		req.CustomerFirstName,
+		req.CustomerLastName,
+		req.CustomerEmail,
+		req.WantsCamping,
+		req.WantsRefundInsurance,
+		orderID,
+	).Scan(
+		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
+		&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status, &o.HelloAssoCheckoutID, &o.HelloAssoPaymentID,
+		&o.HelloAssoCheckoutURL, &o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur update order details: %w", err)
+	}
+
+	return &o, nil
+}
+
 func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID string) (*models.Order, error) {
 	query := `
 		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,

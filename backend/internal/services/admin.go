@@ -115,6 +115,30 @@ func (s *AdminService) ListOrders(ctx context.Context, params models.OrderListPa
 	return s.orderRepo.ListOrders(ctx, params)
 }
 
+func (s *AdminService) UpdateSuccessfulOrderDetails(ctx context.Context, orderID string, req models.UpdateSuccessfulOrderRequest) (*models.Order, error) {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur récupération commande: %w", err)
+	}
+	if order == nil {
+		return nil, fmt.Errorf("commande introuvable")
+	}
+
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return nil, fmt.Errorf("seules les commandes payées/confirmées sont modifiables")
+	}
+
+	updated, err := s.orderRepo.UpdateSuccessfulOrderDetails(ctx, orderID, req)
+	if err != nil {
+		return nil, err
+	}
+	if updated == nil {
+		return nil, fmt.Errorf("commande introuvable")
+	}
+
+	return updated, nil
+}
+
 // ValidateQR valide un QR code à l'entrée du festival
 func (s *AdminService) ValidateQR(ctx context.Context, qrToken string, adminName string) (*models.ValidateQRResponse, error) {
 	return s.ticketRepo.ValidateTicket(ctx, qrToken, adminName)
