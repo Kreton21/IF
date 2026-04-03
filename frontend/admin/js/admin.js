@@ -304,10 +304,12 @@ async function loadReferralLinks() {
 
 async function createReferralLink() {
     const input = document.getElementById('referral-name');
+    const customCodeInput = document.getElementById('referral-custom-code');
     const msg = document.getElementById('referral-msg');
     if (!input || !msg) return;
 
     const name = input.value.trim();
+    const customCode = customCodeInput ? customCodeInput.value.trim() : '';
     msg.classList.add('hidden');
 
     if (!name) {
@@ -317,9 +319,11 @@ async function createReferralLink() {
     }
 
     try {
+        const body = { name };
+        if (customCode) body.custom_code = customCode;
         const response = await apiFetch(`${API_BASE}/admin/referrals`, {
             method: 'POST',
-            body: JSON.stringify({ name }),
+            body: JSON.stringify(body),
         });
         const data = await response.json();
         if (!response.ok) {
@@ -329,6 +333,7 @@ async function createReferralLink() {
         msg.textContent = '✅ Lien de parrainage créé';
         msg.className = 'form-msg success-text';
         input.value = '';
+        if (customCodeInput) customCodeInput.value = '';
         await loadReferralLinks();
     } catch (error) {
         msg.textContent = `❌ ${error.message}`;

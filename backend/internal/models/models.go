@@ -421,7 +421,8 @@ type BusTicketAdminRow struct {
 }
 
 type CreateReferralLinkRequest struct {
-	Name string `json:"name"`
+	Name       string `json:"name"`
+	CustomCode string `json:"custom_code"`
 }
 
 type ReferralLinkRow struct {

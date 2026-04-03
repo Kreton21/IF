@@ -296,7 +296,7 @@ func (s *AdminService) ValidateJWT(tokenStr string) (jwt.MapClaims, error) {
 }
 
 func (s *AdminService) CreateReferralLink(ctx context.Context, req models.CreateReferralLinkRequest, baseURL string) (*models.CreateReferralLinkResponse, error) {
-	link, err := s.orderRepo.CreateReferralLink(ctx, req.Name)
+	link, err := s.orderRepo.CreateReferralLink(ctx, req.Name, req.CustomCode)
 	if err != nil {
 		return nil, err
 	}
