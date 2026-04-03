@@ -665,10 +665,34 @@ func (r *OrderRepository) GetExpiredPendingOrderIDs(ctx context.Context, olderTh
 	return ids, nil
 }
 
-func (r *OrderRepository) CreateReferralLink(ctx context.Context, name string) (*models.ReferralPublicInfo, error) {
+func (r *OrderRepository) CreateReferralLink(ctx context.Context, name, customCode string) (*models.ReferralPublicInfo, error) {
 	trimmedName := strings.TrimSpace(name)
 	if trimmedName == "" {
 		return nil, fmt.Errorf("nom de lien requis")
+	}
+
+	// If a custom code is provided, sanitize and use it directly
+	if strings.TrimSpace(customCode) != "" {
+		code := sanitizeReferralCode(customCode)
+		if code == "" {
+			return nil, fmt.Errorf("code personnalisé invalide (utilisez lettres, chiffres et tirets uniquement)")
+		}
+		if len(code) > 64 {
+			return nil, fmt.Errorf("code personnalisé trop long (max 64 caractères)")
+		}
+		var link models.ReferralPublicInfo
+		err := r.pool.QueryRow(ctx, `
+			INSERT INTO referral_links (name, code, is_active)
+			VALUES ($1, $2, true)
+			RETURNING id, code, name, is_active
+		`, trimmedName, code).Scan(&link.ID, &link.Code, &link.Name, &link.IsActive)
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+				return nil, fmt.Errorf("ce code de parrainage est déjà utilisé")
+			}
+			return nil, fmt.Errorf("erreur création lien parrainage: %w", err)
+		}
+		return &link, nil
 	}
 
 	for attempt := 0; attempt < 5; attempt++ {
@@ -956,4 +980,16 @@ func randomReferralCode() (string, error) {
 		return "", err
 	}
 	return strings.ToLower(hex.EncodeToString(b)), nil
+}
+
+// sanitizeReferralCode lowercases the input and keeps only [a-z0-9-_] characters.
+func sanitizeReferralCode(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	var b strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			b.WriteRune(r)
+		}
+	}
+	return strings.Trim(b.String(), "-_")
 }
