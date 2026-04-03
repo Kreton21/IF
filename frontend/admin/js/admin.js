@@ -13,6 +13,7 @@ let busOptionsCache = null;
 let latestSalesStats = null;
 let salesChartRange = '1j';
 let salesChart = null;
+const expandedOrderIds = new Set();
 
 // ==========================================
 // Initialisation
@@ -819,22 +820,27 @@ async function loadOrders() {
         const response = await apiFetch(`${API_BASE}/admin/orders?${params}`);
         const data = await response.json();
 
-        document.getElementById('orders-table').innerHTML = renderOrdersTable(data.orders || []);
+        document.getElementById('orders-table').innerHTML = renderOrdersTable(data.orders || [], { withDetails: true });
         renderPagination(data.total_count, data.page, data.page_size);
     } catch (error) {
         console.error('Erreur chargement commandes:', error);
     }
 }
 
-function renderOrdersTable(orders) {
+function renderOrdersTable(orders, options = {}) {
+    const withDetails = !!options.withDetails;
+
     if (orders.length === 0) return '<p style="color:#718096;padding:20px;">Aucune commande</p>';
 
     let html = `<table>
         <thead><tr>
-            <th>N°</th><th>Client</th><th>Email</th><th>Camping</th><th>Assurance</th><th>Total</th><th>Statut</th><th>Date</th>
+            <th>N°</th><th>Client</th><th>Email</th><th>Camping</th><th>Assurance</th><th>Total</th><th>Statut</th><th>Date</th>${withDetails ? '<th style="text-align:right;">Action</th>' : ''}
         </tr></thead><tbody>`;
 
     orders.forEach(o => {
+        const canEdit = o.status === 'paid' || o.status === 'confirmed';
+        const isExpanded = withDetails && expandedOrderIds.has(o.id);
+
         html += `<tr>
             <td><strong>${o.order_number}</strong></td>
             <td>${o.customer_first_name} ${o.customer_last_name}</td>
@@ -844,10 +850,91 @@ function renderOrdersTable(orders) {
             <td>${formatPrice(o.total_cents)}</td>
             <td><span class="badge badge-${o.status}">${statusLabel(o.status)}</span></td>
             <td>${formatDateTime(o.created_at)}</td>
+            ${withDetails ? `<td style="text-align:right;"><button class="btn btn-sm btn-primary" onclick="toggleOrderDetails('${o.id}')">${isExpanded ? 'Masquer' : 'Détails'}</button></td>` : ''}
         </tr>`;
+
+        if (withDetails && isExpanded) {
+            html += `<tr class="order-details-row">
+                <td colspan="9">
+                    <div class="order-details-panel">
+                        ${canEdit ? `
+                            <div class="form-row">
+                                <div class="form-group"><label>Prénom</label><input type="text" id="order-first-name-${o.id}" value="${escapeAttr(o.customer_first_name || '')}"></div>
+                                <div class="form-group"><label>Nom</label><input type="text" id="order-last-name-${o.id}" value="${escapeAttr(o.customer_last_name || '')}"></div>
+                            </div>
+                            <div class="form-group"><label>Email</label><input type="email" id="order-email-${o.id}" value="${escapeAttr(o.customer_email || '')}"></div>
+                            <div class="form-row">
+                                <label class="order-checkbox-row"><input type="checkbox" id="order-camping-${o.id}" ${o.wants_camping ? 'checked' : ''}> Camping</label>
+                                <label class="order-checkbox-row"><input type="checkbox" id="order-insurance-${o.id}" ${o.wants_refund_insurance ? 'checked' : ''}> Assurance</label>
+                            </div>
+                            <div class="order-details-actions">
+                                <button class="btn btn-sm btn-primary" onclick="saveOrderDetails('${o.id}')">Confirmer</button>
+                                <button class="btn btn-sm" onclick="resendOrderEmailFromDetails('${o.id}')">Renvoyer</button>
+                            </div>
+                        ` : `
+                            <p style="margin:0;color:#718096;">Cette commande n'est pas modifiable (statut: ${statusLabel(o.status)}).</p>
+                        `}
+                    </div>
+                </td>
+            </tr>`;
+        }
     });
 
     return html + '</tbody></table>';
+}
+
+function toggleOrderDetails(orderID) {
+    if (expandedOrderIds.has(orderID)) {
+        expandedOrderIds.delete(orderID);
+    } else {
+        expandedOrderIds.add(orderID);
+    }
+    loadOrders();
+}
+
+async function saveOrderDetails(orderID) {
+    const body = {
+        customer_first_name: (document.getElementById(`order-first-name-${orderID}`)?.value || '').trim(),
+        customer_last_name: (document.getElementById(`order-last-name-${orderID}`)?.value || '').trim(),
+        customer_email: (document.getElementById(`order-email-${orderID}`)?.value || '').trim(),
+        wants_camping: !!document.getElementById(`order-camping-${orderID}`)?.checked,
+        wants_refund_insurance: !!document.getElementById(`order-insurance-${orderID}`)?.checked,
+    };
+
+    if (!body.customer_first_name || !body.customer_last_name || !body.customer_email) {
+        alert('Prénom, nom et email sont requis');
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de la mise à jour');
+        }
+        await loadOrders();
+        alert('✅ Commande mise à jour');
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
+}
+
+async function resendOrderEmailFromDetails(orderID) {
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}/resend-email`, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors du renvoi');
+        }
+        alert('✅ Email de confirmation renvoyé');
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
 }
 
 function renderPagination(total, page, pageSize) {

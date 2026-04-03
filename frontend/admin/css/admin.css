@@ -227,6 +227,29 @@ th {
 
 tr:hover { background: #f8fafc; }
 
+.order-details-row:hover { background: transparent; }
+
+.order-details-panel {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.order-details-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.order-checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-right: 16px;
+}
+
 /* Status badges */
 .badge {
     display: inline-block;

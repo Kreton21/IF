@@ -273,6 +273,14 @@ type OrderListResponse struct {
 	PageSize   int     `json:"page_size"`
 }
 
+type UpdateSuccessfulOrderRequest struct {
+	CustomerFirstName    string `json:"customer_first_name"`
+	CustomerLastName     string `json:"customer_last_name"`
+	CustomerEmail        string `json:"customer_email"`
+	WantsCamping         bool   `json:"wants_camping"`
+	WantsRefundInsurance bool   `json:"wants_refund_insurance"`
+}
+
 type CreateTicketTypeRequest struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`

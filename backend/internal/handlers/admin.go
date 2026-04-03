@@ -211,6 +211,58 @@ func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *AdminHandler) UpdateSuccessfulOrder(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	if strings.TrimSpace(orderID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande requis"})
+		return
+	}
+
+	var req models.UpdateSuccessfulOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	req.CustomerFirstName = strings.TrimSpace(req.CustomerFirstName)
+	req.CustomerLastName = strings.TrimSpace(req.CustomerLastName)
+	req.CustomerEmail = strings.TrimSpace(strings.ToLower(req.CustomerEmail))
+
+	if req.CustomerFirstName == "" || req.CustomerLastName == "" || req.CustomerEmail == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Prénom, nom et email sont requis"})
+		return
+	}
+
+	if !isValidEmail(req.CustomerEmail) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Email invalide"})
+		return
+	}
+
+	updated, err := h.adminService.UpdateSuccessfulOrderDetails(r.Context(), orderID, req)
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "introuvable") {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": msg})
+			return
+		}
+		if strings.Contains(msg, "modifiables") {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+			return
+		}
+		log.Printf("Erreur update commande %s: %v", orderID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
 func (h *AdminHandler) ResendOrderConfirmationEmail(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {
