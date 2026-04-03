@@ -128,6 +128,10 @@ func (s *AdminService) UpdateSuccessfulOrderDetails(ctx context.Context, orderID
 		return nil, fmt.Errorf("seules les commandes payées/confirmées sont modifiables")
 	}
 
+	if err := s.ticketRepo.UpdateOrderAttendees(ctx, orderID, req.CustomerFirstName, req.CustomerLastName, req.CustomerEmail); err != nil {
+		return nil, err
+	}
+
 	updated, err := s.orderRepo.UpdateSuccessfulOrderDetails(ctx, orderID, req)
 	if err != nil {
 		return nil, err

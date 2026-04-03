@@ -1096,6 +1096,24 @@ func (r *TicketRepository) GetBusOrderRides(ctx context.Context, orderID string)
 	return rides, nil
 }
 
+func (r *TicketRepository) UpdateOrderAttendees(ctx context.Context, orderID string, firstName, lastName, email string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE tickets
+		SET attendee_first_name = $1,
+		    attendee_last_name = $2,
+		    attendee_email = $3
+		WHERE order_id = $4`,
+		firstName,
+		lastName,
+		email,
+		orderID,
+	)
+	if err != nil {
+		return fmt.Errorf("erreur update attendees commande: %w", err)
+	}
+	return nil
+}
+
 func (r *TicketRepository) ReleaseBusOrderRides(ctx context.Context, orderID string) error {
 	rows, err := r.pool.Query(ctx, `
 		SELECT departure_id
