@@ -92,3 +92,15 @@ func GetAdminID(ctx context.Context) string {
 	}
 	return ""
 }
+
+func RequireNotRawRole(disallowedRole string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if GetAdminRawRole(r.Context()) == disallowedRole {
+				http.Error(w, `{"error": "Accès interdit"}`, http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

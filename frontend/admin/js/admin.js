@@ -100,6 +100,7 @@ function showDashboard() {
 
     // Masquer les onglets selon le rôle
     const isStaff = adminRole === 'staff';
+    const isComm = adminRole === 'comm';
     const isSuperAdmin = adminRole === 'super-admin';
     const changePasswordBtn = document.getElementById('change-password-btn');
     if (changePasswordBtn) {
@@ -114,15 +115,18 @@ function showDashboard() {
             passwordPanel.style.display = 'block';
         }
     }
-    document.querySelectorAll('.tab[data-tab="stats"], .tab[data-tab="orders"], .tab[data-tab="tickets"], .tab[data-tab="bus"], .tab[data-tab="referral"]').forEach(tab => {
-        tab.style.display = isStaff ? 'none' : '';
+    document.querySelectorAll('.tab').forEach(tab => {
+        const tabName = tab.dataset.tab;
+        tab.style.display = canAccessTab(tabName) ? '' : 'none';
     });
 
     if (isStaff) {
         // Staff → directement sur le scanner
         switchTab('scanner');
+    } else if (isComm) {
+        switchTab('stats');
     } else {
-        loadStats();
+        switchTab('stats');
     }
 }
 
@@ -271,7 +275,21 @@ async function apiFetch(url, options = {}) {
 // Navigation
 // ==========================================
 
+function canAccessTab(tabName) {
+    if (adminRole === 'staff') {
+        return tabName === 'scanner';
+    }
+    if (adminRole === 'comm') {
+        return tabName === 'stats' || tabName === 'kpi';
+    }
+    return true;
+}
+
 function switchTab(tabName) {
+    if (!canAccessTab(tabName)) {
+        return;
+    }
+
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
