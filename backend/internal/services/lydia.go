@@ -392,7 +392,7 @@ func (s *LydiaService) RefundTransaction(ctx context.Context, req LydiaRefundReq
 	if err != nil {
 		return fmt.Errorf("LYDIA_API_URL invalide: %w", err)
 	}
-	apiURL.Path = path.Join(apiURL.Path, "/api/transaction/refund")
+	apiURL.Path = path.Join(apiURL.Path, "/api/transaction/refund.json")
 
 	form := url.Values{}
 	form.Set("vendor_token", s.cfg.LydiaVendorToken)
