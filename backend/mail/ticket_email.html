@@ -89,13 +89,21 @@
                         <strong>Date :</strong> {{.EventDateText}}
                       </td>
                     </tr>
-                    {{if .VenueName}}
                     <tr>
                       <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
-                        <strong>Lieu :</strong> {{.VenueName}}{{if .VenueAddress}}, {{.VenueAddress}}{{end}}
+                        <strong>Lieu :</strong> Ch&acirc;teau de Saint-Jean-de-Beauregard, Rue du Ch&acirc;teau, 91940 Saint-Jean-de-Beauregard
                       </td>
                     </tr>
-                    {{end}}
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
+                        <strong>Horaires festival :</strong> Samedi 30 mai &agrave; 15h &mdash; Dimanche 31 mai &agrave; 6h du matin
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
+                        <strong>Camping :</strong> Ouverture samedi 30 mai &agrave; 15h &mdash; Fermeture dimanche 31 mai &agrave; 12h
+                      </td>
+                    </tr>
                     <tr>
                       <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
                         <strong>Commande :</strong> {{.OrderNumber}}
@@ -177,7 +185,8 @@
                       </td>
                     </tr>
                     <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Pr&eacute;senter un billet valide avec QR code</td></tr>
-                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Une pi&egrave;ce d'identit&eacute; peut &ecirc;tre demand&eacute;e</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; <strong>Pi&egrave;ce d'identit&eacute; obligatoire</strong> (carte nationale d'identit&eacute; ou passeport)</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; <strong>Carte &eacute;tudiante obligatoire</strong> pour les tarifs &eacute;tudiants</td></tr>
                     <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Chaque billet est personnel et valable pour une seule entr&eacute;e</td></tr>
                     <tr><td style="font-size:13px;line-height:22px;color:#422917;font-family:Arial,Helvetica,sans-serif;">&bull; Toute fraude, duplication ou revente non autoris&eacute;e peut entra&icirc;ner l'invalidation du billet</td></tr>
                   </table>

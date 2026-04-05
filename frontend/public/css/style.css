@@ -961,7 +961,7 @@ iframe:not(.hero-video) {
 	 PAGE STAFF
 ════════════════════════════════════════ */
 .staff-sec { background:var(--offwhite); }
-.why-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:36px; }
+.why-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:36px; }
 .why-card { background:#fff; border-radius:var(--r); padding:30px 24px; box-shadow:var(--sh); text-align:center; transition:all .3s; }
 .why-card:hover { transform:translateY(-4px); box-shadow:var(--sh-lg); }
 .why-ico { font-size:2.4rem; margin-bottom:12px; }
@@ -980,7 +980,7 @@ iframe:not(.hero-video) {
 .pole-l { list-style:none; }
 .pole-l li { font-size:.76rem; color:#777; padding:3px 0; }
 .pole-l li::before { content:'→ '; color:var(--rose); }
-.expect-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+.expect-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:28px; }
 .expect-card {
 	background:linear-gradient(135deg,var(--night),var(--purple));
 	border-radius:14px; padding:28px 22px; color:#fff; text-align:center; transition:all .3s;
