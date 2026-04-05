@@ -394,27 +394,58 @@ func (s *LydiaService) RefundTransaction(ctx context.Context, req LydiaRefundReq
 	}
 	apiURL.Path = path.Join(apiURL.Path, "/api/transaction/refund.json")
 
-	form := url.Values{}
-	form.Set("vendor_token", s.cfg.LydiaVendorToken)
-	form.Set("amount", fmt.Sprintf("%.2f", float64(req.AmountCents)/100.0))
-	if transactionIdentifier != "" {
-		form.Set("transaction_identifier", transactionIdentifier)
-	} else {
-		form.Set("order_ref", orderRef)
+	targets := make([]url.Values, 0, 2)
+	buildForm := func() url.Values {
+		form := url.Values{}
+		form.Set("vendor_token", s.cfg.LydiaVendorToken)
+		form.Set("amount", fmt.Sprintf("%.2f", float64(req.AmountCents)/100.0))
+		if req.NotifyPayer {
+			form.Set("notify_payer", "yes")
+		} else {
+			form.Set("notify_payer", "no")
+		}
+		if req.NotifyCollecter {
+			form.Set("notify_collecter", "yes")
+		} else {
+			form.Set("notify_collecter", "no")
+		}
+		return form
 	}
-	if req.NotifyPayer {
-		form.Set("notify_payer", "yes")
-	} else {
-		form.Set("notify_payer", "no")
-	}
-	if req.NotifyCollecter {
-		form.Set("notify_collecter", "yes")
-	} else {
-		form.Set("notify_collecter", "no")
-	}
-	form.Set("signature", s.buildLydiaSignature(form, []string{"transaction_identifier", "order_ref", "amount"}))
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL.String(), strings.NewReader(form.Encode()))
+	if transactionIdentifier != "" {
+		form := buildForm()
+		form.Set("transaction_identifier", transactionIdentifier)
+		form.Set("signature", s.buildLydiaSignature(form, []string{"transaction_identifier", "order_ref", "amount"}))
+		targets = append(targets, form)
+	}
+	if orderRef != "" {
+		form := buildForm()
+		form.Set("order_ref", orderRef)
+		form.Set("signature", s.buildLydiaSignature(form, []string{"transaction_identifier", "order_ref", "amount"}))
+		targets = append(targets, form)
+	}
+
+	var lastErr error
+	for idx, form := range targets {
+		if err := s.callLydiaRefund(ctx, apiURL.String(), form); err == nil {
+			return nil
+		} else {
+			lastErr = err
+			if s.cfg.LydiaDebug && idx < len(targets)-1 {
+				log.Printf("[LYDIA DEBUG] refund fallback vers autre identifiant (%v)", err)
+			}
+		}
+	}
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return fmt.Errorf("aucune tentative de remboursement Lydia possible")
+}
+
+func (s *LydiaService) callLydiaRefund(ctx context.Context, apiURL string, form url.Values) error {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return fmt.Errorf("erreur création requête Lydia refund: %w", err)
 	}
@@ -428,6 +459,7 @@ func (s *LydiaService) RefundTransaction(ctx context.Context, req LydiaRefundReq
 
 	body, _ := io.ReadAll(resp.Body)
 	if s.cfg.LydiaDebug {
+		log.Printf("[LYDIA DEBUG] refund payload id=%s order_ref=%s amount=%s", form.Get("transaction_identifier"), form.Get("order_ref"), form.Get("amount"))
 		log.Printf("[LYDIA DEBUG] refund HTTP=%d body=%s", resp.StatusCode, string(body))
 	}
 
