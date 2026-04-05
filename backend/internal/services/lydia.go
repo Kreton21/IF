@@ -398,6 +398,7 @@ func (s *LydiaService) RefundTransaction(ctx context.Context, req LydiaRefundReq
 	buildForm := func() url.Values {
 		form := url.Values{}
 		form.Set("vendor_token", s.cfg.LydiaVendorToken)
+		form.Set("amount", fmt.Sprintf("%.2f", float64(req.AmountCents)/100.0))
 		if req.NotifyPayer {
 			form.Set("notify_payer", "yes")
 		} else {
@@ -458,7 +459,7 @@ func (s *LydiaService) callLydiaRefund(ctx context.Context, apiURL string, form 
 
 	body, _ := io.ReadAll(resp.Body)
 	if s.cfg.LydiaDebug {
-		log.Printf("[LYDIA DEBUG] refund/cancel payload id=%s order_ref=%s", form.Get("transaction_identifier"), form.Get("order_ref"))
+		log.Printf("[LYDIA DEBUG] refund/cancel payload id=%s order_ref=%s amount=%s", form.Get("transaction_identifier"), form.Get("order_ref"), form.Get("amount"))
 		log.Printf("[LYDIA DEBUG] refund/cancel HTTP=%d body=%s", resp.StatusCode, string(body))
 	}
 
