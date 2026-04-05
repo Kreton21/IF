@@ -893,6 +893,7 @@ function renderOrdersTable(orders, options = {}) {
                             <div class="order-details-actions">
                                 <button class="btn btn-sm btn-primary" onclick="saveOrderDetails('${o.id}')">Confirmer</button>
                                 <button class="btn btn-sm" onclick="resendOrderEmailFromDetails('${o.id}')">Renvoyer</button>
+                                <button class="btn btn-sm btn-danger" onclick="refundOrderTotalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Rembourser</button>
                             </div>
                         ` : `
                             <p style="margin:0;color:#718096;">Cette commande n'est pas modifiable (statut: ${statusLabel(o.status)}).</p>
@@ -955,6 +956,27 @@ async function resendOrderEmailFromDetails(orderID) {
             throw new Error(data.error || 'Erreur lors du renvoi');
         }
         alert('✅ Email de confirmation renvoyé');
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
+}
+
+async function refundOrderTotalFromDetails(orderID, orderNumber) {
+    const label = orderNumber ? ` (${orderNumber})` : '';
+    if (!confirm(`Confirmer le remboursement total de cette commande${label} ?\nCette action mettra le statut à "Remboursé" et les tickets deviendront invalides au scan.`)) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}/refund-total`, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors du remboursement');
+        }
+        await loadOrders();
+        alert('✅ Commande remboursée et statut mis à jour');
     } catch (error) {
         alert(`❌ ${error.message}`);
     }
