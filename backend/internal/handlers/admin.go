@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -211,6 +212,23 @@ func (h *AdminHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *AdminHandler) GetSalesTimelineCustom(w http.ResponseWriter, r *http.Request) {
+	startAt, endAt, err := parseAdminDateRange(r.URL.Query().Get("start"), r.URL.Query().Get("end"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	points, err := h.adminService.GetSalesTimelineCustom(r.Context(), startAt, endAt)
+	if err != nil {
+		log.Printf("Erreur timeline stats custom: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"points": points})
+}
+
 func (h *AdminHandler) UpdateSuccessfulOrder(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {
@@ -331,6 +349,43 @@ func (h *AdminHandler) ResendAllConfirmationEmails(w http.ResponseWriter, r *htt
 	}
 
 	writeJSON(w, http.StatusOK, map[string]int{"sent_orders": sent, "failed_orders": failed})
+}
+
+func parseAdminDateRange(startRaw, endRaw string) (time.Time, time.Time, error) {
+	startRaw = strings.TrimSpace(startRaw)
+	endRaw = strings.TrimSpace(endRaw)
+	if startRaw == "" || endRaw == "" {
+		return time.Time{}, time.Time{}, fmt.Errorf("start et end sont requis")
+	}
+
+	startAt, err := parseAdminDateOrDateTime(startRaw, true)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	endAt, err := parseAdminDateOrDateTime(endRaw, false)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	if endAt.Before(startAt) {
+		return time.Time{}, time.Time{}, fmt.Errorf("la date de fin doit être après la date de début")
+	}
+
+	return startAt, endAt, nil
+}
+
+func parseAdminDateOrDateTime(value string, startOfDay bool) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t, nil
+	}
+	if d, err := time.Parse("2006-01-02", value); err == nil {
+		if startOfDay {
+			return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.Local), nil
+		}
+		return time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), time.Local), nil
+	}
+	return time.Time{}, fmt.Errorf("format date invalide (utiliser YYYY-MM-DD ou RFC3339)")
 }
 
 // ValidateQR valide un QR code à l'entrée

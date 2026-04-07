@@ -1012,6 +1012,60 @@ func (r *OrderRepository) querySalesTimeline(ctx context.Context, intervalLitera
 	return out, nil
 }
 
+func (r *OrderRepository) GetSalesTimelineBetween(ctx context.Context, startAt, endAt time.Time) ([]models.SalesTimelinePoint, error) {
+	bucketExpr := "date_trunc('day', o.created_at)"
+	if endAt.Sub(startAt) <= 48*time.Hour {
+		bucketExpr = "date_trunc('hour', o.created_at)"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			%s AS bucket,
+			COALESCE(SUM(o.total_cents), 0) AS revenue,
+			COALESCE(SUM((
+				SELECT COUNT(*)
+				FROM tickets t2
+				LEFT JOIN bus_tickets bt2 ON bt2.ticket_id = t2.id
+				WHERE t2.order_id = o.id AND bt2.ticket_id IS NULL
+			)), 0) AS ticket_count
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND o.created_at >= $1
+		  AND o.created_at <= $2
+		  AND NOT EXISTS (
+			  SELECT 1
+			  FROM tickets tb
+			  JOIN bus_tickets btb ON btb.ticket_id = tb.id
+			  WHERE tb.order_id = o.id
+		  )
+		GROUP BY bucket
+		ORDER BY bucket ASC
+	`, bucketExpr)
+
+	rows, err := r.pool.Query(ctx, query, startAt, endAt)
+	if err != nil {
+		return nil, fmt.Errorf("erreur série ventes custom: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.SalesTimelinePoint, 0)
+	for rows.Next() {
+		var bucket time.Time
+		var point models.SalesTimelinePoint
+		if scanErr := rows.Scan(&bucket, &point.RevenueCents, &point.TicketCount); scanErr != nil {
+			return nil, fmt.Errorf("erreur lecture série ventes custom: %w", scanErr)
+		}
+		point.Bucket = bucket.Format(time.RFC3339)
+		out = append(out, point)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur parcours série ventes custom: %w", err)
+	}
+
+	return out, nil
+}
+
 func randomReferralCode() (string, error) {
 	b := make([]byte, 5)
 	if _, err := rand.Read(b); err != nil {

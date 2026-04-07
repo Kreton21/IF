@@ -102,6 +102,7 @@ func NewRouter(
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(middleware.JWTAuth(adminService))
 			r.Get("/stats", adminHandler.GetStats)
+			r.Get("/stats/timeline", adminHandler.GetSalesTimelineCustom)
 			r.Get("/analytics/kpi", analyticsHandler.GetKPI)
 
 			r.Group(func(r chi.Router) {

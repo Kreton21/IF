@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
@@ -75,7 +77,13 @@ func (h *AnalyticsHandler) GetKPI(w http.ResponseWriter, r *http.Request) {
 		rangeName = "1semaine"
 	}
 
-	kpi, err := h.repo.GetKPI(r.Context(), rangeName)
+	startAt, endAt, err := parseOptionalDateRange(r.URL.Query().Get("start"), r.URL.Query().Get("end"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	kpi, err := h.repo.GetKPI(r.Context(), rangeName, startAt, endAt)
 	if err != nil {
 		log.Printf("Erreur analytics KPI: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
@@ -83,4 +91,51 @@ func (h *AnalyticsHandler) GetKPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, kpi)
+}
+
+func parseOptionalDateRange(startRaw, endRaw string) (*time.Time, *time.Time, error) {
+	startRaw = strings.TrimSpace(startRaw)
+	endRaw = strings.TrimSpace(endRaw)
+
+	if startRaw == "" && endRaw == "" {
+		return nil, nil, nil
+	}
+	if startRaw == "" || endRaw == "" {
+		return nil, nil, fmt.Errorf("start et end sont requis ensemble")
+	}
+
+	startAt, err := parseDateOrDateTime(startRaw, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	endAt, err := parseDateOrDateTime(endRaw, false)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if endAt.Before(startAt) {
+		return nil, nil, fmt.Errorf("la date de fin doit être après la date de début")
+	}
+
+	return &startAt, &endAt, nil
+}
+
+func parseDateOrDateTime(value string, startOfDay bool) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}, fmt.Errorf("date invalide")
+	}
+
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t, nil
+	}
+
+	if d, err := time.Parse("2006-01-02", value); err == nil {
+		if startOfDay {
+			return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.Local), nil
+		}
+		return time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), time.Local), nil
+	}
+
+	return time.Time{}, fmt.Errorf("format date invalide (utiliser YYYY-MM-DD ou RFC3339)")
 }
