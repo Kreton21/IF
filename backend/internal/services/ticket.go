@@ -1051,6 +1051,46 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 	return sent, failed, nil
 }
 
+func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération commande %s: %w", orderID, err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable")
+	}
+
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return fmt.Errorf("seules les commandes payées/confirmées sont remboursables")
+	}
+
+	if s.paymentProvider == nil || s.paymentProvider.Name() != "lydia" {
+		return fmt.Errorf("remboursement automatique disponible uniquement pour Lydia")
+	}
+
+	lydiaProvider, ok := s.paymentProvider.(*LydiaService)
+	if !ok {
+		return fmt.Errorf("provider Lydia indisponible")
+	}
+
+	transactionIdentifier := strings.TrimSpace(order.HelloAssoPaymentID)
+	if err := lydiaProvider.RefundTransaction(ctx, LydiaRefundRequest{
+		TransactionIdentifier: transactionIdentifier,
+		OrderRef:              order.OrderNumber,
+		AmountCents:           order.TotalCents,
+		NotifyPayer:           true,
+		NotifyCollecter:       true,
+	}); err != nil {
+		return fmt.Errorf("échec remboursement Lydia: %w", err)
+	}
+
+	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusRefunded); err != nil {
+		return fmt.Errorf("remboursement effectué mais statut non mis à jour: %w", err)
+	}
+
+	return nil
+}
+
 func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {

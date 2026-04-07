@@ -160,6 +160,17 @@ func main() {
 				log.Println("👤 Compte staff créé (staff / staff2026)")
 			}
 		}
+
+		// Compte communication (stats + KPI uniquement)
+		existingComm, _ := adminRepo.GetByUsername(ctx, "comm")
+		if existingComm == nil {
+			err := adminService.CreateAdmin(ctx, "comm", "comm2026", "Communication", "comm")
+			if err != nil {
+				log.Printf("⚠️  Erreur création compte comm: %v", err)
+			} else {
+				log.Println("👤 Compte comm créé (comm / comm2026)")
+			}
+		}
 	}()
 
 	go func() {

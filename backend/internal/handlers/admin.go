@@ -285,6 +285,37 @@ func (h *AdminHandler) ResendOrderConfirmationEmail(w http.ResponseWriter, r *ht
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Email de confirmation renvoyé"})
 }
 
+func (h *AdminHandler) RefundOrderTotal(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	if strings.TrimSpace(orderID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande requis"})
+		return
+	}
+
+	if err := h.ticketService.RefundOrderTotal(r.Context(), orderID); err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "introuvable") {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": msg})
+			return
+		}
+		if strings.Contains(msg, "remboursables") || strings.Contains(msg, "Lydia") || strings.Contains(msg, "provider") {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+			return
+		}
+		log.Printf("Erreur remboursement commande %s: %v", orderID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Commande remboursée"})
+}
+
 func (h *AdminHandler) ResendAllConfirmationEmails(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {
