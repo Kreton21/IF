@@ -14,6 +14,8 @@ let latestSalesStats = null;
 let salesChartRange = '1j';
 let salesChart = null;
 const expandedOrderIds = new Set();
+let salesCustomStart = '';
+let salesCustomEnd = '';
 
 // ==========================================
 // Initialisation
@@ -478,7 +480,51 @@ function setSalesChartRange(rangeKey) {
     });
 
     if (latestSalesStats) {
+        if (rangeKey === 'custom') {
+            applyCustomSalesRange();
+            return;
+        }
         renderDailySalesChart();
+    }
+}
+
+async function applyCustomSalesRange() {
+    const start = document.getElementById('sales-custom-start')?.value || '';
+    const end = document.getElementById('sales-custom-end')?.value || '';
+
+    if (!start || !end) {
+        alert('Sélectionnez une date de début et de fin');
+        return;
+    }
+
+    salesCustomStart = start;
+    salesCustomEnd = end;
+    salesChartRange = 'custom';
+
+    document.querySelectorAll('#sales-chart-range-tabs [data-range]').forEach(btn => {
+        const isActive = btn.getAttribute('data-range') === 'custom';
+        btn.classList.toggle('btn-primary', isActive);
+    });
+
+    try {
+        const params = new URLSearchParams({ start, end });
+        const response = await apiFetch(`${API_BASE}/admin/stats/timeline?${params.toString()}`);
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.error || 'Erreur chargement timeline custom');
+        }
+
+        if (!latestSalesStats) {
+            latestSalesStats = { sales_timeline: {} };
+        }
+        if (!latestSalesStats.sales_timeline) {
+            latestSalesStats.sales_timeline = {};
+        }
+
+        latestSalesStats.sales_timeline.custom = Array.isArray(payload.points) ? payload.points : [];
+        renderDailySalesChart();
+    } catch (error) {
+        alert(`❌ ${error.message}`);
     }
 }
 
@@ -797,7 +843,7 @@ function formatBucketLabel(bucket, rangeKey) {
     const date = new Date(bucket);
     if (Number.isNaN(date.getTime())) return '';
 
-    if (rangeKey === '1h' || rangeKey === '1j') {
+    if (rangeKey === '1h' || rangeKey === '1j' || rangeKey === 'custom') {
         return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
 
@@ -808,7 +854,7 @@ function formatTooltipDate(bucket, rangeKey) {
     const date = new Date(bucket);
     if (Number.isNaN(date.getTime())) return '';
 
-    if (rangeKey === '1h' || rangeKey === '1j') {
+    if (rangeKey === '1h' || rangeKey === '1j' || rangeKey === 'custom') {
         return date.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
@@ -1914,13 +1960,28 @@ async function loadKPI(range) {
     kpiCurrentRange = range;
 
     // Toggle active range button
-    ['1h', '1j', '1semaine', '1mois'].forEach(r => {
+    ['1h', '1j', '1semaine', '1mois', 'custom'].forEach(r => {
         const btn = document.getElementById('kpi-range-' + r);
         if (btn) btn.classList.toggle('btn-primary', r === range);
     });
 
+    const params = new URLSearchParams();
+    if (range !== 'custom') {
+        params.set('range', range);
+    } else {
+        const start = document.getElementById('kpi-custom-start')?.value || '';
+        const end = document.getElementById('kpi-custom-end')?.value || '';
+        if (!start || !end) {
+            alert('Sélectionnez une date de début et de fin pour la période KPI');
+            return;
+        }
+        params.set('range', 'custom');
+        params.set('start', start);
+        params.set('end', end);
+    }
+
     try {
-        const response = await apiFetch(`${API_BASE}/admin/analytics/kpi?range=${encodeURIComponent(range)}`);
+        const response = await apiFetch(`${API_BASE}/admin/analytics/kpi?${params.toString()}`);
         const kpi = await response.json();
 
         document.getElementById('kpi-sessions').textContent = kpi.total_sessions ?? '-';
@@ -1933,6 +1994,10 @@ async function loadKPI(range) {
     } catch (error) {
         console.error('Erreur chargement KPI:', error);
     }
+}
+
+function applyCustomKPIRange() {
+    loadKPI('custom');
 }
 
 function formatDurationShort(seconds) {

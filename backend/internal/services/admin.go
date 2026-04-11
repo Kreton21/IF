@@ -115,6 +115,10 @@ func (s *AdminService) ListOrders(ctx context.Context, params models.OrderListPa
 	return s.orderRepo.ListOrders(ctx, params)
 }
 
+func (s *AdminService) GetSalesTimelineCustom(ctx context.Context, startAt, endAt time.Time) ([]models.SalesTimelinePoint, error) {
+	return s.orderRepo.GetSalesTimelineBetween(ctx, startAt, endAt)
+}
+
 func (s *AdminService) UpdateSuccessfulOrderDetails(ctx context.Context, orderID string, req models.UpdateSuccessfulOrderRequest) (*models.Order, error) {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {

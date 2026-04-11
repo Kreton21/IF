@@ -164,6 +164,18 @@
                     <button type="button" class="btn btn-sm btn-primary" data-range="1j" onclick="setSalesChartRange('1j')">1j</button>
                     <button type="button" class="btn btn-sm" data-range="1semaine" onclick="setSalesChartRange('1semaine')">1 semaine</button>
                     <button type="button" class="btn btn-sm" data-range="1mois" onclick="setSalesChartRange('1mois')">1 mois</button>
+                    <button type="button" class="btn btn-sm" data-range="custom" onclick="setSalesChartRange('custom')">Période</button>
+                </div>
+                <div class="form-row" style="margin-top:10px;gap:8px;align-items:flex-end;">
+                    <div class="form-group" style="margin:0;max-width:200px;">
+                        <label>Début</label>
+                        <input type="date" id="sales-custom-start">
+                    </div>
+                    <div class="form-group" style="margin:0;max-width:200px;">
+                        <label>Fin</label>
+                        <input type="date" id="sales-custom-end">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="applyCustomSalesRange()">Appliquer</button>
                 </div>
                 <div id="sales-by-day-chart" class="daily-chart"></div>
                 <div id="stats-by-day" class="table-container" style="margin-top:12px;"></div>
@@ -390,6 +402,10 @@
                 <button id="kpi-range-1j" class="btn btn-sm btn-primary" onclick="loadKPI('1j')">1 jour</button>
                 <button id="kpi-range-1semaine" class="btn btn-sm" onclick="loadKPI('1semaine')">1 semaine</button>
                 <button id="kpi-range-1mois" class="btn btn-sm" onclick="loadKPI('1mois')">1 mois</button>
+                <button id="kpi-range-custom" class="btn btn-sm" onclick="loadKPI('custom')">Période</button>
+                <input type="date" id="kpi-custom-start" style="max-width:180px;">
+                <input type="date" id="kpi-custom-end" style="max-width:180px;">
+                <button class="btn btn-sm btn-primary" onclick="applyCustomKPIRange()">Appliquer</button>
             </div>
 
             <div class="stats-grid">

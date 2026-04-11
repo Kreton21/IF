@@ -46,16 +46,16 @@ func (r *AnalyticsRepository) InsertClick(ctx context.Context, sessionID, target
 	return err
 }
 
-func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string) (*models.AnalyticsKPI, error) {
-	since := rangeToTime(rangeName)
+func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string, startAt, endAt *time.Time) (*models.AnalyticsKPI, error) {
+	since, until := rangeToBounds(rangeName, startAt, endAt)
 
 	kpi := &models.AnalyticsKPI{}
 
 	// Total sessions & avg duration
 	err := r.pool.QueryRow(ctx,
 		`SELECT COUNT(*), COALESCE(AVG(duration_ms), 0)
-		 FROM analytics_sessions WHERE started_at >= $1`,
-		since,
+		 FROM analytics_sessions WHERE started_at >= $1 AND started_at <= $2`,
+		since, until,
 	).Scan(&kpi.TotalSessions, &kpi.AvgSessionDuration)
 	if err != nil {
 		return nil, fmt.Errorf("sessions kpi: %w", err)
@@ -65,20 +65,20 @@ func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string) (*mo
 
 	// Total clicks
 	err = r.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM analytics_clicks WHERE clicked_at >= $1`,
-		since,
+		`SELECT COUNT(*) FROM analytics_clicks WHERE clicked_at >= $1 AND clicked_at <= $2`,
+		since, until,
 	).Scan(&kpi.TotalClicks)
 	if err != nil {
 		return nil, fmt.Errorf("clicks kpi: %w", err)
 	}
 
 	// Clicks timeline
-	bucket := bucketForRange(rangeName)
+	bucket := bucketForBounds(rangeName, since, until)
 	kpi.ClicksTimeline, err = r.timelineQuery(ctx,
 		fmt.Sprintf(`SELECT date_trunc('%s', clicked_at) AS bucket, COUNT(*)
-		 FROM analytics_clicks WHERE clicked_at >= $1
+		 FROM analytics_clicks WHERE clicked_at >= $1 AND clicked_at <= $2
 		 GROUP BY bucket ORDER BY bucket`, bucket),
-		since,
+		since, until,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("clicks timeline: %w", err)
@@ -87,9 +87,9 @@ func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string) (*mo
 	// Sessions timeline
 	kpi.SessionsTimeline, err = r.timelineQuery(ctx,
 		fmt.Sprintf(`SELECT date_trunc('%s', started_at) AS bucket, COUNT(*)
-		 FROM analytics_sessions WHERE started_at >= $1
+		 FROM analytics_sessions WHERE started_at >= $1 AND started_at <= $2
 		 GROUP BY bucket ORDER BY bucket`, bucket),
-		since,
+		since, until,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("sessions timeline: %w", err)
@@ -98,11 +98,11 @@ func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string) (*mo
 	// Top pages
 	rows, err := r.pool.Query(ctx,
 		`SELECT page, COUNT(DISTINCT session_id) AS sessions,
-		        (SELECT COUNT(*) FROM analytics_clicks c WHERE c.page = s.page AND c.clicked_at >= $1) AS clicks
+		        (SELECT COUNT(*) FROM analytics_clicks c WHERE c.page = s.page AND c.clicked_at >= $1 AND c.clicked_at <= $2) AS clicks
 		 FROM analytics_sessions s
-		 WHERE started_at >= $1
+		 WHERE started_at >= $1 AND started_at <= $2
 		 GROUP BY page ORDER BY sessions DESC LIMIT 10`,
-		since,
+		since, until,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("top pages: %w", err)
@@ -120,8 +120,8 @@ func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string) (*mo
 	return kpi, nil
 }
 
-func (r *AnalyticsRepository) timelineQuery(ctx context.Context, query string, since time.Time) ([]models.AnalyticsTimePoint, error) {
-	rows, err := r.pool.Query(ctx, query, since)
+func (r *AnalyticsRepository) timelineQuery(ctx context.Context, query string, since, until time.Time) ([]models.AnalyticsTimePoint, error) {
+	rows, err := r.pool.Query(ctx, query, since, until)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +156,13 @@ func rangeToTime(rangeName string) time.Time {
 	}
 }
 
+func rangeToBounds(rangeName string, startAt, endAt *time.Time) (time.Time, time.Time) {
+	if startAt != nil && endAt != nil {
+		return *startAt, *endAt
+	}
+	return rangeToTime(rangeName), time.Now()
+}
+
 func bucketForRange(rangeName string) string {
 	switch rangeName {
 	case "1h":
@@ -169,4 +176,14 @@ func bucketForRange(rangeName string) string {
 	default:
 		return "day"
 	}
+}
+
+func bucketForBounds(rangeName string, since, until time.Time) string {
+	if rangeName != "custom" {
+		return bucketForRange(rangeName)
+	}
+	if until.Sub(since) <= 24*time.Hour {
+		return "hour"
+	}
+	return "day"
 }
