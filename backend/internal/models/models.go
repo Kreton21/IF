@@ -323,22 +323,36 @@ type TicketTypeForEmail struct {
 	Name              string             `json:"name"`
 	Description       string             `json:"description,omitempty"`
 	PriceCents        int                `json:"price_cents"`
-	QuantityTotal     int                `json:"quantity_total"`
-	QuantitySold      int                `json:"quantity_sold"`
 	MaxPerOrder       int                `json:"max_per_order"`
+	MaxSelectable     int                `json:"max_selectable"`
 	OneTicketPerEmail bool               `json:"one_ticket_per_email"`
 	SaleStart         time.Time          `json:"sale_start"`
 	SaleEnd           time.Time          `json:"sale_end"`
 	IsActive          bool               `json:"is_active"`
+	IsAvailable       bool               `json:"is_available"`
 	Categories        []CategoryForEmail `json:"categories"`
 }
 
 type CategoryForEmail struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	QuantityAllocated int    `json:"quantity_allocated"`
-	QuantitySold      int    `json:"quantity_sold"`
-	IsCheckbox        bool   `json:"is_checkbox"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	IsCheckbox  bool   `json:"is_checkbox"`
+	IsAvailable bool   `json:"is_available"`
+}
+
+type PublicBusDeparture struct {
+	ID            string    `json:"id"`
+	StationID     string    `json:"station_id"`
+	Direction     string    `json:"direction"`
+	DepartureTime time.Time `json:"departure_time"`
+	PriceCents    int       `json:"price_cents"`
+	IsActive      bool      `json:"is_active"`
+}
+
+type PublicBusOptionsResponse struct {
+	Stations           []BusStation         `json:"stations"`
+	OutboundDepartures []PublicBusDeparture `json:"outbound_departures"`
+	ReturnDepartures   []PublicBusDeparture `json:"return_departures"`
 }
 
 type BusStation struct {

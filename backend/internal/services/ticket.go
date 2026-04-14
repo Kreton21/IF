@@ -193,6 +193,7 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 
 		// Filter categories by email domain and masked status
 		var filteredCats []models.CategoryForEmail
+		totalCategoryRemaining := 0
 		for _, cat := range cats {
 			if cat.IsMasked {
 				continue
@@ -200,12 +201,16 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 			if !emailAllowedByRules(normalizedEmail, cat.AllowedDomains) {
 				continue
 			}
+			remaining := cat.QuantityAllocated - cat.QuantitySold
+			if remaining < 0 {
+				remaining = 0
+			}
+			totalCategoryRemaining += remaining
 			filteredCats = append(filteredCats, models.CategoryForEmail{
-				ID:                cat.ID,
-				Name:              cat.Name,
-				QuantityAllocated: cat.QuantityAllocated,
-				QuantitySold:      cat.QuantitySold,
-				IsCheckbox:        cat.IsCheckbox,
+				ID:          cat.ID,
+				Name:        cat.Name,
+				IsCheckbox:  cat.IsCheckbox,
+				IsAvailable: remaining > 0,
 			})
 		}
 
@@ -215,18 +220,32 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 			if !tt.OneTicketPerEmail && effectiveMaxPerOrder < 2 {
 				effectiveMaxPerOrder = 10
 			}
+
+			remaining := tt.QuantityTotal - tt.QuantitySold
+			if len(cats) > 0 {
+				remaining = totalCategoryRemaining
+			}
+			if remaining < 0 {
+				remaining = 0
+			}
+			maxSelectable := effectiveMaxPerOrder
+			if remaining < maxSelectable {
+				maxSelectable = remaining
+			}
+			isAvailable := remaining > 0
+
 			ttForEmail := models.TicketTypeForEmail{
 				ID:                tt.ID,
 				Name:              tt.Name,
 				Description:       tt.Description,
 				PriceCents:        tt.PriceCents,
-				QuantityTotal:     tt.QuantityTotal,
-				QuantitySold:      tt.QuantitySold,
 				MaxPerOrder:       effectiveMaxPerOrder,
+				MaxSelectable:     maxSelectable,
 				OneTicketPerEmail: tt.OneTicketPerEmail,
 				SaleStart:         tt.SaleStart,
 				SaleEnd:           tt.SaleEnd,
 				IsActive:          tt.IsActive,
+				IsAvailable:       isAvailable,
 				Categories:        filteredCats,
 			}
 			result = append(result, ttForEmail)
@@ -1175,7 +1194,11 @@ func (s *TicketService) HandleLydiaWebhook(ctx context.Context, event string, fo
 	}
 	orderID := order.ID
 
-	if sig := form.Get("sig"); sig != "" && s.cfg.LydiaVendorPrivateToken != "" {
+	if s.cfg.LydiaVendorPrivateToken != "" {
+		sig := strings.TrimSpace(form.Get("sig"))
+		if sig == "" {
+			return fmt.Errorf("signature Lydia manquante")
+		}
 		if !s.verifyLydiaSignature(form, sig) {
 			return fmt.Errorf("signature Lydia invalide")
 		}
@@ -1262,14 +1285,14 @@ func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (
 	if totalTickets == 0 {
 		return &models.CampingClaimResponse{
 			UpdatedTickets: 0,
-			Message:        "Il n'y a pas de billet acheté. Veuillez prendre un billet.",
+			Message:        "Si des billets éligibles existent, l'option camping sera activée.",
 		}, nil
 	}
 
 	if updatable == 0 && alreadyCamping > 0 {
 		return &models.CampingClaimResponse{
 			UpdatedTickets: 0,
-			Message:        "Le ticket possède déjà l'option camping",
+			Message:        "Si des billets éligibles existent, l'option camping sera activée.",
 		}, nil
 	}
 
@@ -1281,13 +1304,13 @@ func (s *TicketService) ClaimCampingByEmail(ctx context.Context, email string) (
 	if updated == 0 {
 		return &models.CampingClaimResponse{
 			UpdatedTickets: 0,
-			Message:        "Le ticket possède déjà l'option camping",
+			Message:        "Si des billets éligibles existent, l'option camping sera activée.",
 		}, nil
 	}
 
 	return &models.CampingClaimResponse{
 		UpdatedTickets: updated,
-		Message:        "Option camping ajoutée à votre ticket",
+		Message:        "Si des billets éligibles existent, l'option camping sera activée.",
 	}, nil
 }
 

@@ -46,7 +46,38 @@ func (h *TicketHandler) GetTicketTypes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, types)
+	resp := make([]models.TicketTypeForEmail, 0, len(types))
+	for _, tt := range types {
+		effectiveMaxPerOrder := tt.MaxPerOrder
+		if !tt.OneTicketPerEmail && effectiveMaxPerOrder < 2 {
+			effectiveMaxPerOrder = 10
+		}
+		remaining := tt.QuantityTotal - tt.QuantitySold
+		if remaining < 0 {
+			remaining = 0
+		}
+		maxSelectable := effectiveMaxPerOrder
+		if remaining < maxSelectable {
+			maxSelectable = remaining
+		}
+
+		resp = append(resp, models.TicketTypeForEmail{
+			ID:                tt.ID,
+			Name:              tt.Name,
+			Description:       tt.Description,
+			PriceCents:        tt.PriceCents,
+			MaxPerOrder:       effectiveMaxPerOrder,
+			MaxSelectable:     maxSelectable,
+			OneTicketPerEmail: tt.OneTicketPerEmail,
+			SaleStart:         tt.SaleStart,
+			SaleEnd:           tt.SaleEnd,
+			IsActive:          tt.IsActive,
+			IsAvailable:       remaining > 0,
+			Categories:        []models.CategoryForEmail{},
+		})
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // CreateCheckout crée un checkout HelloAsso
@@ -148,7 +179,35 @@ func (h *TicketHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	outbound := make([]models.PublicBusDeparture, 0, len(resp.OutboundDepartures))
+	for _, dep := range resp.OutboundDepartures {
+		outbound = append(outbound, models.PublicBusDeparture{
+			ID:            dep.ID,
+			StationID:     dep.StationID,
+			Direction:     dep.Direction,
+			DepartureTime: dep.DepartureTime,
+			PriceCents:    dep.PriceCents,
+			IsActive:      dep.IsActive,
+		})
+	}
+
+	returns := make([]models.PublicBusDeparture, 0, len(resp.ReturnDepartures))
+	for _, dep := range resp.ReturnDepartures {
+		returns = append(returns, models.PublicBusDeparture{
+			ID:            dep.ID,
+			StationID:     dep.StationID,
+			Direction:     dep.Direction,
+			DepartureTime: dep.DepartureTime,
+			PriceCents:    dep.PriceCents,
+			IsActive:      dep.IsActive,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, models.PublicBusOptionsResponse{
+		Stations:           resp.Stations,
+		OutboundDepartures: outbound,
+		ReturnDepartures:   returns,
+	})
 }
 
 func (h *TicketHandler) CreateBusCheckout(w http.ResponseWriter, r *http.Request) {

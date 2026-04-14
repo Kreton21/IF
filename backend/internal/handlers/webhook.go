@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"log"
@@ -26,6 +27,11 @@ func NewWebhookHandler(ticketService *services.TicketService, adminService *serv
 
 // HandleHelloAssoWebhook traite les webhooks de HelloAsso
 func (h *WebhookHandler) HandleHelloAssoWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isHelloAssoWebhookAuthorized(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Erreur lecture webhook body: %v", err)
@@ -131,6 +137,23 @@ func (h *WebhookHandler) HandleLydiaWebhook(w http.ResponseWriter, r *http.Reque
 func isLydiaDebugEnabled() bool {
 	raw := strings.TrimSpace(strings.ToLower(os.Getenv("LYDIA_DEBUG")))
 	return raw == "1" || raw == "true" || raw == "yes" || raw == "on"
+}
+
+func isHelloAssoWebhookAuthorized(r *http.Request) bool {
+	secret := strings.TrimSpace(os.Getenv("HELLOASSO_WEBHOOK_SECRET"))
+	if secret == "" {
+		return true
+	}
+
+	provided := strings.TrimSpace(r.Header.Get("X-Webhook-Secret"))
+	if provided == "" {
+		provided = strings.TrimSpace(r.URL.Query().Get("secret"))
+	}
+	if provided == "" {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(secret)) == 1
 }
 
 func redactFormForLog(form map[string][]string) map[string]string {

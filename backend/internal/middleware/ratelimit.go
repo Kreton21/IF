@@ -3,7 +3,9 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -11,25 +13,25 @@ import (
 
 // RateLimit middleware basé sur Redis pour limiter les requêtes
 func RateLimit(redisClient *redis.Client, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
+	return RateLimitScoped(redisClient, "global", maxRequests, window)
+}
+
+func RateLimitScoped(redisClient *redis.Client, scope string, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Identifier le client par IP
-			ip := r.Header.Get("X-Forwarded-For")
+			ip := clientIP(r)
 			if ip == "" {
-				ip = r.Header.Get("X-Real-IP")
-			}
-			if ip == "" {
-				ip = r.RemoteAddr
+				http.Error(w, `{"error":"unable to identify client"}`, http.StatusBadRequest)
+				return
 			}
 
-			key := fmt.Sprintf("ratelimit:%s", ip)
+			key := fmt.Sprintf("ratelimit:%s:%s", scope, ip)
 			ctx := context.Background()
 
 			// Incrémenter et vérifier
 			count, err := redisClient.Incr(ctx, key).Result()
 			if err != nil {
-				// En cas d'erreur Redis, on laisse passer (fail open)
-				next.ServeHTTP(w, r)
+				http.Error(w, `{"error":"service temporairement indisponible"}`, http.StatusServiceUnavailable)
 				return
 			}
 
@@ -39,6 +41,7 @@ func RateLimit(redisClient *redis.Client, maxRequests int, window time.Duration)
 
 			if count > int64(maxRequests) {
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", int(window.Seconds())))
+				w.Header().Set("Content-Type", "application/json")
 				http.Error(w, `{"error": "Trop de requêtes, veuillez réessayer plus tard"}`, http.StatusTooManyRequests)
 				return
 			}
@@ -54,5 +57,16 @@ func RateLimit(redisClient *redis.Client, maxRequests int, window time.Duration)
 
 // StrictRateLimit pour les endpoints sensibles (checkout)
 func StrictRateLimit(redisClient *redis.Client) func(http.Handler) http.Handler {
-	return RateLimit(redisClient, 10, 1*time.Minute) // 10 checkout par minute max
+	return RateLimitScoped(redisClient, "strict", 10, 1*time.Minute) // 10 checkout par minute max
+}
+
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err == nil {
+		return host
+	}
+	if parsed := net.ParseIP(strings.TrimSpace(r.RemoteAddr)); parsed != nil {
+		return parsed.String()
+	}
+	return ""
 }
