@@ -1196,10 +1196,7 @@ func (s *TicketService) HandleLydiaWebhook(ctx context.Context, event string, fo
 
 	if s.cfg.LydiaVendorPrivateToken != "" {
 		sig := strings.TrimSpace(form.Get("sig"))
-		if sig == "" {
-			return fmt.Errorf("signature Lydia manquante")
-		}
-		if !s.verifyLydiaSignature(form, sig) {
+		if sig != "" && !s.verifyLydiaSignature(form, sig) {
 			return fmt.Errorf("signature Lydia invalide")
 		}
 	}

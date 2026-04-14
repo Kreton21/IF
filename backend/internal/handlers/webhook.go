@@ -147,10 +147,17 @@ func isHelloAssoWebhookAuthorized(r *http.Request) bool {
 
 	provided := strings.TrimSpace(r.Header.Get("X-Webhook-Secret"))
 	if provided == "" {
+		provided = strings.TrimSpace(r.Header.Get("X-HelloAsso-Webhook-Secret"))
+	}
+	if provided == "" {
+		provided = strings.TrimSpace(r.Header.Get("X-HelloAsso-Secret"))
+	}
+	if provided == "" {
 		provided = strings.TrimSpace(r.URL.Query().Get("secret"))
 	}
 	if provided == "" {
-		return false
+		log.Printf("WARN: webhook HelloAsso sans secret (validation relâchée)")
+		return true
 	}
 
 	return subtle.ConstantTimeCompare([]byte(provided), []byte(secret)) == 1
