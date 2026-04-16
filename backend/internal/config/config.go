@@ -29,6 +29,7 @@ type Config struct {
 	HelloAssoAPIURL       string
 	HelloAssoReturnURL    string
 	HelloAssoErrorURL     string
+	HelloAssoWebhookSecret string
 
 	// Lydia (required only when PaymentProvider = "lydia")
 	LydiaAPIURL             string
@@ -90,6 +91,7 @@ func Load() (*Config, error) {
 		HelloAssoAPIURL:       getEnv("HELLOASSO_API_URL", "https://api.helloasso.com"),
 		HelloAssoReturnURL:    getEnv("HELLOASSO_RETURN_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
 		HelloAssoErrorURL:     getEnv("HELLOASSO_ERROR_URL", getEnv("BASE_URL", "http://localhost:8080")+"/"),
+		HelloAssoWebhookSecret: getEnv("HELLOASSO_WEBHOOK_SECRET", ""),
 
 		LydiaAPIURL:             getEnv("LYDIA_API_URL", "https://homologation.lydia-app.com"),
 		LydiaVendorToken:        getEnv("LYDIA_VENDOR_TOKEN", ""),

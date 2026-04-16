@@ -74,27 +74,47 @@ func NewRouter(
 			if rateLimitDisabled {
 				r.Post("/checkout", ticketHandler.CreateBusCheckout)
 			} else {
-				r.With(middleware.StrictRateLimit(redisClient)).Post("/checkout", ticketHandler.CreateBusCheckout)
+				r.With(middleware.RateLimitScoped(redisClient, "bus_checkout", 10, 1*time.Minute)).Post("/checkout", ticketHandler.CreateBusCheckout)
 			}
 		})
 
-		r.Post("/camping/claim", ticketHandler.ClaimCampingByEmail)
+		if rateLimitDisabled {
+			r.Post("/camping/claim", ticketHandler.ClaimCampingByEmail)
+		} else {
+			r.With(middleware.RateLimitScoped(redisClient, "camping_claim", 5, 1*time.Minute)).Post("/camping/claim", ticketHandler.ClaimCampingByEmail)
+		}
 
 		// --- Public : Commandes ---
-		r.Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
+		if rateLimitDisabled {
+			r.Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
+		} else {
+			r.With(middleware.RateLimitScoped(redisClient, "order_status", 30, 1*time.Minute)).Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
+		}
 
 		// --- Public : QR Code image ---
 		r.Get("/tickets/{qrToken}/qr", ticketHandler.GetTicketQRCode)
 
 		// --- Public : Analytics ingest ---
-		r.Post("/analytics/events", analyticsHandler.Ingest)
+		if rateLimitDisabled {
+			r.Post("/analytics/events", analyticsHandler.Ingest)
+		} else {
+			r.With(middleware.RateLimitScoped(redisClient, "analytics_ingest", 30, 1*time.Minute)).Post("/analytics/events", analyticsHandler.Ingest)
+		}
 
 		// --- Webhooks HelloAsso ---
-		r.Post("/webhooks/helloasso", webhookHandler.HandleHelloAssoWebhook)
-		r.Post("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
-		r.Post("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
-		r.Get("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
-		r.Get("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
+		if rateLimitDisabled {
+			r.Post("/webhooks/helloasso", webhookHandler.HandleHelloAssoWebhook)
+			r.Post("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
+			r.Post("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
+			r.Get("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
+			r.Get("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
+		} else {
+			r.With(middleware.RateLimitScoped(redisClient, "webhook_helloasso", 120, 1*time.Minute)).Post("/webhooks/helloasso", webhookHandler.HandleHelloAssoWebhook)
+			r.With(middleware.RateLimitScoped(redisClient, "webhook_lydia", 120, 1*time.Minute)).Post("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
+			r.With(middleware.RateLimitScoped(redisClient, "webhook_lydia", 120, 1*time.Minute)).Post("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
+			r.With(middleware.RateLimitScoped(redisClient, "webhook_lydia", 120, 1*time.Minute)).Get("/webhooks/lydia", webhookHandler.HandleLydiaWebhook)
+			r.With(middleware.RateLimitScoped(redisClient, "webhook_lydia", 120, 1*time.Minute)).Get("/webhooks/lydia/{event}", webhookHandler.HandleLydiaWebhook)
+		}
 
 		// --- Admin (JWT requis) ---
 		r.Post("/admin/login", adminHandler.Login)

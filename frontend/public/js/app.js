@@ -361,20 +361,22 @@ function renderTickets() {
 
     const remaining = categories.length > 0
       ? getTotalCategoryRemaining(tt)
-      : ((tt.quantity_total || 0) - (tt.quantity_sold || 0));
+      : (tt.max_selectable ?? ((tt.quantity_total || 0) - (tt.quantity_sold || 0)));
 
     const now = new Date();
     const saleStart = tt.sale_start ? new Date(tt.sale_start) : null;
     const saleEnd = tt.sale_end ? new Date(tt.sale_end) : null;
     const isActive = tt.is_active !== undefined ? tt.is_active : true;
-    const isOnSale = isActive && (!saleStart || now >= saleStart) && (!saleEnd || now <= saleEnd) && remaining > 0;
+    const isAvailable = tt.is_available !== undefined ? !!tt.is_available : remaining > 0;
+    const isOnSale = isActive && (!saleStart || now >= saleStart) && (!saleEnd || now <= saleEnd) && isAvailable;
     const isSoldOut = remaining <= 0;
     const notYet = isActive && saleStart && now < saleStart;
     const isBest = idx === 0 && !isSoldOut;
     const inCart = qty > 0;
     const onePerEmail = !!tt.one_ticket_per_email;
     const maxPerOrder = onePerEmail ? 1 : Math.max(1, tt.max_per_order || 1);
-    const maxQty = Math.max(0, Math.min(maxPerOrder, remaining));
+    const maxSelectable = tt.max_selectable ?? remaining;
+    const maxQty = Math.max(0, Math.min(maxPerOrder, maxSelectable));
 
     const rvClass = idx === 0 ? 'rv' : idx === 1 ? 'rv2' : 'rv3';
 
@@ -473,10 +475,11 @@ function increaseTicket(id) {
   const categories = tt.categories || [];
   const remaining = categories.length > 0
     ? getTotalCategoryRemaining(tt)
-    : ((tt.quantity_total || 0) - (tt.quantity_sold || 0));
+    : (tt.max_selectable ?? ((tt.quantity_total || 0) - (tt.quantity_sold || 0)));
 
   const maxPerOrder = Math.max(1, tt.max_per_order || 1);
-  const maxQty = Math.max(0, Math.min(maxPerOrder, remaining));
+  const maxSelectable = tt.max_selectable ?? remaining;
+  const maxQty = Math.max(0, Math.min(maxPerOrder, maxSelectable));
   const current = state.cart[id] || 0;
   if (current >= maxQty) return;
 
@@ -869,10 +872,16 @@ document.addEventListener('change', (event) => {
 });
 
 function getCategoryRemaining(category) {
+  if (typeof category?.is_available === 'boolean') {
+    return category.is_available ? 1 : 0;
+  }
   return Math.max(0, (category?.quantity_allocated || 0) - (category?.quantity_sold || 0));
 }
 
 function getTotalCategoryRemaining(ticketType) {
+  if (typeof ticketType?.max_selectable === 'number') {
+    return Math.max(0, ticketType.max_selectable);
+  }
   const categories = ticketType?.categories || [];
   return categories.reduce((sum, category) => sum + getCategoryRemaining(category), 0);
 }
