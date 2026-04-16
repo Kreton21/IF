@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paiement confirmé — L'Interfilières 2026</title>
+<title>Paiement confirmÃ© â€” L'InterfiliÃ¨res 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -29,7 +29,7 @@ body {
   min-height:100vh;
 }
 
-/* ── Nav ── */
+/* â”€â”€ Nav â”€â”€ */
 .top-bar {
   background:linear-gradient(135deg, var(--night) 0%, var(--purple) 100%);
   padding:18px 5vw;
@@ -56,14 +56,14 @@ body {
 }
 .top-back:hover { color:#fff; }
 
-/* ── Main ── */
+/* â”€â”€ Main â”€â”€ */
 .container {
   max-width:720px;
   margin:0 auto;
   padding:40px 20px 80px;
 }
 
-/* ── Success Header ── */
+/* â”€â”€ Success Header â”€â”€ */
 .success-header {
   text-align:center;
   margin-bottom:36px;
@@ -105,7 +105,7 @@ body {
   font-size:1.1rem;
 }
 
-/* ── Info box ── */
+/* â”€â”€ Info box â”€â”€ */
 .info-box {
   background:linear-gradient(135deg, rgba(201,184,255,.15), rgba(116,201,248,.1));
   border:1px solid rgba(123,63,168,.12);
@@ -119,7 +119,7 @@ body {
 .info-box .ib-icon { font-size:1.4rem; flex-shrink:0; margin-top:2px; }
 .info-box p { font-size:.88rem; color:var(--text); line-height:1.6; }
 
-/* ── Ticket cards ── */
+/* â”€â”€ Ticket cards â”€â”€ */
 .ticket-list { display:flex; flex-direction:column; gap:20px; }
 
 .ticket-card {
@@ -208,7 +208,7 @@ body {
   margin-top:6px;
 }
 
-/* ── Loading ── */
+/* â”€â”€ Loading â”€â”€ */
 .loading {
   text-align:center;
   padding:60px 20px;
@@ -224,7 +224,7 @@ body {
 @keyframes spin { to { transform:rotate(360deg); } }
 .loading p { color:var(--muted); font-size:.9rem; }
 
-/* ── Error card ── */
+/* â”€â”€ Error card â”€â”€ */
 .error-card {
   background:#fff;
   border-radius:18px;
@@ -236,7 +236,7 @@ body {
 .error-card h2 { font-size:1.2rem; color:var(--text); margin-bottom:8px; }
 .error-card p { color:var(--muted); font-size:.88rem; margin-bottom:20px; }
 
-/* ── CTA ── */
+/* â”€â”€ CTA â”€â”€ */
 .btn-home {
   display:inline-block;
   background:linear-gradient(135deg, var(--rose), var(--peach));
@@ -256,7 +256,7 @@ body {
   box-shadow:0 8px 28px rgba(249,127,160,.5);
 }
 
-/* ── Responsive ── */
+/* â”€â”€ Responsive â”€â”€ */
 @media (max-width:600px) {
   .ticket-card-body {
     flex-direction:column;
@@ -272,45 +272,45 @@ body {
 <body>
 
 <div class="top-bar">
-  <a href="/" class="top-logo">L'INTERFILIÈRES</a>
-  <a href="/" class="top-back">← Retour à l'accueil</a>
+  <a href="/" class="top-logo">L'INTERFILIÃˆRES</a>
+  <a href="/" class="top-back">â† Retour Ã  l'accueil</a>
 </div>
 
 <div class="container">
   <!-- Loading state -->
   <div id="loading-state" class="loading">
     <div class="spinner"></div>
-    <p>Chargement de votre commande…</p>
+    <p>Chargement de votre commandeâ€¦</p>
   </div>
 
   <!-- Success content (hidden until loaded) -->
   <div id="success-content" style="display:none">
     <div class="success-header">
-      <div class="success-icon">✓</div>
-      <h1>Paiement confirmé !</h1>
+      <div class="success-icon">âœ“</div>
+      <h1>Paiement confirmÃ© !</h1>
       <p>Commande <span class="order-number" id="order-number"></span></p>
     </div>
 
     <div class="info-box">
-      <div class="ib-icon">📱</div>
-      <p>Présentez le <strong>QR code</strong> ci-dessous (sur mobile ou imprimé) à l'entrée du festival.
-        Chaque billet dispose de son propre QR code unique — <strong>un scan = une entrée</strong>.</p>
+      <div class="ib-icon">ðŸ“±</div>
+      <p>PrÃ©sentez le <strong>QR code</strong> ci-dessous (sur mobile ou imprimÃ©) Ã  l'entrÃ©e du festival.
+        Chaque billet dispose de son propre QR code unique â€” <strong>un scan = une entrÃ©e</strong>.</p>
     </div>
 
     <div class="ticket-list" id="ticket-list"></div>
 
     <div style="text-align:center; margin-top:36px;">
-      <a href="/" class="btn-home">🎵 Retour à l'accueil</a>
+      <a href="/" class="btn-home">ðŸŽµ Retour Ã  l'accueil</a>
     </div>
   </div>
 
   <!-- Error state (hidden) -->
   <div id="error-state" style="display:none">
     <div class="error-card">
-      <div class="err-icon">⚠️</div>
+      <div class="err-icon">âš ï¸</div>
       <h2>Impossible de charger la commande</h2>
-      <p id="error-message">La commande est introuvable ou n'a pas encore été confirmée.</p>
-      <a href="/" class="btn-home">Retour à l'accueil</a>
+      <p id="error-message">La commande est introuvable ou n'a pas encore Ã©tÃ© confirmÃ©e.</p>
+      <a href="/" class="btn-home">Retour Ã  l'accueil</a>
     </div>
   </div>
 </div>
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const orderId = params.get('order_id');
 
   if (!orderId) {
-    showError('Aucun identifiant de commande trouvé dans l\'URL.');
+    showError('Aucun identifiant de commande trouvÃ© dans l\'URL.');
     return;
   }
 
@@ -338,7 +338,7 @@ async function loadOrder(orderId, attempt = 0) {
     const order = await res.json();
 
     if (order.status === 'pending' && attempt < 10) {
-      // Still processing — poll
+      // Still processing â€” poll
       setTimeout(() => loadOrder(orderId, attempt + 1), 2000);
       return;
     }
@@ -346,9 +346,9 @@ async function loadOrder(orderId, attempt = 0) {
     if (order.status === 'confirmed' || order.status === 'paid') {
       renderSuccess(order);
     } else if (order.status === 'cancelled') {
-      showError('Cette commande a été annulée.');
+      showError('Cette commande a Ã©tÃ© annulÃ©e.');
     } else {
-      showError('Le paiement n\'a pas encore été confirmé. Vérifiez votre email.');
+      showError('Le paiement n\'a pas encore Ã©tÃ© confirmÃ©. VÃ©rifiez votre email.');
     }
   } catch (e) {
     console.error(e);
@@ -367,9 +367,9 @@ function renderSuccess(order) {
   if (!order.tickets || order.tickets.length === 0) {
     list.innerHTML = `
       <div class="info-box">
-        <div class="ib-icon">📧</div>
-        <p>Vos billets ont été envoyés par email à <strong>${escapeHtml(order.customer_email)}</strong>.
-          Si vous ne les trouvez pas, vérifiez vos spams.</p>
+        <div class="ib-icon">ðŸ“§</div>
+        <p>Vos billets ont Ã©tÃ© envoyÃ©s par email Ã  <strong>${escapeHtml(order.customer_email)}</strong>.
+          Si vous ne les trouvez pas, vÃ©rifiez vos spams.</p>
       </div>`;
     return;
   }
@@ -379,7 +379,7 @@ function renderSuccess(order) {
     card.className = 'ticket-card';
     card.innerHTML = `
       <div class="ticket-card-header">
-        <h3>🎟 ${escapeHtml(ticket.ticket_type_name || 'Billet')}</h3>
+        <h3>ðŸŽŸ ${escapeHtml(ticket.ticket_type_name || 'Billet')}</h3>
         <span class="ticket-badge">Billet ${i + 1}/${order.tickets.length}</span>
       </div>
       <div class="ticket-card-body">
@@ -392,8 +392,8 @@ function renderSuccess(order) {
           <div class="ti-label">Participant</div>
           <div class="ti-value">${escapeHtml(ticket.attendee_first_name)} ${escapeHtml(ticket.attendee_last_name)}</div>
           <div class="ti-label">Type</div>
-          <div class="ti-value">${escapeHtml(ticket.ticket_type_name || '—')}</div>
-          <div class="ti-label">Token de vérification</div>
+          <div class="ti-value">${escapeHtml(ticket.ticket_type_name || 'â€”')}</div>
+          <div class="ti-label">Token de vÃ©rification</div>
           <div class="ti-token">${escapeHtml(ticket.qr_token)}</div>
         </div>
       </div>`;
@@ -419,3 +419,4 @@ function escapeHtml(str) {
 
 </body>
 </html>
+

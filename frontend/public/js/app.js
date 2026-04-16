@@ -414,6 +414,8 @@ function renderTickets() {
       btnHtml = '<button class="btn-otl" disabled>Complet</button>';
     } else if (notYet) {
       btnHtml = '<button class="btn-otl" disabled>Bientôt disponible</button>';
+    } else {
+      btnHtml = '<button class="btn-otl" disabled>Complet</button>';
     }
 
     const description = (tt.description || '').trim();

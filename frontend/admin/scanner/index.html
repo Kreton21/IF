@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Scanner QR — L'Interfilières 2026</title>
+<title>Scanner QR â€” L'InterfiliÃ¨res 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -26,7 +26,7 @@ body {
   overflow: hidden;
 }
 
-/* ── Border flash overlay ── */
+/* â”€â”€ Border flash overlay â”€â”€ */
 .border-flash {
   position: fixed; inset: 0; z-index: 100;
   pointer-events: none;
@@ -37,7 +37,7 @@ body {
 .border-flash.success { border-color: var(--green); }
 .border-flash.error   { border-color: var(--red); }
 
-/* ── Login screen ── */
+/* â”€â”€ Login screen â”€â”€ */
 .login-screen {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -73,7 +73,7 @@ body {
 .login-form button:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(249,127,160,.4); }
 .login-error { color: var(--red); font-size: .85rem; text-align: center; min-height: 1.2em; }
 
-/* ── Idle screen (before scanning) ── */
+/* â”€â”€ Idle screen (before scanning) â”€â”€ */
 .idle-screen {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -117,7 +117,7 @@ body {
   letter-spacing: 1px; text-transform: uppercase;
 }
 
-/* ── Camera screen ── */
+/* â”€â”€ Camera screen â”€â”€ */
 .camera-screen {
   position: relative;
   width: 100%; height: 100vh;
@@ -147,7 +147,7 @@ body {
   padding: 8px 20px; border-radius: 50px;
 }
 
-/* ── Result overlay ── */
+/* â”€â”€ Result overlay â”€â”€ */
 .result-overlay {
   position: fixed; inset: 0; z-index: 80;
   display: none; flex-direction: column;
@@ -203,10 +203,10 @@ body {
   box-shadow: 0 4px 20px rgba(229,62,62,.4);
 }
 
-/* ── Canvas (hidden, for QR processing) ── */
+/* â”€â”€ Canvas (hidden, for QR processing) â”€â”€ */
 #qr-canvas { display: none; }
 
-/* ── Responsive ── */
+/* â”€â”€ Responsive â”€â”€ */
 @media (max-width: 420px) {
   .scan-reticle { width: 220px; height: 220px; }
   .idle-screen h1 { font-size: 2rem; }
@@ -225,12 +225,12 @@ body {
 <div class="staff-info" id="staffInfo"></div>
 
 <!-- Back button -->
-<button class="btn-back" id="btnBack" onclick="stopScan()">← Retour</button>
+<button class="btn-back" id="btnBack" onclick="stopScan()">â† Retour</button>
 
-<!-- ═══ Login Screen ═══ -->
+<!-- â•â•â• Login Screen â•â•â• -->
 <div class="login-screen" id="loginScreen">
-  <h1>L'INTERFILIÈRES</h1>
-  <p>Connexion scanner — Staff & Admin</p>
+  <h1>L'INTERFILIÃˆRES</h1>
+  <p>Connexion scanner â€” Staff & Admin</p>
   <form class="login-form" id="loginForm">
     <input type="text" id="loginUser" placeholder="Identifiant" required autocomplete="username">
     <input type="password" id="loginPass" placeholder="Mot de passe" required autocomplete="current-password">
@@ -239,10 +239,10 @@ body {
   <p class="login-error" id="loginError"></p>
 </div>
 
-<!-- ═══ Idle Screen ═══ -->
+<!-- â•â•â• Idle Screen â•â•â• -->
 <div class="idle-screen" id="idleScreen" style="display:none">
   <h1>SCANNER QR</h1>
-  <p>Scannez les billets des festivaliers à l'entrée du festival.</p>
+  <p>Scannez les billets des festivaliers Ã  l'entrÃ©e du festival.</p>
   <button class="btn-scan" id="btnStartScan" onclick="startScan()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
@@ -253,19 +253,19 @@ body {
     </svg>
     Lancer le scan
   </button>
-  <button class="btn-back" style="display:inline-block;position:static;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2)" onclick="logout()">Déconnexion</button>
+  <button class="btn-back" style="display:inline-block;position:static;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2)" onclick="logout()">DÃ©connexion</button>
 </div>
 
-<!-- ═══ Camera Screen ═══ -->
+<!-- â•â•â• Camera Screen â•â•â• -->
 <div class="camera-screen hidden" id="cameraScreen">
   <video id="video" autoplay playsinline muted></video>
   <canvas id="qr-canvas"></canvas>
   <div class="scan-overlay">
-    <p class="scan-hint">Pointez la caméra vers un QR code</p>
+    <p class="scan-hint">Pointez la camÃ©ra vers un QR code</p>
   </div>
 </div>
 
-<!-- ═══ Result Overlay ═══ -->
+<!-- â•â•â• Result Overlay â•â•â• -->
 <div class="result-overlay" id="resultOverlay">
   <div class="result-icon" id="resultIcon"></div>
   <div class="result-status" id="resultStatus"></div>
@@ -287,7 +287,7 @@ let scanning = false;
 let cooldown = false;  // prevent rapid re-scans
 let animFrame = null;
 
-// ══════════════ INIT ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• INIT â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ══════════════ LOGIN ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• LOGIN â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function handleLogin(e) {
   e.preventDefault();
   const errEl = document.getElementById('loginError');
@@ -341,10 +341,10 @@ function logout() {
 function showIdle() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('idleScreen').style.display = 'flex';
-  document.getElementById('staffInfo').textContent = `👤 ${staffName}`;
+  document.getElementById('staffInfo').textContent = `ðŸ‘¤ ${staffName}`;
 }
 
-// ══════════════ CAMERA ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• CAMERA â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function startScan() {
   const video = document.getElementById('video');
 
@@ -355,7 +355,7 @@ async function startScan() {
     video.srcObject = videoStream;
     await video.play();
   } catch (err) {
-    alert('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+    alert('Impossible d\'accÃ©der Ã  la camÃ©ra. VÃ©rifiez les permissions.');
     console.error(err);
     return;
   }
@@ -382,7 +382,7 @@ function stopScan() {
   document.getElementById('idleScreen').style.display = 'flex';
 }
 
-// ══════════════ QR DECODE LOOP ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• QR DECODE LOOP â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function tick() {
   if (!scanning) return;
 
@@ -408,7 +408,7 @@ function tick() {
   animFrame = requestAnimationFrame(tick);
 }
 
-// ══════════════ QR DETECTED → VALIDATE ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• QR DETECTED â†’ VALIDATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function onQRDetected(qrData) {
   if (cooldown) return;
   cooldown = true;
@@ -428,7 +428,7 @@ async function onQRDetected(qrData) {
 
     if (res.status === 401) {
       logout();
-      alert('Session expirée. Veuillez vous reconnecter.');
+      alert('Session expirÃ©e. Veuillez vous reconnecter.');
       return;
     }
 
@@ -439,14 +439,14 @@ async function onQRDetected(qrData) {
     console.error('Erreur validation:', err);
     showResult({
       valid: false,
-      message: 'Erreur réseau. Réessayez.',
+      message: 'Erreur rÃ©seau. RÃ©essayez.',
       attendee_first_name: '',
       attendee_last_name: '',
     });
   }
 }
 
-// ══════════════ RESULT DISPLAY ══════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â• RESULT DISPLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function showResult(data) {
   const overlay = document.getElementById('resultOverlay');
   const flash = document.getElementById('borderFlash');
@@ -459,35 +459,35 @@ function showResult(data) {
   flash.className = 'border-flash';
 
   const busDetails = data.ride_type
-    ? `<br>Départ : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
+    ? `<br>DÃ©part : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
     : '';
   const campingDetails = `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}`;
 
   if (data.valid && !data.already_validated) {
-    // ✅ Valid - first scan
+    // âœ… Valid - first scan
     flash.classList.add('success');
     overlay.className = 'result-overlay success-bg';
-    icon.textContent = '✅';
-    status.textContent = 'ENTRÉE VALIDÉE';
+    icon.textContent = 'âœ…';
+    status.textContent = 'ENTRÃ‰E VALIDÃ‰E';
     status.className = 'result-status valid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
     detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}${campingDetails}${busDetails}`;
     btn.className = 'result-btn btn-ok';
   } else if (data.already_validated) {
-    // ⚠️ Already scanned
+    // âš ï¸ Already scanned
     flash.classList.add('error');
     overlay.className = 'result-overlay error-bg';
-    icon.textContent = '⛔';
-    status.textContent = 'DÉJÀ SCANNÉ';
+    icon.textContent = 'â›”';
+    status.textContent = 'DÃ‰JÃ€ SCANNÃ‰';
     status.className = 'result-status invalid';
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
-    detail.innerHTML = `Ce billet a déjà été validé.<br>${data.ticket_type_name || ''} · ${data.order_number || ''}${campingDetails}${busDetails}`;
+    detail.innerHTML = `Ce billet a dÃ©jÃ  Ã©tÃ© validÃ©.<br>${data.ticket_type_name || ''} Â· ${data.order_number || ''}${campingDetails}${busDetails}`;
     btn.className = 'result-btn btn-err';
   } else {
-    // ❌ Invalid
+    // âŒ Invalid
     flash.classList.add('error');
     overlay.className = 'result-overlay error-bg';
-    icon.textContent = '❌';
+    icon.textContent = 'âŒ';
     status.textContent = 'BILLET INVALIDE';
     status.className = 'result-status invalid';
     name.textContent = '';
@@ -528,3 +528,4 @@ document.addEventListener('keydown', (e) => {
 
 </body>
 </html>
+
