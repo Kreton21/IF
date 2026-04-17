@@ -308,7 +308,11 @@
           <strong>La revente de ce billet n’est pas autorisée.</strong><br>
           Toute tentative de revente ou d’utilisation frauduleuse peut entraîner son invalidation.
         </div>
-      </div>
+        <div style="margin-top:18px;background:#fff7ef;border-top:3px solid #F97FA0;border-radius:10px;padding:18px 20px;font-size:11px;line-height:1.75;color:#422917;">
+          <strong style="font-size:12px;">Annexe — Autorisation de droit à l'image et traitement des données personnelles</strong>
+          <p style="margin:8px 0 0;">En assistant à cet événement, j'autorise le COI, sans contrepartie financière, à prendre des photos/vidéos, les reproduire et les diffuser à des fins non lucratives (réseaux sociaux, communication). Je reconnais mes droits RGPD (accès, rectification, effacement, opposition, portabilité, retrait du consentement).</p>
+          <p style="margin:6px 0 0;">Pour toute réclamation : <strong>{{.SupportEmail}}</strong></p>
+        </div>      </div>
 
       <div class="footer">
         {{.FestivalName}} — {{.FestivalDate}} — Contact : {{.SupportEmail}}

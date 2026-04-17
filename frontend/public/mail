@@ -88,9 +88,12 @@
                 Les billets sont strictement personnels. L’organisateur se réserve le droit de refuser l’accès ou d’exclure toute personne ne respectant pas les règles de sécurité, le règlement intérieur ou les conditions d’accès applicables à l’événement.
               </p>
 
-              <p style="margin:0;font-size:13px;line-height:1.8;color:#422917;">
+              <p style="margin:0 0 10px;font-size:13px;line-height:1.8;color:#422917;">
                 Contact : <strong>{{.SupportEmail}}</strong>
               </p>
+
+              <p style="margin:10px 0 6px;font-size:13px;font-weight:800;color:#220850;">Droit à l'image</p>
+              <p style="margin:0;font-size:12px;line-height:1.8;color:#422917;">En assistant à cet événement, j'autorise le COI, sans contrepartie financière, à prendre des photos/vidéos, les reproduire et les diffuser à des fins non lucratives (réseaux sociaux, communication de l'événement). Je reconnais mes droits RGPD : accès, rectification, effacement, opposition, portabilité et retrait du consentement à tout moment. Pour toute réclamation : <strong>{{.SupportEmail}}</strong></p>
             </div>
           </td>
         </tr>

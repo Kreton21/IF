@@ -149,7 +149,7 @@ iframe:not(.hero-video) {
 	box-shadow:0 4px 18px rgba(249,127,160,.38);
 	padding:8px 20px!important;
 }
-.nav-cta:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(249,127,160,.52)!important; }
+.nav-cta:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(249,127,160,.52)!important; color:#fff!important; }
 .hamburger {
 	display:none; flex-direction:column; gap:5px; cursor:pointer; padding:6px;
 	flex-shrink:0;
