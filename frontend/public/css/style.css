@@ -366,7 +366,11 @@ iframe:not(.hero-video) {
 .hl-card:hover { transform:translateY(-8px); box-shadow:0 22px 60px rgba(249,127,160,.28); }
 .hl-card:hover::before { opacity:1; }
 .hl-num { font-family:var(--font-primary); font-size:5rem; line-height:1; color:rgba(255,255,255,.06); position:absolute; top:12px; right:18px; }
-.hl-name { font-family:var(--font-primary); font-size:clamp(1.8rem,2.8vw,2.5rem); letter-spacing:2px; color:#fff; line-height:1.05; position:relative; z-index:1; text-shadow:0 2px 16px rgba(0,0,0,.3); }
+.hl-name {
+	font-family:var(--font-primary); font-size:clamp(1.8rem,2.8vw,2.5rem); letter-spacing:2px;
+	color:#fff; line-height:1.05; position:relative; z-index:1; text-shadow:0 2px 16px rgba(0,0,0,.3);
+	min-height:2.15em; display:flex; align-items:center; justify-content:center; text-align:center;
+}
 .hl-pill {
 	display:inline-block; margin-top:12px; position:relative; z-index:1;
 	background:rgba(249,127,160,.22); color:var(--rose);
