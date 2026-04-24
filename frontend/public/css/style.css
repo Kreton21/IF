@@ -357,6 +357,7 @@ iframe:not(.hero-video) {
 	background:linear-gradient(160deg,var(--night) 0%,var(--purple) 100%);
 	box-shadow:var(--sh-lg); transition:all .32s; position:relative;
 	padding:52px 28px 40px; text-align:center;
+	display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
 .hl-card::before {
 	content:''; position:absolute; inset:0;
@@ -373,8 +374,8 @@ iframe:not(.hero-video) {
 }
 .hl-pill {
 	display:inline-block; margin-top:12px; position:relative; z-index:1;
-	background:rgba(249,127,160,.22); color:var(--rose);
-	border:1px solid rgba(249,127,160,.38); border-radius:50px;
+	background:rgba(249,127,160,.75); color:#fff;
+	border:1px solid rgba(249,127,160,1); border-radius:50px;
 	padding:4px 14px; font-size:.66rem; font-weight:800; letter-spacing:2px; text-transform:uppercase;
 }
 .hl-more { text-align:center; margin-top:24px; font-size:.85rem; color:var(--muted); font-weight:600; }
