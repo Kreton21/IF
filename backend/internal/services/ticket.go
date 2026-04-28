@@ -1241,6 +1241,11 @@ func (s *TicketService) verifyLydiaSignature(form url.Values, providedSig string
 }
 
 // GetOrderStatus retourne le statut d'une commande
+// VerifyOrderForCIC confirms an order exists, belongs to that email, and is paid/confirmed.
+func (s *TicketService) VerifyOrderForCIC(ctx context.Context, orderNumber, email string) (*models.Order, error) {
+	return s.orderRepo.VerifyOrderByNumberAndEmail(ctx, orderNumber, email)
+}
+
 func (s *TicketService) GetOrderStatus(ctx context.Context, orderID string) (*models.Order, error) {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {

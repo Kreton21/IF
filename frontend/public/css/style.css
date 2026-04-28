@@ -1030,6 +1030,8 @@ footer {
 ════════════════════════════════════════ */
 @media(max-width:900px){
 	.hl-grid,.tkt-grid,.recap-grid,.qnav-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid{grid-template-columns:repeat(2,1fr)}
+	.tkt-preview .tkt-grid{grid-template-columns:repeat(2,1fr)}
+	.tkt-grid-alt{grid-template-columns:repeat(2,1fr)}
 	.prog-grid--hl{grid-template-columns:repeat(2,1fr)!important}
 	.prog-grid{grid-template-columns:repeat(4,1fr)}
 	.anim-banner{flex-direction:column}
@@ -1079,6 +1081,9 @@ footer {
 	.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid,.opts-grid{grid-template-columns:1fr}
 		.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid,.opts-grid{grid-template-columns:1fr}
 		.tkt-grid{gap:30px}
+	.tkt-preview .tkt-grid{grid-template-columns:repeat(2,1fr);align-items:stretch}
+	.tkt-grid-alt{grid-template-columns:repeat(2,1fr);align-items:stretch}
+	.tkt-preview .tkt-card{height:auto;min-height:200px}
 	.recap-grid,.qnav-grid{grid-template-columns:repeat(2,1fr)}
 	.prog-grid--hl{grid-template-columns:1fr!important}
 	.prog-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -1108,6 +1113,12 @@ footer {
 		grid-template-columns:1fr!important;
 	}
 	.postes-grid{grid-template-columns:repeat(2,1fr)!important}
+}
+
+@media(max-width:420px){
+	.tkt-preview .tkt-grid,
+	.tkt-grid-alt{grid-template-columns:1fr}
+	.tkt-preview .tkt-card{height:auto;min-height:180px}
 }
 
 /* ═══════════ Email Gate & Category Dropdown ═══════════ */
@@ -1197,6 +1208,227 @@ footer {
 .eg-current-email span {
 	font-weight: 600;
 	color: var(--rose);
+}
+
+/* ════════════════════════════════════════
+	 APERCU TARIFS (INFORMATIF)
+════════════════════════════════════════ */
+
+/* ── Ticket preview (static cards before email gate) ── */
+.tkt-preview {
+	margin-top: 18px;
+}
+
+.tkt-preview .tkt-grid {
+	margin-top: 0;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+}
+
+.tkt-grid-alt {
+	margin-top: 56px;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 16px;
+}
+
+/* Card base — hauteur fixe identique pour toutes */
+.tkt-preview .tkt-card {
+	background: #fff;
+	border-radius: 20px;
+	border: 2px solid #efe8f8;
+	padding: 22px 20px 20px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	text-align: center;
+	height: 280px;
+	overflow: hidden;
+	transition: box-shadow .2s, transform .2s;
+}
+.tkt-preview .tkt-card:hover { transform: translateY(-4px); box-shadow: 0 10px 36px rgba(249,127,160,.18); }
+
+/* Unavailable cards: keep same white style */
+.tkt-preview .tkt-card:has(button[disabled]) {
+	background: #fff;
+	border-color: #f0eaf5;
+}
+
+/* Tier label — petit, gris muted, léger */
+.tkt-preview .tkt-tier {
+	font-family: var(--font-text);
+	font-size: .8rem;
+	font-weight: 900;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	margin-bottom: 0;
+	line-height: 1.3;
+	background: none;
+	-webkit-background-clip: unset;
+	-webkit-text-fill-color: #6b5b80;
+	background-clip: unset;
+	color: #6b5b80;
+	width: 100%;
+	text-align: center;
+}
+
+/* Price — grand, dégradé rose→pêche */
+.tkt-price-box {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 4px 0 6px;
+	width: 100%;
+	text-align: center;
+}
+
+.tkt-preview .tkt-price {
+	font-family: var(--font-primary);
+	font-size: clamp(2.4rem, 4.5vw, 3.2rem);
+	line-height: 1;
+	white-space: normal;
+	word-break: keep-all;
+	background: linear-gradient(135deg, var(--rose), var(--peach));
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	color: transparent;
+}
+
+.tkt-price-invert {
+	background: linear-gradient(135deg, var(--rose), var(--peach));
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	color: transparent;
+}
+
+/* "Tarif préférentiel" — taille réduite pour tenir dans 280px */
+.tkt-price.tkt-price-text,
+.tkt-grid-alt .tkt-price.tkt-price-text {
+	font-size: 1.3rem;
+	line-height: 1.2;
+	white-space: normal;
+	font-weight: 900;
+}
+
+.tkt-grid-alt .tkt-price:not(.tkt-price-text) {
+	font-size: clamp(2.2rem, 4vw, 3rem);
+}
+
+/* Description — gris muted */
+.tkt-preview .tkt-desc {
+	font-size: .75rem;
+	color: #6b5b80;
+	margin: 4px 0;
+	line-height: 1.35;
+	width: 100%;
+	text-align: center;
+}
+
+/* Availability badge */
+.tkt-preview .tkt-avail {
+	font-size: .75rem;
+	margin: 2px 0 4px;
+	color: #6b5b80;
+}
+
+/* Progress */
+.tkt-preview .progress-container,
+.tkt-preview .progress-bar {
+	width: 100%;
+}
+
+/* Button always at bottom */
+.tkt-preview .btn-otl,
+.tkt-preview a.btn-otl {
+	width: 100%;
+	box-sizing: border-box;
+	text-align: center;
+	margin-top: auto;
+	border-radius: 50px;
+	font-weight: 800;
+	font-size: .85rem;
+	padding: 12px 16px;
+	flex-shrink: 0;
+}
+
+/* Active (non-disabled) button: gradient rose→pêche identique à "Réserver ma place" */
+.tkt-preview .btn-otl:not([disabled]),
+.tkt-preview a.btn-otl {
+	background: linear-gradient(135deg, var(--rose), var(--peach));
+	color: #fff;
+	border: none;
+	box-shadow: 0 4px 18px rgba(249,127,160,.35);
+}
+.tkt-preview .btn-otl:not([disabled]):hover,
+.tkt-preview a.btn-otl:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 36px rgba(249,127,160,.55);
+}
+
+.tkt-grid-alt .tkt-tier {
+	font-size: .75rem;
+	color: #6b5b80;
+	-webkit-text-fill-color: #6b5b80;
+}
+
+@media(max-width: 900px) {
+	.tkt-preview .tkt-price { font-size: clamp(2rem, 6vw, 2.8rem); white-space: normal; }
+	.tkt-grid-alt .tkt-price:not(.tkt-price-text) { font-size: clamp(1.8rem, 5.5vw, 2.6rem); }
+	.tkt-preview .tkt-card { height: 300px; }
+}
+
+.progress-container {
+	width: 100%;
+	margin: 10px 0;
+}
+
+.progress-bar {
+	width: 100%;
+	height: 12px;
+	background: #d8d3df;
+	border-radius: 999px;
+	overflow: hidden;
+	position: relative;
+	border: 1px solid rgba(30,8,69,.1);
+}
+
+.progress-fill {
+	background: linear-gradient(90deg, #5bb4e8 0%, #f07ca2 100%);
+	height: 100%;
+	border-radius: 999px;
+	transition: width 0.4s ease;
+}
+
+.tkt-preview .progress-text {
+	font-size: 0.84rem;
+	color: var(--rose);
+	margin-top: 4px;
+	font-weight: 700;
+}
+
+@media(max-width: 580px) {
+	
+	.tkt-price {
+		font-size: 1.6rem;
+	}
+
+	.tkt-preview .tkt-card { height: auto; min-height: 220px; }
+
+	.tkt-preview .tkt-grid,
+	.tkt-grid-alt {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media(max-width: 400px) {
+	.tkt-preview .tkt-grid,
+	.tkt-grid-alt {
+		grid-template-columns: 1fr;
+	}
 }
 
 .eg-change {

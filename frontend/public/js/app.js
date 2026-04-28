@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCheckoutForm();
   setupBusForm();
   setupCampingClaimForm();
+  setupCICForm();
 
   initHashRouting();
   if (!goFromHash(false)) {
@@ -264,6 +265,7 @@ function initHeroVideo() {
 function setupEmailGate() {
   const form = document.getElementById('email-gate-form');
   if (!form) return;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('gate-email').value.trim();
@@ -287,9 +289,12 @@ function resetEmailGate() {
   state.cart = {};
   state.attendees = {};
   document.getElementById('email-gate').classList.remove('hidden');
+  const currentEmailWrap = document.getElementById('current-email-wrap');
+  if (currentEmailWrap) currentEmailWrap.classList.add('hidden');
   document.getElementById('tkt-step2').classList.add('hidden');
   document.getElementById('checkout-section').classList.add('hidden');
-  document.getElementById('gate-email').value = '';
+  const gateField = document.getElementById('gate-email');
+  if (gateField) gateField.value = '';
   const emailField = document.getElementById('email');
   if (emailField) {
     emailField.value = '';
@@ -304,6 +309,7 @@ async function loadTicketTypes(email) {
   const grid = document.getElementById('tkt-grid');
   const errEl = document.getElementById('eg-error');
 
+  if (!grid) return;
   grid.innerHTML = '<div class="tkt-loading"><div class="spinner"></div><p>Chargement des billets disponibles...</p></div>';
 
   try {
@@ -324,6 +330,8 @@ async function loadTicketTypes(email) {
 
     // Show step 2, hide email gate
     document.getElementById('email-gate').classList.add('hidden');
+    const currentEmailWrap = document.getElementById('current-email-wrap');
+    if (currentEmailWrap) currentEmailWrap.classList.remove('hidden');
     document.getElementById('tkt-step2').classList.remove('hidden');
     document.getElementById('current-email-display').textContent = email;
 
@@ -1326,4 +1334,70 @@ function escapeHTML(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// ══════════════════════════════════════
+// CIC REFUND FORM
+// ══════════════════════════════════════
+function setupCICForm() {
+  const form = document.getElementById('cic-verify-form');
+  if (!form) return;
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await verifyCICOrder();
+  });
+}
+
+async function verifyCICOrder() {
+  const orderNumber = document.getElementById('cic-order-number').value.trim().toUpperCase();
+  const email = document.getElementById('cic-email').value.trim().toLowerCase();
+  const errorEl = document.getElementById('cic-error');
+  const notFoundEl = document.getElementById('cic-not-found-actions');
+  
+  // Reset state on each attempt
+  errorEl.classList.add('hidden');
+  if (notFoundEl) { notFoundEl.classList.add('hidden'); notFoundEl.style.display = ''; }
+
+  if (!orderNumber || !email) {
+    errorEl.textContent = 'Veuillez remplir tous les champs';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  try {
+    // Call API to verify order
+    const response = await fetch(`${API_BASE}/orders/verify?order_number=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(email)}`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      errorEl.textContent = data.error || 'Commande non trouvée. Vérifiez votre numéro de commande et email.';
+      errorEl.classList.remove('hidden');
+      if (notFoundEl) {
+        notFoundEl.classList.remove('hidden');
+        notFoundEl.style.display = 'flex';
+      }
+      return;
+    }
+
+    // Success - show refund info
+    errorEl.classList.add('hidden');
+    if (notFoundEl) { notFoundEl.classList.add('hidden'); notFoundEl.style.display = ''; }
+    document.getElementById('cic-refund-info').classList.remove('hidden');
+
+    // Populate order number
+    document.getElementById('cic-display-order').textContent = orderNumber;
+    const inlineOrder = document.getElementById('cic-inline-order');
+    if (inlineOrder) inlineOrder.textContent = '(' + orderNumber + ')';
+    
+    // Scroll to refund info
+    setTimeout(() => {
+      document.getElementById('cic-refund-info').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
+    
+  } catch (error) {
+    console.error('Erreur vérification CIC:', error);
+    errorEl.textContent = 'Erreur de connexion. Veuillez réessayer.';
+    errorEl.classList.remove('hidden');
+  }
 }

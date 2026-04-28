@@ -26,6 +26,44 @@
 <link rel="manifest" href="img/favicon_io/site.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MusicEvent",
+  "name": "L'Interfilières 2026",
+  "startDate": "2026-05-30T12:00:00+02:00",
+  "endDate": "2026-05-30T23:59:00+02:00",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "Domaine de Saint-Jean-de-Beauregard",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Domaine de Saint-Jean-de-Beauregard",
+      "addressLocality": "Saint-Jean-de-Beauregard",
+      "postalCode": "91940",
+      "addressCountry": "FR"
+    }
+  },
+  "image": "https://interfilieres.fr/img/favicon_io/android-chrome-512x512.png",
+  "description": "L'Interfilières 2026 est le festival étudiant de l'Université Paris-Saclay. Musique, animations, camping et transports.",
+  "url": "https://interfilieres.fr",
+  "organizer": {
+    "@type": "Organization",
+    "name": "Comité d'Organisation de L'Interfilières (COI)",
+    "url": "https://interfilieres.fr"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "https://interfilieres.fr",
+    "priceCurrency": "EUR",
+    "price": "20",
+    "availability": "https://schema.org/InStock",
+    "validFrom": "2026-03-01"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -146,24 +184,80 @@
 	  <h2 class="title rv">Choisis ton tarif</h2>
 	  <div class="bar rv"></div>
 
-	  <!-- Step 1: Email gate -->
-	  <div id="email-gate" class="email-gate rv">
-		<p class="eg-subtitle">Entrez votre adresse email pour découvrir les tarifs disponibles</p>
-		<p class="eg-hint">⚠️ Utilisez votre <strong>adresse email universitaire</strong> (ex : prenom.nom@universite-paris-saclay.fr) pour accéder aux tarifs étudiants réservés à votre établissement.</p>
-    <p class="eg-hint">En cas de problème avec votre billet, merci de contacter le SAV à l'adresse mail suivante : <a href="mailto:sav@interfilieres.fr" style="color:var(--rose);font-weight:800;">sav@interfilieres.fr</a> en précisant votre nom, prénom, adresse mail et numéro de commande si disponible.</p>
-		<form id="email-gate-form" class="eg-form">
-		  <input type="email" id="gate-email" required placeholder="prenom.nom@universite-paris-saclay.fr" class="eg-input">
-		  <button type="submit" class="btn-rose eg-btn">Voir les billets →</button>
-		</form>
-		<p id="eg-error" class="eg-error hidden"></p>
-	  </div>
+    <!-- Aperçu informatif des tarifs (avant email) -->
+    <div class="tkt-preview rv" aria-label="Aperçu des tarifs">
+      <div class="tkt-grid">
+        <div class="tkt-card rv">
+          <p class="tkt-tier">ULTRA EARLY</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">12,00 €</div></div>
+          <p class="tkt-desc">Places en quantité très limitée</p>
+          <button class="btn-otl" type="button" disabled>Complet</button>
+        </div>
+        <div class="tkt-card rv2">
+          <p class="tkt-tier">EARLY</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">20,00 €</div></div>
+          <p class="tkt-desc"></p>
+          <button class="btn-otl" type="button" disabled>Complet</button>
+        </div>
+        <div class="tkt-card rv3">
+          <p class="tkt-tier">REGULAR</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">25,00 €</div></div>
+          <div class="tkt-avail available">✅ En cours</div>
+          <div class="progress-bar" style="margin:10px 0 4px;">
+            <div class="progress-fill" style="width:50%"></div>
+          </div>
+          <button class="btn-otl" type="button" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Réserver</button>
+        </div>
+        <div class="tkt-card rv">
+          <p class="tkt-tier">LATE</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">30,00 €</div></div>
+          <p class="tkt-desc"></p>
+          <button class="btn-otl" type="button" disabled>Bientôt disponible</button>
+        </div>
+      </div>
 
-	  <!-- Step 2: Ticket grid (hidden until email submitted) -->
+      <div class="tkt-grid tkt-grid-alt">
+        <div class="tkt-card rv2">
+          <p class="tkt-tier">PASS CULTURE</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">0,00 €</div></div>
+          <p class="tkt-desc">Réservation via Pass Culture</p>
+          <a href="https://passculture.app/" target="_blank" class="btn-otl">Voir l'offre</a>
+        </div>
+        <div class="tkt-card rv2">
+          <p class="tkt-tier">ETUDIANT.E.S PARIS-SACLAY</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert tkt-price-text">Tarif préférentiel</div></div>
+          <p class="tkt-desc">Offre réservée aux étudiant.e.s Paris-Saclay</p>
+          <button class="btn-otl" type="button" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Durée limitée</button>
+        </div>
+        <div class="tkt-card rv2">
+          <p class="tkt-tier">REMBOURSEMENT CIC</p>
+          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">0,00 €</div></div>
+          <p class="tkt-desc">Accès procédure CIC Orsay</p>
+          <button type="button" class="btn-otl" onclick="go('cic-refund')">Voir la procédure</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Email gate -->
+    <div id="email-gate" class="email-gate rv">
+    <p class="eg-subtitle">Entrez votre adresse email pour découvrir les tarifs disponibles</p>
+    <p class="eg-hint">⚠️ Utilisez votre <strong>adresse email universitaire</strong> (ex : prenom.nom@universite-paris-saclay.fr) pour accéder aux tarifs étudiants réservés à votre établissement.</p>
+    <p class="eg-hint">En cas de problème avec votre billet, merci de contacter le SAV à l'adresse mail suivante : <a href="mailto:sav@interfilieres.fr" style="color:var(--rose);font-weight:800;">sav@interfilieres.fr</a> en précisant votre nom, prénom, adresse mail et numéro de commande si disponible.</p>
+    <form id="email-gate-form" class="eg-form">
+      <input type="email" id="gate-email" required placeholder="prenom.nom@universite-paris-saclay.fr" class="eg-input">
+      <button type="submit" class="btn-rose eg-btn">Voir les billets →</button>
+    </form>
+    <p id="eg-error" class="eg-error hidden"></p>
+    </div>
+
+    <!-- Current email (shown after email validation) -->
+    <div id="current-email-wrap" class="eg-current-email rv hidden">
+    <span id="current-email-display"></span>
+    <button class="eg-change" onclick="resetEmailGate()">Changer d'email</button>
+    </div>
+
+	  <!-- Step 2: Ticket selection grid (hidden until email submitted) -->
 	  <div id="tkt-step2" class="hidden">
-		<div class="eg-current-email rv">
-		  <span id="current-email-display"></span>
-		  <button class="eg-change" onclick="resetEmailGate()">Changer d'email</button>
-		</div>
 		<div class="tkt-grid" id="tkt-grid">
 		  <div class="tkt-loading" id="tkt-loading">
 			<div class="spinner"></div>
@@ -1275,7 +1369,82 @@
 
     </div>
   </section>
+</div>
 
+<!-- ════════════════════════════════════════
+  CIC REMBOURSEMENT
+════════════════════════════════════════ -->
+<div class="page" id="page-cic-refund">
+  <div class="ph ph-anim" style="min-height:52vh;">
+    <div>
+      <p class="ph-eyebrow">✦ Remboursement</p>
+      <h1 class="ph-title">Remboursement<br>CIC Orsay</h1>
+      <p class="ph-sub">Accédez à votre procédure de remboursement</p>
+    </div>
+  </div>
+
+  <section class="sec">
+    <div class="inner" style="max-width:600px;margin:0 auto">
+      <div class="rv" style="background:var(--offwhite);border-radius:var(--r);padding:28px 32px;margin-bottom:32px;box-shadow:var(--sh)">
+        <h2 style="font-size:1.2rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--rose);margin-bottom:20px">Vérifier votre demande</h2>
+        <p style="font-size:0.95rem;color:var(--muted);margin-bottom:20px;line-height:1.6">Entrez votre numéro de commande et l'adresse email utilisée pour l'achat afin d'accéder à votre procédure de remboursement.</p>
+
+        <form id="cic-verify-form" style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label for="cic-order-number">Numéro de commande *</label>
+            <input type="text" id="cic-order-number" required placeholder="ex: IF-2026-001234" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.95rem;font-family:'Montserrat',sans-serif">
+          </div>
+
+          <div class="form-group">
+            <label for="cic-email">Adresse email *</label>
+            <input type="email" id="cic-email" required placeholder="prenom.nom@example.com" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.95rem;font-family:'Montserrat',sans-serif">
+          </div>
+
+          <button type="submit" class="btn-full">Vérifier ma commande</button>
+          <p id="cic-error" class="eg-error hidden" style="margin:0"></p>
+          <div id="cic-not-found-actions" class="hidden" style="flex-direction:column;gap:10px;margin-top:4px">
+            <a href="mailto:sav@interfilieres.fr" class="btn-otl" style="text-align:center">✉️ Contacter le SAV</a>
+            <button type="button" class="btn-full" onclick="go('home');setTimeout(()=>document.getElementById('tickets').scrollIntoView({behavior:'smooth'}),200)">🎫 Prendre ma place</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Refund info section (shown after verification) -->
+      <div id="cic-refund-info" class="hidden" style="background:linear-gradient(135deg, rgba(116,201,248,.08), rgba(201,184,255,.12));border:1px solid rgba(116,201,248,.2);border-radius:var(--r);padding:28px 32px;box-shadow:var(--sh);margin-bottom:32px">
+        <div class="rv">
+          <h2 style="font-size:1.2rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--sky);margin-bottom:20px">✓ Commande vérifiée</h2>
+
+          <div style="background:white;border-radius:10px;padding:18px;margin-bottom:24px;border-left:4px solid var(--rose)">
+            <p style="font-size:0.85rem;color:var(--muted);margin:0;margin-bottom:6px">Numéro de commande</p>
+            <p style="font-size:1.1rem;font-weight:700;color:var(--night);margin:0" id="cic-display-order"></p>
+          </div>
+
+          <div style="background:#FFF5EC;border-radius:10px;padding:20px;margin-bottom:24px">
+            <h3 style="font-size:1rem;font-weight:700;color:var(--rose);margin:0 0 12px 0">📋 Procédure de remboursement</h3>
+            <ol style="margin:0;padding-left:20px;font-size:0.9rem;color:var(--text);line-height:1.8">
+              <li><strong>Accéder au formulaire CIC :</strong> Cliquez sur le bouton ci-dessous pour accéder au formulaire officiel CIC</li>
+              <li><strong>Indiquer votre numéro de commande</strong> <span id="cic-inline-order" style="font-weight:700;color:var(--night)"></span> dans la rubrique dédiée</li>
+              <li><strong>Valider votre demande :</strong> Suivez les instructions sur le site CIC pour finaliser votre remboursement</li>
+            </ol>
+          </div>
+
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:20px;line-height:1.6;background:rgba(30,8,69,.04);padding:12px 16px;border-radius:8px;border-left:3px solid var(--sky)">
+            <strong>Note importante :</strong> Le remboursement est soumis aux conditions définies par CIC. Conservez votre numéro de commande et l'email utilisé lors de l'achat.
+          </p>
+
+          <a href="https://www.cic.fr/fr/particuliers/comptes/ouvrir-un-compte.html" target="_blank" rel="noopener noreferrer" class="btn-full" style="display:block;text-align:center;margin-bottom:12px;font-size:1rem;padding:16px 24px">🏦 Accéder au formulaire CIC</a>
+          <a href="https://www.cic.fr/fr/agences/orsay.html" target="_blank" rel="noopener noreferrer" class="btn-otl" style="display:block;text-align:center">📍 Localiser l'agence CIC d'Orsay</a>
+        </div>
+      </div>
+
+      <!-- Info section -->
+      <div class="rv" style="margin-top:32px;background:rgba(201,184,255,.08);border:1px solid rgba(201,184,255,.2);border-radius:var(--r);padding:20px;text-align:center">
+        <p style="margin:0;font-size:0.9rem;color:var(--muted);line-height:1.6">
+          Des questions sur votre remboursement? <a href="mailto:sav@interfilieres.fr" style="color:var(--rose);font-weight:600;text-decoration:none">Contactez notre SAV</a>
+        </p>
+      </div>
+    </div>
+  </section>
   <footer>
 	<div class="f-logo">
 		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">

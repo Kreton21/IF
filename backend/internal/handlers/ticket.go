@@ -275,6 +275,66 @@ func (h *TicketHandler) ClaimCampingByEmail(w http.ResponseWriter, r *http.Reque
 }
 
 // GetOrderStatus retourne le statut d'une commande
+// VerifyOrder vérifie qu'une commande correspond à un numéro + email (pour procédure CIC)
+func (h *TicketHandler) VerifyOrder(w http.ResponseWriter, r *http.Request) {
+	orderNumber := strings.TrimSpace(r.URL.Query().Get("order_number"))
+	email := strings.TrimSpace(r.URL.Query().Get("email"))
+
+	if orderNumber == "" || email == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Numéro de commande et email requis"})
+		return
+	}
+
+	order, err := h.ticketService.VerifyOrderForCIC(r.Context(), orderNumber, email)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+	if order == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Commande introuvable. Vérifiez votre numéro de commande et votre email."})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"order_number": order.OrderNumber,
+		"first_name":   order.CustomerFirstName,
+		"last_name":    order.CustomerLastName,
+		"email":        order.CustomerEmail,
+		"status":       string(order.Status),
+	})
+}
+
+// GetOrderStatus returns current order status
+// VerifyOrder vérifie qu'une commande correspond à un numéro + email (pour procédure CIC)
+func (h *TicketHandler) VerifyOrder(w http.ResponseWriter, r *http.Request) {
+	orderNumber := strings.TrimSpace(r.URL.Query().Get("order_number"))
+	email := strings.TrimSpace(r.URL.Query().Get("email"))
+
+	if orderNumber == "" || email == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Numéro de commande et email requis"})
+		return
+	}
+
+	order, err := h.ticketService.VerifyOrderForCIC(r.Context(), orderNumber, email)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+	if order == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Commande introuvable. Vérifiez votre numéro de commande et votre email."})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"order_number": order.OrderNumber,
+		"first_name":   order.CustomerFirstName,
+		"last_name":    order.CustomerLastName,
+		"email":        order.CustomerEmail,
+		"status":       string(order.Status),
+	})
+}
+
+// GetOrderStatus returns current order status
 func (h *TicketHandler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if orderID == "" {

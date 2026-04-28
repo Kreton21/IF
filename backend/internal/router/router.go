@@ -87,8 +87,10 @@ func NewRouter(
 		// --- Public : Commandes ---
 		if rateLimitDisabled {
 			r.Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
+			r.Get("/orders/verify", ticketHandler.VerifyOrder)
 		} else {
 			r.With(middleware.RateLimitScoped(redisClient, "order_status", 30, 1*time.Minute)).Get("/orders/{id}/status", ticketHandler.GetOrderStatus)
+			r.With(middleware.RateLimitScoped(redisClient, "order_verify", 10, 1*time.Minute)).Get("/orders/verify", ticketHandler.VerifyOrder)
 		}
 
 		// --- Public : QR Code image ---
