@@ -2104,12 +2104,11 @@ function renderKPITicketOrigins(rows) {
         return;
     }
 
-    let html = '<table><thead><tr><th>Domaine</th><th>Catégorie</th><th>Type</th><th>Tickets</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Catégorie</th><th>Type</th><th>Tickets</th></tr></thead><tbody>';
     rows.forEach(r => {
-        const domain = r.domain || 'inconnu';
         const category = r.category || 'sans catégorie';
         const ticketType = r.ticket_type || '-';
-        html += `<tr><td>${escapeHtml(domain)}</td><td>${escapeHtml(category)}</td><td>${escapeHtml(ticketType)}</td><td>${r.ticket_count ?? 0}</td></tr>`;
+        html += `<tr><td>${escapeHtml(category)}</td><td>${escapeHtml(ticketType)}</td><td>${r.ticket_count ?? 0}</td></tr>`;
     });
     container.innerHTML = html + '</tbody></table>';
 }

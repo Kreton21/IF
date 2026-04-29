@@ -500,7 +500,6 @@ type AnalyticsPageStat struct {
 }
 
 type AnalyticsTicketOrigin struct {
-	Domain      string `json:"domain"`
 	Category    string `json:"category"`
 	TicketType  string `json:"ticket_type"`
 	TicketCount int    `json:"ticket_count"`
