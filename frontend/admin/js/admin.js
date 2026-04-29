@@ -1991,6 +1991,7 @@ async function loadKPI(range) {
         renderKPIChart('kpi-sessions-chart', kpi.sessions_timeline || [], 'Sessions', '#667eea', c => { kpiSessionsChart = c; }, kpiSessionsChart);
         renderKPIChart('kpi-clicks-chart', kpi.clicks_timeline || [], 'Clics', '#ed8936', c => { kpiClicksChart = c; }, kpiClicksChart);
         renderKPITopPages(kpi.top_pages || []);
+        renderKPITicketOrigins(kpi.ticket_origins || []);
     } catch (error) {
         console.error('Erreur chargement KPI:', error);
     }
@@ -2090,6 +2091,25 @@ function renderKPITopPages(pages) {
     let html = '<table><thead><tr><th>Page</th><th>Sessions</th><th>Clics</th></tr></thead><tbody>';
     pages.forEach(p => {
         html += `<tr><td>${escapeHtml(p.page)}</td><td>${p.sessions}</td><td>${p.clicks}</td></tr>`;
+    });
+    container.innerHTML = html + '</tbody></table>';
+}
+
+function renderKPITicketOrigins(rows) {
+    const container = document.getElementById('kpi-ticket-origins');
+    if (!container) return;
+
+    if (!rows.length) {
+        container.innerHTML = '<p style="color:#718096;">Aucune donnée</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Domaine</th><th>Catégorie</th><th>Type</th><th>Tickets</th></tr></thead><tbody>';
+    rows.forEach(r => {
+        const domain = r.domain || 'inconnu';
+        const category = r.category || 'sans catégorie';
+        const ticketType = r.ticket_type || '-';
+        html += `<tr><td>${escapeHtml(domain)}</td><td>${escapeHtml(category)}</td><td>${escapeHtml(ticketType)}</td><td>${r.ticket_count ?? 0}</td></tr>`;
     });
     container.innerHTML = html + '</tbody></table>';
 }

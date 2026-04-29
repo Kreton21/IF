@@ -116,6 +116,38 @@ func (r *AnalyticsRepository) GetKPI(ctx context.Context, rangeName string, star
 		}
 		kpi.TopPages = append(kpi.TopPages, p)
 	}
+	rows.Close()
+
+	// Ticket origins by email domain and category
+	rows, err = r.pool.Query(ctx,
+		`SELECT
+			COALESCE(NULLIF(LOWER(SPLIT_PART(o.customer_email, '@', 2)), ''), 'inconnu') AS domain,
+			COALESCE(tc.name, tt.name) AS category,
+			tt.name AS ticket_type,
+			SUM(oi.quantity) AS ticket_count
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		JOIN ticket_types tt ON tt.id = oi.ticket_type_id
+		LEFT JOIN ticket_categories tc ON tc.id = oi.category_id
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND o.created_at >= $1 AND o.created_at <= $2
+		GROUP BY domain, category, ticket_type
+		ORDER BY ticket_count DESC, domain ASC, category ASC
+		LIMIT 300`,
+		since, until,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("ticket origins kpi: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row models.AnalyticsTicketOrigin
+		if err := rows.Scan(&row.Domain, &row.Category, &row.TicketType, &row.TicketCount); err != nil {
+			return nil, err
+		}
+		kpi.TicketOrigins = append(kpi.TicketOrigins, row)
+	}
 
 	return kpi, nil
 }

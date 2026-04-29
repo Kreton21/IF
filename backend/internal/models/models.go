@@ -485,6 +485,7 @@ type AnalyticsKPI struct {
 	ClicksTimeline     []AnalyticsTimePoint   `json:"clicks_timeline"`
 	SessionsTimeline   []AnalyticsTimePoint   `json:"sessions_timeline"`
 	TopPages           []AnalyticsPageStat    `json:"top_pages"`
+	TicketOrigins      []AnalyticsTicketOrigin `json:"ticket_origins"`
 }
 
 type AnalyticsTimePoint struct {
@@ -496,4 +497,11 @@ type AnalyticsPageStat struct {
 	Page     string `json:"page"`
 	Sessions int    `json:"sessions"`
 	Clicks   int    `json:"clicks"`
+}
+
+type AnalyticsTicketOrigin struct {
+	Domain      string `json:"domain"`
+	Category    string `json:"category"`
+	TicketType  string `json:"ticket_type"`
+	TicketCount int    `json:"ticket_count"`
 }
