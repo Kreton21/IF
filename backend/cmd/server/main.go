@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Erreur configuration: %v", err)
 	}
-	
+
 	// Debug: log important config values
 	log.Printf("⚙️  Payment Provider: %s", cfg.PaymentProvider)
 	log.Printf("⚙️  Return URL: %s", cfg.HelloAssoReturnURL)
@@ -52,6 +52,7 @@ func main() {
 	ticketRepo := repository.NewTicketRepository(pgPool)
 	orderRepo := repository.NewOrderRepository(pgPool)
 	adminRepo := repository.NewAdminRepository(pgPool)
+	couponRepo := repository.NewCouponRepository(pgPool)
 
 	// 5. Initialiser les services
 	var helloAssoService *services.HelloAssoService
@@ -78,8 +79,8 @@ func main() {
 	qrService := services.NewQRCodeService(baseURL)
 	emailService := services.NewEmailService(cfg)
 
-	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, paymentProvider, qrService, emailService, redisClient)
-	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, emailService, redisClient)
+	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, couponRepo, paymentProvider, qrService, emailService, redisClient)
+	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, couponRepo, emailService, redisClient)
 
 	pendingTTLMinutes := 20
 	if raw := os.Getenv("ORDER_PENDING_TTL_MINUTES"); raw != "" {
@@ -111,7 +112,7 @@ func main() {
 		frontendDir = "../frontend"
 	}
 	log.Printf("📁 Frontend directory: %s", frontendDir)
-	
+
 	// Verify frontend directories exist
 	if _, err := os.Stat(frontendDir + "/admin"); err != nil {
 		log.Printf("⚠️  Warning: Admin directory not found at %s/admin", frontendDir)
@@ -123,7 +124,7 @@ func main() {
 	} else {
 		log.Printf("✓ Public directory found")
 	}
-	
+
 	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, analyticsHandler, adminService, redisClient, frontendDir)
 
 	// 8. Créer les comptes par défaut si nécessaire

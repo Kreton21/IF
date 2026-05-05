@@ -8,21 +8,22 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/kreton/if-festival/internal/config"
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
+	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AdminService gère la logique admin (auth, stats, validation QR)
 type AdminService struct {
-	cfg        *config.Config
-	adminRepo  *repository.AdminRepository
-	orderRepo  *repository.OrderRepository
-	ticketRepo *repository.TicketRepository
+	cfg          *config.Config
+	adminRepo    *repository.AdminRepository
+	orderRepo    *repository.OrderRepository
+	ticketRepo   *repository.TicketRepository
+	couponRepo   *repository.CouponRepository
 	emailService *EmailService
-	redis      *redis.Client
+	redis        *redis.Client
 }
 
 func NewAdminService(
@@ -30,16 +31,18 @@ func NewAdminService(
 	adminRepo *repository.AdminRepository,
 	orderRepo *repository.OrderRepository,
 	ticketRepo *repository.TicketRepository,
+	couponRepo *repository.CouponRepository,
 	emailService *EmailService,
 	redis *redis.Client,
 ) *AdminService {
 	return &AdminService{
-		cfg:        cfg,
-		adminRepo:  adminRepo,
-		orderRepo:  orderRepo,
-		ticketRepo: ticketRepo,
+		cfg:          cfg,
+		adminRepo:    adminRepo,
+		orderRepo:    orderRepo,
+		ticketRepo:   ticketRepo,
+		couponRepo:   couponRepo,
 		emailService: emailService,
-		redis:      redis,
+		redis:        redis,
 	}
 }
 
@@ -245,6 +248,18 @@ func (s *AdminService) SetStaffPassword(ctx context.Context, username, newPasswo
 	}
 
 	return nil
+}
+
+func (s *AdminService) CreateCoupon(ctx context.Context, req models.CreateCouponRequest) (*models.Coupon, error) {
+	return s.couponRepo.CreateCoupon(ctx, req)
+}
+
+func (s *AdminService) ListCoupons(ctx context.Context) ([]models.Coupon, error) {
+	return s.couponRepo.ListCoupons(ctx)
+}
+
+func (s *AdminService) DisableCoupon(ctx context.Context, couponID string) error {
+	return s.couponRepo.DisableCoupon(ctx, couponID)
 }
 
 // SaveWebhookLog enregistre un webhook reçu

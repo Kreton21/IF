@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -46,13 +46,15 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, tx pgx.Tx, order *mod
 
 	query := `
 		INSERT INTO orders (order_number, customer_email, customer_first_name, customer_last_name,
-		                     customer_phone, date_of_birth, wants_camping, wants_refund_insurance, total_cents, status, ip_address, user_agent)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::inet, $12)
+		                     customer_phone, date_of_birth, wants_camping, wants_refund_insurance, total_cents, status,
+		                     ip_address, user_agent, coupon_id, coupon_code, coupon_discount_cents, coupon_uses_applied)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::inet, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at`
 
 	return tx.QueryRow(ctx, query,
 		order.OrderNumber, order.CustomerEmail, order.CustomerFirstName, order.CustomerLastName,
-		order.CustomerPhone, order.DateOfBirth, order.WantsCamping, order.WantsRefundInsurance, order.TotalCents, order.Status, order.IPAddress, order.UserAgent,
+		order.CustomerPhone, order.DateOfBirth, order.WantsCamping, order.WantsRefundInsurance, order.TotalCents, order.Status,
+		order.IPAddress, order.UserAgent, nullIfEmpty(order.CouponID), nullIfEmpty(order.CouponCode), order.CouponDiscountCents, order.CouponUsesApplied,
 	).Scan(&order.ID, &order.CreatedAt, &order.UpdatedAt)
 }
 
@@ -632,6 +634,13 @@ func (r *OrderRepository) orderItemsHasAttendeesJSONColumn(ctx context.Context, 
 		return false, err
 	}
 	return exists, nil
+}
+
+func nullIfEmpty(value string) interface{} {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 func isMissingAttendeesJSONColumn(err error) bool {

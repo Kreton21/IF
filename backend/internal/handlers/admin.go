@@ -281,6 +281,88 @@ func (h *AdminHandler) UpdateSuccessfulOrder(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, updated)
 }
 
+// ListCoupons returns all coupons
+func (h *AdminHandler) ListCoupons(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	rows, err := h.adminService.ListCoupons(r.Context())
+	if err != nil {
+		log.Printf("Erreur liste coupons: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, rows)
+}
+
+// CreateCoupon creates a new coupon
+func (h *AdminHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.CreateCouponRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	req.Code = strings.TrimSpace(req.Code)
+	req.TicketTypeID = strings.TrimSpace(req.TicketTypeID)
+
+	if req.Name == "" || req.TicketTypeID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Nom et ticket requis"})
+		return
+	}
+	if req.MaxUses < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Quantité d'utilisation invalide"})
+		return
+	}
+	if req.DiscountCents < 1 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Réduction invalide"})
+		return
+	}
+
+	created, err := h.adminService.CreateCoupon(r.Context(), req)
+	if err != nil {
+		log.Printf("Erreur création coupon: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, created)
+}
+
+// DisableCoupon disables a coupon code
+func (h *AdminHandler) DisableCoupon(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	couponID := chi.URLParam(r, "couponID")
+	if strings.TrimSpace(couponID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Coupon requis"})
+		return
+	}
+
+	if err := h.adminService.DisableCoupon(r.Context(), couponID); err != nil {
+		log.Printf("Erreur désactivation coupon: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Coupon désactivé"})
+}
+
 func (h *AdminHandler) ResendOrderConfirmationEmail(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {

@@ -80,6 +80,10 @@ type Order struct {
 	WantsRefundInsurance bool        `json:"wants_refund_insurance,omitempty"`
 	TotalCents           int         `json:"total_cents"`
 	Status               OrderStatus `json:"status"`
+	CouponID             string      `json:"coupon_id,omitempty"`
+	CouponCode           string      `json:"coupon_code,omitempty"`
+	CouponDiscountCents  int         `json:"coupon_discount_cents,omitempty"`
+	CouponUsesApplied    int         `json:"coupon_uses_applied,omitempty"`
 	HelloAssoCheckoutID  string      `json:"helloasso_checkout_id,omitempty"`
 	HelloAssoPaymentID   string      `json:"helloasso_payment_id,omitempty"`
 	HelloAssoCheckoutURL string      `json:"helloasso_checkout_url,omitempty"`
@@ -133,16 +137,17 @@ type Admin struct {
 // ============================================
 
 type CheckoutRequest struct {
-	CustomerEmail     string         `json:"customer_email"`
-	CustomerFirstName string         `json:"customer_first_name"`
-	CustomerLastName  string         `json:"customer_last_name"`
-	CustomerPhone     string         `json:"customer_phone,omitempty"`
-	DateOfBirth       string         `json:"date_of_birth,omitempty"`
-	ReferralCode      string         `json:"-"`
-	ReferralVisitorID string         `json:"-"`
-	WantsCamping      bool           `json:"wants_camping,omitempty"`
-	WantsRefundInsurance bool         `json:"wants_refund_insurance,omitempty"`
-	Items             []CheckoutItem `json:"items"`
+	CustomerEmail        string         `json:"customer_email"`
+	CustomerFirstName    string         `json:"customer_first_name"`
+	CustomerLastName     string         `json:"customer_last_name"`
+	CustomerPhone        string         `json:"customer_phone,omitempty"`
+	DateOfBirth          string         `json:"date_of_birth,omitempty"`
+	ReferralCode         string         `json:"-"`
+	ReferralVisitorID    string         `json:"-"`
+	CouponCode           string         `json:"coupon_code,omitempty"`
+	WantsCamping         bool           `json:"wants_camping,omitempty"`
+	WantsRefundInsurance bool           `json:"wants_refund_insurance,omitempty"`
+	Items                []CheckoutItem `json:"items"`
 }
 
 type CheckoutItem struct {
@@ -163,6 +168,47 @@ type CheckoutResponse struct {
 	OrderNumber string `json:"order_number"`
 	CheckoutURL string `json:"checkout_url"`
 	TotalCents  int    `json:"total_cents"`
+}
+
+type Coupon struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Code           string    `json:"code"`
+	TicketTypeID   string    `json:"ticket_type_id"`
+	TicketTypeName string    `json:"ticket_type_name,omitempty"`
+	MaxUses        int       `json:"max_uses"`
+	UsedCount      int       `json:"used_count"`
+	DiscountCents  int       `json:"discount_cents"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type CreateCouponRequest struct {
+	Name          string `json:"name"`
+	Code          string `json:"code,omitempty"`
+	TicketTypeID  string `json:"ticket_type_id"`
+	MaxUses       int    `json:"max_uses"`
+	DiscountCents int    `json:"discount_cents"`
+}
+
+type CouponPreviewRequest struct {
+	Code  string              `json:"code"`
+	Items []CouponPreviewItem `json:"items"`
+}
+
+type CouponPreviewItem struct {
+	TicketTypeID string `json:"ticket_type_id"`
+	Quantity     int    `json:"quantity"`
+}
+
+type CouponPreviewResponse struct {
+	Valid         bool   `json:"valid"`
+	Message       string `json:"message"`
+	Code          string `json:"code,omitempty"`
+	TicketTypeID  string `json:"ticket_type_id,omitempty"`
+	AppliedUses   int    `json:"applied_uses"`
+	RemainingUses int    `json:"remaining_uses"`
+	DiscountCents int    `json:"discount_cents"`
 }
 
 type LoginRequest struct {
@@ -208,17 +254,17 @@ type ValidateQRResponse struct {
 }
 
 type SalesStats struct {
-	TotalOrders       int              `json:"total_orders"`
-	TotalRevenueCents int              `json:"total_revenue_cents"`
-	TotalTicketsSold  int              `json:"total_tickets_sold"`
-	TotalValidated    int              `json:"total_validated"`
-	TotalCamping      int              `json:"total_camping"`
-	TotalRefundInsurance int           `json:"total_refund_insurance"`
-	TestEmailEnabled  bool             `json:"test_email_enabled"`
-	ByTicketType      []TicketTypeStat `json:"by_ticket_type"`
-	RecentOrders      []Order          `json:"recent_orders"`
-	SalesByDay        []DailySales     `json:"sales_by_day"`
-	SalesTimeline     map[string][]SalesTimelinePoint `json:"sales_timeline"`
+	TotalOrders          int                             `json:"total_orders"`
+	TotalRevenueCents    int                             `json:"total_revenue_cents"`
+	TotalTicketsSold     int                             `json:"total_tickets_sold"`
+	TotalValidated       int                             `json:"total_validated"`
+	TotalCamping         int                             `json:"total_camping"`
+	TotalRefundInsurance int                             `json:"total_refund_insurance"`
+	TestEmailEnabled     bool                            `json:"test_email_enabled"`
+	ByTicketType         []TicketTypeStat                `json:"by_ticket_type"`
+	RecentOrders         []Order                         `json:"recent_orders"`
+	SalesByDay           []DailySales                    `json:"sales_by_day"`
+	SalesTimeline        map[string][]SalesTimelinePoint `json:"sales_timeline"`
 }
 
 type CampingClaimRequest struct {
@@ -254,9 +300,9 @@ type DailyReferralSales struct {
 }
 
 type SalesTimelinePoint struct {
-	Bucket      string `json:"bucket"`
-	RevenueCents int   `json:"revenue_cents"`
-	TicketCount int    `json:"ticket_count"`
+	Bucket       string `json:"bucket"`
+	RevenueCents int    `json:"revenue_cents"`
+	TicketCount  int    `json:"ticket_count"`
 }
 
 type OrderListParams struct {
@@ -440,18 +486,18 @@ type CreateReferralLinkRequest struct {
 }
 
 type ReferralLinkRow struct {
-	ID               string    `json:"id"`
-	Name             string    `json:"name"`
-	Code             string    `json:"code"`
-	IsActive         bool      `json:"is_active"`
-	CreatedAt        time.Time `json:"created_at"`
-	ClickCount       int       `json:"click_count"`
-	UniqueVisitors   int       `json:"unique_visitors"`
-	ConvertedOrders  int       `json:"converted_orders"`
-	ConvertedTickets int       `json:"converted_tickets"`
-	ConvertedRevenue int       `json:"converted_revenue_cents"`
+	ID               string               `json:"id"`
+	Name             string               `json:"name"`
+	Code             string               `json:"code"`
+	IsActive         bool                 `json:"is_active"`
+	CreatedAt        time.Time            `json:"created_at"`
+	ClickCount       int                  `json:"click_count"`
+	UniqueVisitors   int                  `json:"unique_visitors"`
+	ConvertedOrders  int                  `json:"converted_orders"`
+	ConvertedTickets int                  `json:"converted_tickets"`
+	ConvertedRevenue int                  `json:"converted_revenue_cents"`
 	DailySalesByDay  []DailyReferralSales `json:"daily_sales_by_day,omitempty"`
-	ShareURL         string    `json:"share_url,omitempty"`
+	ShareURL         string               `json:"share_url,omitempty"`
 }
 
 type CreateReferralLinkResponse struct {
@@ -470,21 +516,22 @@ type ReferralPublicInfo struct {
 // ══════════════════════════════════════
 
 type AnalyticsEvent struct {
-	SessionID string           `json:"session_id"`
-	Type      string           `json:"type"` // "session_start", "click", "session_end"
-	Page      string           `json:"page"`
-	Target    string           `json:"target,omitempty"`
-	Referrer  string           `json:"referrer,omitempty"`
-	Duration  int64            `json:"duration_ms,omitempty"`
+	SessionID string `json:"session_id"`
+	Type      string `json:"type"` // "session_start", "click", "session_end"
+	Page      string `json:"page"`
+	Target    string `json:"target,omitempty"`
+	Referrer  string `json:"referrer,omitempty"`
+	Duration  int64  `json:"duration_ms,omitempty"`
 }
 
 type AnalyticsKPI struct {
-	TotalSessions      int                    `json:"total_sessions"`
-	TotalClicks        int                    `json:"total_clicks"`
-	AvgSessionDuration float64                `json:"avg_session_duration_s"`
-	ClicksTimeline     []AnalyticsTimePoint   `json:"clicks_timeline"`
-	SessionsTimeline   []AnalyticsTimePoint   `json:"sessions_timeline"`
-	TopPages           []AnalyticsPageStat    `json:"top_pages"`
+	TotalSessions      int                     `json:"total_sessions"`
+	TotalClicks        int                     `json:"total_clicks"`
+	AvgSessionDuration float64                 `json:"avg_session_duration_s"`
+	ClicksTimeline     []AnalyticsTimePoint    `json:"clicks_timeline"`
+	SessionsTimeline   []AnalyticsTimePoint    `json:"sessions_timeline"`
+	TopPages           []AnalyticsPageStat     `json:"top_pages"`
+	TicketOrigins      []AnalyticsTicketOrigin `json:"ticket_origins"`
 }
 
 type AnalyticsTimePoint struct {
@@ -496,4 +543,10 @@ type AnalyticsPageStat struct {
 	Page     string `json:"page"`
 	Sessions int    `json:"sessions"`
 	Clicks   int    `json:"clicks"`
+}
+
+type AnalyticsTicketOrigin struct {
+	Category    string `json:"category"`
+	TicketType  string `json:"ticket_type"`
+	TicketCount int    `json:"ticket_count"`
 }

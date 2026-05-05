@@ -677,6 +677,41 @@ iframe:not(.hero-video) {
 	letter-spacing:.2px;
 }
 
+.coupon-box {
+	background:var(--offwhite);
+	border:1px solid #e8e0f0;
+	border-radius:14px;
+	padding:18px;
+	margin:12px 0 18px;
+}
+
+.coupon-row {
+	display:flex;
+	gap:10px;
+	align-items:center;
+}
+
+.coupon-row input {
+	flex:1;
+	text-transform:uppercase;
+}
+
+.coupon-row .btn-otl {
+	white-space:nowrap;
+	padding:12px 18px;
+	line-height:1;
+}
+
+@media(max-width:640px){
+	.coupon-row{
+		flex-direction:column;
+		align-items:stretch;
+	}
+	.coupon-row .btn-otl{
+		width:100%;
+	}
+}
+
 /* Order summary in checkout */
 .order-summary {
 	background:var(--offwhite); border:1px solid #e8e0f0;
