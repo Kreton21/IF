@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Erreur configuration: %v", err)
 	}
-	
+
 	// Debug: log important config values
 	log.Printf("⚙️  Payment Provider: %s", cfg.PaymentProvider)
 	log.Printf("⚙️  Return URL: %s", cfg.HelloAssoReturnURL)
@@ -112,7 +112,7 @@ func main() {
 		frontendDir = "../frontend"
 	}
 	log.Printf("📁 Frontend directory: %s", frontendDir)
-	
+
 	// Verify frontend directories exist
 	if _, err := os.Stat(frontendDir + "/admin"); err != nil {
 		log.Printf("⚠️  Warning: Admin directory not found at %s/admin", frontendDir)
@@ -124,7 +124,7 @@ func main() {
 	} else {
 		log.Printf("✓ Public directory found")
 	}
-	
+
 	r := router.NewRouter(ticketHandler, webhookHandler, adminHandler, analyticsHandler, adminService, redisClient, frontendDir)
 
 	// 8. Créer les comptes par défaut si nécessaire

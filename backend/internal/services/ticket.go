@@ -507,21 +507,21 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	order := &models.Order{
-		CustomerEmail:     req.CustomerEmail,
-		CustomerFirstName: req.CustomerFirstName,
-		CustomerLastName:  req.CustomerLastName,
-		CustomerPhone:     req.CustomerPhone,
-		DateOfBirth:       req.DateOfBirth,
-		WantsCamping:      req.WantsCamping,
+		CustomerEmail:        req.CustomerEmail,
+		CustomerFirstName:    req.CustomerFirstName,
+		CustomerLastName:     req.CustomerLastName,
+		CustomerPhone:        req.CustomerPhone,
+		DateOfBirth:          req.DateOfBirth,
+		WantsCamping:         req.WantsCamping,
 		WantsRefundInsurance: req.WantsRefundInsurance,
-		TotalCents:        totalCents,
-		Status:            models.OrderStatusPending,
-		IPAddress:         ipAddress,
-		UserAgent:         userAgent,
-		CouponID:          "",
-		CouponCode:        "",
-		CouponDiscountCents: couponDiscountCents,
-		CouponUsesApplied: couponAppliedUses,
+		TotalCents:           totalCents,
+		Status:               models.OrderStatusPending,
+		IPAddress:            ipAddress,
+		UserAgent:            userAgent,
+		CouponID:             "",
+		CouponCode:           "",
+		CouponDiscountCents:  couponDiscountCents,
+		CouponUsesApplied:    couponAppliedUses,
 	}
 	if coupon != nil {
 		order.CouponID = coupon.ID
@@ -1150,7 +1150,7 @@ func (s *TicketService) buildFestivalEmailTicketsForOrder(ctx context.Context, o
 
 		emailTickets = append(emailTickets, TicketEmailData{
 			TicketTypeName: ticket.TicketTypeName,
-			AttendeeName: strings.TrimSpace(strings.TrimSpace(ticket.AttendeeFirstName) + " " + strings.TrimSpace(ticket.AttendeeLastName)),
+			AttendeeName:   strings.TrimSpace(strings.TrimSpace(ticket.AttendeeFirstName) + " " + strings.TrimSpace(ticket.AttendeeLastName)),
 			DateOfBirth:    order.DateOfBirth,
 			RecipientEmail: recipientEmail,
 			QRToken:        ticket.QRToken,

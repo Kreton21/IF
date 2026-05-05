@@ -8,22 +8,22 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/kreton/if-festival/internal/config"
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
+	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AdminService gère la logique admin (auth, stats, validation QR)
 type AdminService struct {
-	cfg        *config.Config
-	adminRepo  *repository.AdminRepository
-	orderRepo  *repository.OrderRepository
-	ticketRepo *repository.TicketRepository
-	couponRepo *repository.CouponRepository
+	cfg          *config.Config
+	adminRepo    *repository.AdminRepository
+	orderRepo    *repository.OrderRepository
+	ticketRepo   *repository.TicketRepository
+	couponRepo   *repository.CouponRepository
 	emailService *EmailService
-	redis      *redis.Client
+	redis        *redis.Client
 }
 
 func NewAdminService(
@@ -36,13 +36,13 @@ func NewAdminService(
 	redis *redis.Client,
 ) *AdminService {
 	return &AdminService{
-		cfg:        cfg,
-		adminRepo:  adminRepo,
-		orderRepo:  orderRepo,
-		ticketRepo: ticketRepo,
-		couponRepo: couponRepo,
+		cfg:          cfg,
+		adminRepo:    adminRepo,
+		orderRepo:    orderRepo,
+		ticketRepo:   ticketRepo,
+		couponRepo:   couponRepo,
 		emailService: emailService,
-		redis:      redis,
+		redis:        redis,
 	}
 }
 

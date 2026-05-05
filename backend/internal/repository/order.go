@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
