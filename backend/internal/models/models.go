@@ -179,6 +179,7 @@ type Coupon struct {
 	MaxUses        int       `json:"max_uses"`
 	UsedCount      int       `json:"used_count"`
 	DiscountCents  int       `json:"discount_cents"`
+	IsActive       bool      `json:"is_active"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 

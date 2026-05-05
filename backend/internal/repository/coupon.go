@@ -34,7 +34,7 @@ func (r *CouponRepository) CreateCoupon(ctx context.Context, req models.CreateCo
 	query := `
 		INSERT INTO coupons (name, code, ticket_type_id, max_uses, discount_cents)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, name, code, ticket_type_id, max_uses, used_count, discount_cents, created_at`
+		RETURNING id, name, code, ticket_type_id, max_uses, used_count, discount_cents, is_active, created_at`
 
 	err := r.pool.QueryRow(ctx, query,
 		strings.TrimSpace(req.Name),
@@ -50,6 +50,7 @@ func (r *CouponRepository) CreateCoupon(ctx context.Context, req models.CreateCo
 		&c.MaxUses,
 		&c.UsedCount,
 		&c.DiscountCents,
+		&c.IsActive,
 		&c.CreatedAt,
 	)
 	if err != nil {
@@ -61,7 +62,7 @@ func (r *CouponRepository) CreateCoupon(ctx context.Context, req models.CreateCo
 
 func (r *CouponRepository) ListCoupons(ctx context.Context) ([]models.Coupon, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.name, c.code, c.ticket_type_id, tt.name, c.max_uses, c.used_count, c.discount_cents, c.created_at
+		SELECT c.id, c.name, c.code, c.ticket_type_id, tt.name, c.max_uses, c.used_count, c.discount_cents, c.is_active, c.created_at
 		FROM coupons c
 		JOIN ticket_types tt ON tt.id = c.ticket_type_id
 		ORDER BY c.created_at DESC`)
@@ -82,6 +83,7 @@ func (r *CouponRepository) ListCoupons(ctx context.Context) ([]models.Coupon, er
 			&c.MaxUses,
 			&c.UsedCount,
 			&c.DiscountCents,
+			&c.IsActive,
 			&c.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -99,7 +101,7 @@ func (r *CouponRepository) GetCouponByCode(ctx context.Context, code string) (*m
 
 	var c models.Coupon
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, name, code, ticket_type_id, max_uses, used_count, discount_cents, created_at
+		SELECT id, name, code, ticket_type_id, max_uses, used_count, discount_cents, is_active, created_at
 		FROM coupons
 		WHERE code = $1`, code).Scan(
 		&c.ID,
@@ -109,6 +111,7 @@ func (r *CouponRepository) GetCouponByCode(ctx context.Context, code string) (*m
 		&c.MaxUses,
 		&c.UsedCount,
 		&c.DiscountCents,
+		&c.IsActive,
 		&c.CreatedAt,
 	)
 	if err != nil {
@@ -129,7 +132,7 @@ func (r *CouponRepository) GetCouponByCodeForUpdate(ctx context.Context, tx pgx.
 
 	var c models.Coupon
 	err := tx.QueryRow(ctx, `
-		SELECT id, name, code, ticket_type_id, max_uses, used_count, discount_cents, created_at
+		SELECT id, name, code, ticket_type_id, max_uses, used_count, discount_cents, is_active, created_at
 		FROM coupons
 		WHERE code = $1
 		FOR UPDATE`, code).Scan(
@@ -140,6 +143,7 @@ func (r *CouponRepository) GetCouponByCodeForUpdate(ctx context.Context, tx pgx.
 		&c.MaxUses,
 		&c.UsedCount,
 		&c.DiscountCents,
+		&c.IsActive,
 		&c.CreatedAt,
 	)
 	if err != nil {
@@ -172,6 +176,14 @@ func (r *CouponRepository) InsertCouponRedemption(ctx context.Context, tx pgx.Tx
 		VALUES ($1, $2, $3)`, couponID, orderID, uses)
 	if err != nil {
 		return fmt.Errorf("erreur insertion redemption: %w", err)
+	}
+	return nil
+}
+
+func (r *CouponRepository) DisableCoupon(ctx context.Context, couponID string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE coupons SET is_active = false WHERE id = $1`, couponID)
+	if err != nil {
+		return fmt.Errorf("erreur désactivation coupon: %w", err)
 	}
 	return nil
 }

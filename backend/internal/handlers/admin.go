@@ -340,6 +340,29 @@ func (h *AdminHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, created)
 }
 
+// DisableCoupon disables a coupon code
+func (h *AdminHandler) DisableCoupon(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	couponID := chi.URLParam(r, "couponID")
+	if strings.TrimSpace(couponID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Coupon requis"})
+		return
+	}
+
+	if err := h.adminService.DisableCoupon(r.Context(), couponID); err != nil {
+		log.Printf("Erreur désactivation coupon: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Coupon désactivé"})
+}
+
 func (h *AdminHandler) ResendOrderConfirmationEmail(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {

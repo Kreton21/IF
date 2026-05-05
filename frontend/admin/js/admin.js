@@ -1291,16 +1291,42 @@ function renderCoupons(rows) {
         return;
     }
 
-    let html = '<table><thead><tr><th>Nom</th><th>Code</th><th>Alloués</th><th>Utilisés</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Nom</th><th>Ticket</th><th>Code</th><th>Alloués</th><th>Utilisés</th><th>Action</th></tr></thead><tbody>';
     rows.forEach(c => {
+        const disabled = c.is_active === false;
+        const actionBtn = disabled
+            ? '<span style="color:#a0aec0;">Désactivé</span>'
+            : `<button class="btn btn-sm btn-danger" onclick="disableCoupon('${c.id}', '${escapeAttr(c.code || '')}')">Désactiver</button>`;
         html += `<tr>
             <td>${escapeHtml(c.name || '')}</td>
+            <td>${escapeHtml(c.ticket_type_name || '')}</td>
             <td><strong>${escapeHtml(c.code || '')}</strong></td>
             <td>${c.max_uses ?? 0}</td>
             <td>${c.used_count ?? 0}</td>
+            <td>${actionBtn}</td>
         </tr>`;
     });
     container.innerHTML = html + '</tbody></table>';
+}
+
+async function disableCoupon(couponID, code) {
+    const label = code ? ` (${code})` : '';
+    if (!confirm(`Désactiver ce coupon${label} ?`)) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/coupons/${couponID}/disable`, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur désactivation coupon');
+        }
+        await loadCoupons();
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
 }
 
 async function renderTicketTypesAdmin(types) {

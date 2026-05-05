@@ -258,6 +258,10 @@ func (s *AdminService) ListCoupons(ctx context.Context) ([]models.Coupon, error)
 	return s.couponRepo.ListCoupons(ctx)
 }
 
+func (s *AdminService) DisableCoupon(ctx context.Context, couponID string) error {
+	return s.couponRepo.DisableCoupon(ctx, couponID)
+}
+
 // SaveWebhookLog enregistre un webhook reçu
 func (s *AdminService) SaveWebhookLog(ctx context.Context, eventType string, payload []byte) (int64, error) {
 	return s.adminRepo.SaveWebhookLog(ctx, eventType, payload)

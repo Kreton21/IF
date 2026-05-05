@@ -275,6 +275,9 @@ func (s *TicketService) PreviewCoupon(ctx context.Context, req models.CouponPrev
 	if coupon == nil {
 		return &models.CouponPreviewResponse{Valid: false, Message: "Coupon introuvable"}, nil
 	}
+	if !coupon.IsActive {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Coupon désactivé"}, nil
+	}
 
 	remaining := coupon.MaxUses - coupon.UsedCount
 	if remaining <= 0 {
@@ -325,6 +328,9 @@ func (s *TicketService) applyCouponInTx(ctx context.Context, tx pgx.Tx, code str
 	}
 	if coupon == nil {
 		return nil, 0, 0, fmt.Errorf("coupon introuvable")
+	}
+	if !coupon.IsActive {
+		return nil, 0, 0, fmt.Errorf("coupon désactivé")
 	}
 
 	remaining := coupon.MaxUses - coupon.UsedCount

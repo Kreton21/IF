@@ -166,6 +166,7 @@ func NewRouter(
 				r.Post("/referrals", adminHandler.CreateReferralLink)
 				r.Get("/coupons", adminHandler.ListCoupons)
 				r.Post("/coupons", adminHandler.CreateCoupon)
+				r.Post("/coupons/{couponID}/disable", adminHandler.DisableCoupon)
 			})
 		})
 	})
