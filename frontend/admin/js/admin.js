@@ -1291,15 +1291,13 @@ function renderCoupons(rows) {
         return;
     }
 
-    let html = '<table><thead><tr><th>Nom</th><th>Code</th><th>Ticket</th><th>Alloués</th><th>Utilisés</th><th>Réduction</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Nom</th><th>Code</th><th>Alloués</th><th>Utilisés</th></tr></thead><tbody>';
     rows.forEach(c => {
         html += `<tr>
             <td>${escapeHtml(c.name || '')}</td>
             <td><strong>${escapeHtml(c.code || '')}</strong></td>
-            <td>${escapeHtml(c.ticket_type_name || '')}</td>
             <td>${c.max_uses ?? 0}</td>
             <td>${c.used_count ?? 0}</td>
-            <td>${formatPrice(c.discount_cents || 0)}</td>
         </tr>`;
     });
     container.innerHTML = html + '</tbody></table>';

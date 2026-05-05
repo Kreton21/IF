@@ -269,6 +269,8 @@ function initHeroVideo() {
 function setupEmailGate() {
   const form = document.getElementById('email-gate-form');
   if (!form) return;
+  state.coupon = null;
+  state.couponCooldownUntil = 0;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('gate-email').value.trim();
@@ -276,6 +278,9 @@ function setupEmailGate() {
     errEl.classList.add('hidden');
 
     if (!email || !email.includes('@')) {
+  const couponField = document.getElementById('coupon-code');
+  if (couponField) couponField.value = '';
+  setCouponMessage('', false);
       errEl.textContent = 'Veuillez entrer une adresse email valide';
       errEl.classList.remove('hidden');
       return;
