@@ -180,74 +180,115 @@
   <!-- BILLETTERIE (dynamic) -->
   <section class="sec tkt-sec" id="tickets">
 	<div class="inner">
-	  <span class="tag rv">✦ Billetterie</span>
-	  <h2 class="title rv">Choisis ton tarif</h2>
-	  <div class="bar rv"></div>
 
-    <!-- Aperçu informatif des tarifs (avant email) -->
-    <div class="tkt-preview rv" aria-label="Aperçu des tarifs">
-      <div class="tkt-grid">
-        <div class="tkt-card rv">
-          <p class="tkt-tier">ULTRA EARLY</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">12,00 €</div></div>
-          <p class="tkt-desc">Places en quantité très limitée</p>
-          <button class="btn-otl" type="button" disabled>Complet</button>
-        </div>
-        <div class="tkt-card rv2">
-          <p class="tkt-tier">EARLY</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">20,00 €</div></div>
-          <p class="tkt-desc"></p>
-          <button class="btn-otl" type="button" disabled>Complet</button>
-        </div>
-        <div class="tkt-card rv3">
-          <p class="tkt-tier">REGULAR</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">25,00 €</div></div>
-          <div class="tkt-avail available">✅ En cours</div>
-          <div class="progress-bar" style="margin:10px 0 4px;">
-            <div class="progress-fill" style="width:50%"></div>
+      <!-- En-tête -->
+      <div class="rv" style="text-align:center;margin-bottom:40px">
+        <span class="tag" style="display:inline-block;margin-bottom:10px">✦ Billetterie</span>
+        <h2 class="title" style="font-size:clamp(2.4rem,5.5vw,3.8rem)">Prends ta place</h2>
+        <div class="bar" style="margin:14px auto 16px"></div>
+        <p style="color:var(--muted);font-size:.88rem;line-height:1.65;max-width:420px;margin:0 auto">
+          Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard
+        </p>
+        <p style="margin-top:8px;font-size:.82rem;font-weight:700">
+          <span style="color:#D4145A">🔥 Tarif Regular en cours — places limitées</span>
+        </p>
+      </div>
+
+      <!-- Aperçu tarifs -->
+      <div class="tkt-preview rv" aria-label="Aperçu des tarifs">
+
+        <!-- 4 tarifs principaux -->
+        <div class="b-grid">
+
+          <!-- Ultra Early — épuisé -->
+          <div class="b-card b-sold">
+            <div class="b-badge b-badge-sold">Épuisé</div>
+            <p class="b-tier">Ultra Early</p>
+            <div class="b-price">12 €</div>
+            <p class="b-desc">Places en quantité très limitée</p>
+            <button class="b-btn b-btn-disabled" disabled>Complet</button>
           </div>
-          <button class="btn-otl" type="button" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Réserver</button>
-        </div>
-        <div class="tkt-card rv">
-          <p class="tkt-tier">LATE</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">30,00 €</div></div>
-          <p class="tkt-desc"></p>
-          <button class="btn-otl" type="button" disabled>Bientôt disponible</button>
-        </div>
-      </div>
 
-      <div class="tkt-grid tkt-grid-alt">
-        <div class="tkt-card rv2">
-          <p class="tkt-tier">PASS CULTURE</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">0,00 €</div></div>
-          <p class="tkt-desc">Réservation via Pass Culture</p>
-          <a href="https://passculture.app/" target="_blank" class="btn-otl">Voir l'offre</a>
+          <!-- Early — épuisé -->
+          <div class="b-card b-sold">
+            <div class="b-badge b-badge-sold">Épuisé</div>
+            <p class="b-tier">Early</p>
+            <div class="b-price">20 €</div>
+            <p class="b-desc">Tarif deuxième vague</p>
+            <button class="b-btn b-btn-disabled" disabled>Complet</button>
+          </div>
+
+          <!-- Regular — ACTIF, carte mise en avant -->
+          <div class="b-card b-active">
+            <div class="b-badge b-badge-live">🔥 Disponible</div>
+            <p class="b-tier">Regular</p>
+            <div class="b-price">25 €</div>
+            <p class="b-desc">Tarif en cours — places limitées</p>
+            <div class="b-progress">
+              <div class="b-progress-bar">
+                <div class="b-progress-fill" style="width:62%"></div>
+              </div>
+            
+            </div>
+            <button class="b-btn b-btn-main" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Réserver ma place →</button>
+          </div>
+
+          <!-- Late — bientôt -->
+          <div class="b-card b-soon">
+            <div class="b-badge b-badge-soon">Bientôt</div>
+            <p class="b-tier">Late</p>
+            <div class="b-price">30 €</div>
+            <p class="b-desc">Dernier tarif disponible</p>
+            <button class="b-btn b-btn-soon" disabled>Bientôt disponible</button>
+          </div>
+
         </div>
-        <div class="tkt-card rv2">
-          <p class="tkt-tier">ETUDIANT.E.S PARIS-SACLAY</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert tkt-price-text">Tarif préférentiel</div></div>
-          <p class="tkt-desc">Offre réservée aux étudiant.e.s Paris-Saclay</p>
-          <button class="btn-otl" type="button" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Durée limitée</button>
-        </div>
-        <div class="tkt-card rv2">
-          <p class="tkt-tier">REMBOURSEMENT CIC</p>
-          <div class="tkt-price-box"><div class="tkt-price tkt-price-invert">0,00 €</div></div>
-          <p class="tkt-desc">Accès procédure CIC Orsay</p>
-          <button type="button" class="btn-otl" onclick="go('cic-refund')">Voir la procédure</button>
+
+        <!-- Séparateur tarifs spéciaux -->
+        <div class="b-sep">Tarifs spéciaux</div>
+
+        <!-- 3 tarifs spéciaux -->
+        <div class="b-grid-alt">
+
+          <div class="b-card-alt">
+            <div style="font-size:1.6rem;margin-bottom:8px">🎭</div>
+            <p class="b-tier">Pass Culture</p>
+            <div class="b-price">0 €</div>
+            <p class="b-desc">Réservation via Pass Culture</p>
+            <a href="https://passculture.app/offre/404601180?utm_gen=product&utm_campaign=share_offer&utm_medium=header" target="_blank" rel="noopener noreferrer" class="b-btn b-btn-ghost">Voir l'offre</a>
+          </div>
+
+          <div class="b-card-alt">
+            <div style="font-size:1.6rem;margin-bottom:8px">🎓</div>
+            <p class="b-tier">Étudiant.e.s Paris-Saclay</p>
+            <div class="b-price b-price-text">Tarif préférentiel</div>
+            <p class="b-desc">Offre réservée aux étudiant.e.s Paris-Saclay</p>
+            <button class="b-btn b-btn-special" onclick="document.getElementById('email-gate').scrollIntoView({behavior:'smooth'})">Durée et quantitée limitée</button>
+          </div>
+
+          <div class="b-card-alt">
+            <div style="font-size:1.6rem;margin-bottom:8px">🏦</div>
+            <p class="b-tier">Remboursement CIC</p>
+            <div class="b-price">0 €</div>
+            <p class="b-desc">Accès procédure CIC Orsay</p>
+            <button class="b-btn b-btn-ghost" onclick="go('cic-refund')">Voir la procédure</button>
+          </div>
+
         </div>
       </div>
-    </div>
 
     <!-- Step 1: Email gate -->
     <div id="email-gate" class="email-gate rv">
     <p class="eg-subtitle">Entrez votre adresse email pour découvrir les tarifs disponibles</p>
     <p class="eg-hint">⚠️ Utilisez votre <strong>adresse email universitaire</strong> (ex : prenom.nom@universite-paris-saclay.fr) pour accéder aux tarifs étudiants réservés à votre établissement.</p>
-    <p class="eg-hint">En cas de problème avec votre billet, merci de contacter le SAV à l'adresse mail suivante : <a href="mailto:sav@interfilieres.fr" style="color:var(--rose);font-weight:800;">sav@interfilieres.fr</a> en précisant votre nom, prénom, adresse mail et numéro de commande si disponible.</p>
     <form id="email-gate-form" class="eg-form">
       <input type="email" id="gate-email" required placeholder="prenom.nom@universite-paris-saclay.fr" class="eg-input">
       <button type="submit" class="btn-rose eg-btn">Voir les billets →</button>
-    </form>
+          </form>
     <p id="eg-error" class="eg-error hidden"></p>
+    <br>
+    <p class="eg-hint">En cas de problème avec votre billet, merci de contacter le SAV à l'adresse mail suivante : <a href="mailto:sav@interfilieres.fr" style="color:var(--rose);font-weight:800;">sav@interfilieres.fr</a> en précisant votre nom, prénom, adresse mail et numéro de commande si disponible.</p>
+    </div>
     </div>
 
     <!-- Current email (shown after email validation) -->
@@ -699,31 +740,6 @@
 
 	</div><!-- /inner -->
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -751,31 +767,6 @@
 	  </div>
 	</div>
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -840,31 +831,6 @@
       </div>
     </div>
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
 <!-- ════════════════════════════════════════
@@ -883,27 +849,25 @@
     </div>
   </div>
 
-  <section class="sec" style="background:#FFF8F5">
-    <div class="inner">
-      <span class="tag rv">✦ Infos essentielles</span>
+  <section class="sec" style="background:#FFFAF4">
       <h2 class="title rv">Le camping de L'&#8288;Interfilières</h2>
       <div class="bar rv"></div>
 
-      <div class="rv" style="background:linear-gradient(135deg,#8FD8FF 0%,#A9CCFF 46%,#C7C8FF 100%);border-radius:18px;padding:32px 36px;margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 12px 40px rgba(116,201,248,.28);position:relative;overflow:hidden;">
+      <div class="rv" style="background:linear-gradient(135deg,#B8A4F0 0%,#C4B8F8 46%,#A9CCFF 100%);border-radius:18px;padding:32px 36px;margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 12px 40px rgba(155,143,212,.32);position:relative;overflow:hidden;">
         <span style="position:absolute;right:-10px;top:-10px;font-size:110px;opacity:.06;line-height:1;pointer-events:none">🏕</span>
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping sur réservation</div>
-          <p style="font-size:.86rem;color:rgba(255,255,255,.65);margin-top:6px;font-weight:600">200 emplacements disponibles · premier arrivé premier servi</p>
+          <div style="font-family:'Paytone One',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">🏕 Camping sur réservation</div>
+          <p style="font-size:.86rem;color:rgba(255,255,255,.7);margin-top:6px;font-weight:600">200 emplacements disponibles · premier arrivé premier servi</p>
         </div>
-        <button style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;border:none;border-radius:50px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 4px 18px rgba(249,127,160,.3);transition:all .25s" onmouseover="this.style.background='linear-gradient(135deg,#ee7097,#ff8d55)'" onmouseout="this.style.background='linear-gradient(135deg,var(--rose),var(--peach))'" onclick="goCampingForm()">🏕 Réserver le camping</button>
+        <button style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap;background:linear-gradient(135deg,#E06090,#FF9A5F);color:#fff;border:none;border-radius:50px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 4px 18px rgba(224,96,144,.32);transition:all .25s" onmouseover="this.style.background='linear-gradient(135deg,#D45080,#FF8040)'" onmouseout="this.style.background='linear-gradient(135deg,#E06090,#FF9A5F)'" onclick="goCampingForm()">🏕 Réserver le camping</button>
       </div>
 
       <div class="rv2" style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:24px">
-        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">200</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Emplacements</div></div>
-        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Nuit</div></div>
-        <div style="background:var(--offwhite);border-radius:16px;padding:28px 16px;text-align:center;box-shadow:var(--sh)"><div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">∞</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Musique</div></div>
-        <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 16px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--lavender)"><div style="font-size:2rem;margin-bottom:8px">🚻</div><div style="font-weight:800;font-size:.82rem">Toilettes H/F</div><p style="font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.5">Sanitaires séparés hommes et femmes.</p></div>
-        <div style="background:var(--offwhite);border-radius:var(--r);padding:26px 16px;text-align:center;box-shadow:var(--sh);border-top:3px solid var(--sky)"><div style="font-size:2rem;margin-bottom:8px">🚑</div><div style="font-weight:800;font-size:.82rem">Poste de secours</div><p style="font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.5">Secouristes présents toute la nuit.</p></div>
+        <div class="camping-stat-card"><div style="font-family:'Paytone One',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">200</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Emplacements</div></div>
+        <div class="camping-stat-card"><div style="font-family:'Paytone One',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Nuit</div></div>
+        <div class="camping-stat-card"><div style="font-family:'Paytone One',sans-serif;font-size:3rem;line-height:1;background:linear-gradient(135deg,var(--sky),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">∞</div><div style="font-size:.72rem;color:var(--muted);font-weight:700;margin-top:6px;text-transform:uppercase;letter-spacing:1px">Musique</div></div>
+        <div class="camping-stat-card"><div style="font-size:2rem;margin-bottom:8px">🚻</div><div style="font-weight:800;font-size:.82rem">Toilettes H/F</div><p style="font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.5">Sanitaires séparés hommes et femmes.</p></div>
+        <div class="camping-stat-card"><div style="font-size:2rem;margin-bottom:8px">🚑</div><div style="font-weight:800;font-size:.82rem">Poste de secours</div><p style="font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.5">Secouristes présents toute la nuit.</p></div>
       </div>
 
       <div class="camping-section rv" id="camping-section" style="margin-top:26px;">
@@ -920,36 +884,8 @@
       </div>
     </div>
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
-<!-- ════════════════════════════════════════
-  STAFF
-════════════════════════════════════════ -->
 <!-- ════════════════════════════════════════
   STAFF
 ════════════════════════════════════════ -->
@@ -1117,31 +1053,6 @@
 
     </div>
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
 
@@ -1445,31 +1356,6 @@
       </div>
     </div>
   </section>
-  <footer>
-	<div class="f-logo">
-		<img src="img/logo-sticker.svg" alt="Logo Interfilières" style="height:50px; width:auto; margin-right:12px;">
-		L'&#8288;Interfilières 2026
-	</div>
-	<p class="f-info">Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard</p>
-	<div class="f-socs">
-	<a class="f-soc" href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener">Instagram</a>
-	<a class="f-soc" href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener">TikTok</a>
-	<a class="f-soc" href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener">Facebook</a>
-	<a class="f-soc" href="https://linktr.ee/interfilieres" target="_blank" rel="noopener">Linktree</a>
-	</div>
-	<div class="f-links">
-	  <a href="#" onclick="goTickets();return false">Billetterie</a>
-	  <a href="#" onclick="go('prog');return false">Programmation</a>
-	  <a href="#" onclick="go('transport');return false">Transports</a>
-	  <a href="#" onclick="go('camping');return false">Camping</a>
-	  <a href="#" onclick="go('staff');return false">Staff</a>
-	  <a href="mailto:festival@interfilieres.fr">Contact</a>
-	  <a href="#" onclick="go('mentions');return false">Mentions légales</a>
-	  <a href="#" onclick="go('cgv');return false">CGV</a>
-	</div>
-	<p class="f-copy">© 2026 L'&#8288;Interfilières · Université Paris-Saclay · @interfilieres_upsaclay</p>
-	<p class="f-note">Cet événement est filmé et photographié à des fins promotionnelles et de communication.</p>
-  </footer>
 </div>
 
 
