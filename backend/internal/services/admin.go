@@ -21,6 +21,7 @@ type AdminService struct {
 	adminRepo  *repository.AdminRepository
 	orderRepo  *repository.OrderRepository
 	ticketRepo *repository.TicketRepository
+	couponRepo *repository.CouponRepository
 	emailService *EmailService
 	redis      *redis.Client
 }
@@ -30,6 +31,7 @@ func NewAdminService(
 	adminRepo *repository.AdminRepository,
 	orderRepo *repository.OrderRepository,
 	ticketRepo *repository.TicketRepository,
+	couponRepo *repository.CouponRepository,
 	emailService *EmailService,
 	redis *redis.Client,
 ) *AdminService {
@@ -38,6 +40,7 @@ func NewAdminService(
 		adminRepo:  adminRepo,
 		orderRepo:  orderRepo,
 		ticketRepo: ticketRepo,
+		couponRepo: couponRepo,
 		emailService: emailService,
 		redis:      redis,
 	}
@@ -245,6 +248,14 @@ func (s *AdminService) SetStaffPassword(ctx context.Context, username, newPasswo
 	}
 
 	return nil
+}
+
+func (s *AdminService) CreateCoupon(ctx context.Context, req models.CreateCouponRequest) (*models.Coupon, error) {
+	return s.couponRepo.CreateCoupon(ctx, req)
+}
+
+func (s *AdminService) ListCoupons(ctx context.Context) ([]models.Coupon, error) {
+	return s.couponRepo.ListCoupons(ctx)
 }
 
 // SaveWebhookLog enregistre un webhook reçu

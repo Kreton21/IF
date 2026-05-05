@@ -52,6 +52,7 @@ func main() {
 	ticketRepo := repository.NewTicketRepository(pgPool)
 	orderRepo := repository.NewOrderRepository(pgPool)
 	adminRepo := repository.NewAdminRepository(pgPool)
+	couponRepo := repository.NewCouponRepository(pgPool)
 
 	// 5. Initialiser les services
 	var helloAssoService *services.HelloAssoService
@@ -78,8 +79,8 @@ func main() {
 	qrService := services.NewQRCodeService(baseURL)
 	emailService := services.NewEmailService(cfg)
 
-	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, paymentProvider, qrService, emailService, redisClient)
-	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, emailService, redisClient)
+	ticketService := services.NewTicketService(cfg, ticketRepo, orderRepo, couponRepo, paymentProvider, qrService, emailService, redisClient)
+	adminService := services.NewAdminService(cfg, adminRepo, orderRepo, ticketRepo, couponRepo, emailService, redisClient)
 
 	pendingTTLMinutes := 20
 	if raw := os.Getenv("ORDER_PENDING_TTL_MINUTES"); raw != "" {

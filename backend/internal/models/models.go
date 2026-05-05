@@ -80,6 +80,10 @@ type Order struct {
 	WantsRefundInsurance bool        `json:"wants_refund_insurance,omitempty"`
 	TotalCents           int         `json:"total_cents"`
 	Status               OrderStatus `json:"status"`
+	CouponID             string      `json:"coupon_id,omitempty"`
+	CouponCode           string      `json:"coupon_code,omitempty"`
+	CouponDiscountCents  int         `json:"coupon_discount_cents,omitempty"`
+	CouponUsesApplied    int         `json:"coupon_uses_applied,omitempty"`
 	HelloAssoCheckoutID  string      `json:"helloasso_checkout_id,omitempty"`
 	HelloAssoPaymentID   string      `json:"helloasso_payment_id,omitempty"`
 	HelloAssoCheckoutURL string      `json:"helloasso_checkout_url,omitempty"`
@@ -140,6 +144,7 @@ type CheckoutRequest struct {
 	DateOfBirth       string         `json:"date_of_birth,omitempty"`
 	ReferralCode      string         `json:"-"`
 	ReferralVisitorID string         `json:"-"`
+	CouponCode        string         `json:"coupon_code,omitempty"`
 	WantsCamping      bool           `json:"wants_camping,omitempty"`
 	WantsRefundInsurance bool         `json:"wants_refund_insurance,omitempty"`
 	Items             []CheckoutItem `json:"items"`
@@ -163,6 +168,46 @@ type CheckoutResponse struct {
 	OrderNumber string `json:"order_number"`
 	CheckoutURL string `json:"checkout_url"`
 	TotalCents  int    `json:"total_cents"`
+}
+
+type Coupon struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Code           string    `json:"code"`
+	TicketTypeID   string    `json:"ticket_type_id"`
+	TicketTypeName string    `json:"ticket_type_name,omitempty"`
+	MaxUses        int       `json:"max_uses"`
+	UsedCount      int       `json:"used_count"`
+	DiscountCents  int       `json:"discount_cents"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type CreateCouponRequest struct {
+	Name          string `json:"name"`
+	Code          string `json:"code,omitempty"`
+	TicketTypeID  string `json:"ticket_type_id"`
+	MaxUses       int    `json:"max_uses"`
+	DiscountCents int    `json:"discount_cents"`
+}
+
+type CouponPreviewRequest struct {
+	Code  string              `json:"code"`
+	Items []CouponPreviewItem `json:"items"`
+}
+
+type CouponPreviewItem struct {
+	TicketTypeID string `json:"ticket_type_id"`
+	Quantity     int    `json:"quantity"`
+}
+
+type CouponPreviewResponse struct {
+	Valid         bool   `json:"valid"`
+	Message       string `json:"message"`
+	Code          string `json:"code,omitempty"`
+	TicketTypeID  string `json:"ticket_type_id,omitempty"`
+	AppliedUses   int    `json:"applied_uses"`
+	RemainingUses int    `json:"remaining_uses"`
+	DiscountCents int    `json:"discount_cents"`
 }
 
 type LoginRequest struct {

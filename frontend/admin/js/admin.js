@@ -302,6 +302,7 @@ function switchTab(tabName) {
         case 'stats': loadStats(); break;
         case 'orders': loadOrders(); break;
         case 'tickets': loadTicketTypesAdmin(); break;
+        case 'coupons': loadCoupons(); break;
         case 'bus': loadBusAdminData(); break;
         case 'referral': loadReferralLinks(); break;
         case 'kpi': loadKPI(); break;
@@ -1157,6 +1158,9 @@ let allTicketTypes = []; // cache for reallocation dropdowns
 document.addEventListener('DOMContentLoaded', () => {
     const ttForm = document.getElementById('create-tt-form');
     if (ttForm) ttForm.addEventListener('submit', handleCreateTicketType);
+
+    const couponForm = document.getElementById('create-coupon-form');
+    if (couponForm) couponForm.addEventListener('submit', handleCreateCoupon);
 });
 
 async function handleCreateTicketType(e) {
@@ -1202,6 +1206,103 @@ async function loadTicketTypesAdmin() {
     } catch (err) {
         console.error('Erreur chargement ticket types:', err);
     }
+}
+
+// ==========================================
+// Coupons
+// ==========================================
+
+async function loadCoupons() {
+    await loadCouponTicketTypes();
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/coupons`);
+        const rows = await response.json();
+        renderCoupons(rows || []);
+    } catch (error) {
+        console.error('Erreur chargement coupons:', error);
+    }
+}
+
+async function loadCouponTicketTypes() {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/ticket-types`);
+        const types = await res.json();
+        const select = document.getElementById('coupon-ticket-type');
+        if (!select) return;
+        const options = (types || []).map(tt => `<option value="${tt.id}">${escapeHtml(tt.name)}</option>`);
+        select.innerHTML = options.join('') || '<option value="">Aucun ticket</option>';
+    } catch (error) {
+        console.error('Erreur chargement ticket types pour coupons:', error);
+    }
+}
+
+async function handleCreateCoupon(e) {
+    e.preventDefault();
+    const msg = document.getElementById('coupon-msg');
+    if (!msg) return;
+    msg.classList.add('hidden');
+
+    const name = document.getElementById('coupon-name').value.trim();
+    const code = document.getElementById('coupon-code').value.trim();
+    const maxUses = parseInt(document.getElementById('coupon-max-uses').value, 10);
+    const discount = parseFloat(document.getElementById('coupon-discount').value);
+    const ticketTypeID = document.getElementById('coupon-ticket-type').value;
+
+    if (!name || !ticketTypeID || !maxUses || isNaN(discount)) {
+        msg.textContent = '❌ Champs requis manquants';
+        msg.className = 'form-msg error-text';
+        return;
+    }
+
+    const body = {
+        name,
+        code,
+        ticket_type_id: ticketTypeID,
+        max_uses: maxUses,
+        discount_cents: Math.round(discount * 100),
+    };
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/coupons`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur création coupon');
+        }
+
+        msg.textContent = `✅ Coupon créé (${data.code})`;
+        msg.className = 'form-msg success-text';
+        document.getElementById('create-coupon-form').reset();
+        await loadCoupons();
+    } catch (error) {
+        msg.textContent = `❌ ${error.message}`;
+        msg.className = 'form-msg error-text';
+    }
+}
+
+function renderCoupons(rows) {
+    const container = document.getElementById('coupons-table');
+    if (!container) return;
+
+    if (!rows.length) {
+        container.innerHTML = '<p style="color:#718096;padding:20px;">Aucun coupon</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Nom</th><th>Code</th><th>Ticket</th><th>Alloués</th><th>Utilisés</th><th>Réduction</th></tr></thead><tbody>';
+    rows.forEach(c => {
+        html += `<tr>
+            <td>${escapeHtml(c.name || '')}</td>
+            <td><strong>${escapeHtml(c.code || '')}</strong></td>
+            <td>${escapeHtml(c.ticket_type_name || '')}</td>
+            <td>${c.max_uses ?? 0}</td>
+            <td>${c.used_count ?? 0}</td>
+            <td>${formatPrice(c.discount_cents || 0)}</td>
+        </tr>`;
+    });
+    container.innerHTML = html + '</tbody></table>';
 }
 
 async function renderTicketTypesAdmin(types) {

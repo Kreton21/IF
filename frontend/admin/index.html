@@ -96,6 +96,7 @@
             <button class="tab active" data-tab="stats" onclick="switchTab('stats')">📊 Statistiques</button>
             <button class="tab" data-tab="orders" onclick="switchTab('orders')">📋 Commandes</button>
             <button class="tab" data-tab="tickets" onclick="switchTab('tickets')">🎟 Tickets</button>
+            <button class="tab" data-tab="coupons" onclick="switchTab('coupons')">🏷 Coupons</button>
             <button class="tab" data-tab="bus" onclick="switchTab('bus')">🚌 Navettes</button>
             <button class="tab" data-tab="referral" onclick="switchTab('referral')">🤝 Parrainage</button>
             <button class="tab" data-tab="kpi" onclick="switchTab('kpi')">📈 KPI Site</button>
@@ -367,6 +368,33 @@
             <div class="card">
                 <h3>🎫 Tickets navette</h3>
                 <div id="bus-tickets-table" class="table-container"></div>
+            </div>
+        </section>
+
+        <section id="tab-coupons" class="tab-content">
+            <div class="card">
+                <h3>🏷 Créer un coupon</h3>
+                <form id="create-coupon-form">
+                    <div class="form-row">
+                        <div class="form-group"><label>Nom *</label><input type="text" id="coupon-name" required placeholder="Promo BDE"></div>
+                        <div class="form-group"><label>Code (optionnel)</label><input type="text" id="coupon-code" placeholder="AUTO8"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Quantité d'utilisations *</label><input type="number" id="coupon-max-uses" min="1" required placeholder="100"></div>
+                        <div class="form-group"><label>Réduction par ticket (€) *</label><input type="number" id="coupon-discount" min="0" step="0.01" required placeholder="5.00"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ticket concerné *</label>
+                        <select id="coupon-ticket-type" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Créer coupon</button>
+                    <span id="coupon-msg" class="form-msg hidden"></span>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📋 Coupons créés</h3>
+                <div id="coupons-table" class="table-container"></div>
             </div>
         </section>
 

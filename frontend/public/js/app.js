@@ -16,6 +16,9 @@ const state = {
   customerEmail: '',
   busOptions: null,
   busLoading: false,
+  coupon: null,
+  couponCooldownUntil: 0,
+  couponRefreshTimer: null,
 };
 
 function setMenuOpen(open) {
@@ -50,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCheckoutForm();
   setupBusForm();
   setupCampingClaimForm();
+  setupCouponField();
+  setupCICForm();
 
   initHashRouting();
   if (!goFromHash(false)) {
@@ -658,7 +663,7 @@ function updateOrderSummary() {
   if (!summaryItems || !totalEl) return;
 
   let html = '';
-  let total = 0;
+  let ticketTotal = 0;
 
   for (const [typeId, qty] of Object.entries(state.cart)) {
     if (qty <= 0) continue;
@@ -666,7 +671,7 @@ function updateOrderSummary() {
     if (!tt) continue;
 
     const subtotal = tt.price_cents * qty;
-    total += subtotal;
+    ticketTotal += subtotal;
     html += `<div class="summary-item">
       <span>${qty}× ${tt.name}</span>
       <span>${formatPrice(subtotal)}</span>
@@ -674,16 +679,167 @@ function updateOrderSummary() {
   }
 
   const wantsRefundInsurance = document.getElementById('wants-refund-insurance')?.checked || false;
+  let insuranceCents = 0;
+  let discountCents = (state.coupon && state.coupon.discount_cents) ? state.coupon.discount_cents : 0;
+  if (discountCents > ticketTotal) discountCents = ticketTotal;
+
+  if (discountCents > 0) {
+    const label = state.coupon && state.coupon.code ? `Coupon ${state.coupon.code}` : 'Coupon';
+    html += `<div class="summary-item">
+      <span>${label}</span>
+      <span>- ${formatPrice(discountCents)}</span>
+    </div>`;
+  }
+
   if (wantsRefundInsurance) {
-    total += 100;
+    insuranceCents = 100;
     html += `<div class="summary-item">
       <span>Assurance remboursement</span>
       <span>${formatPrice(100)}</span>
     </div>`;
   }
 
+  let total = ticketTotal + insuranceCents - discountCents;
+  if (total < 0) total = 0;
+
   summaryItems.innerHTML = html;
   totalEl.textContent = formatPrice(total);
+
+  scheduleCouponRefresh();
+}
+
+// ══════════════════════════════════════
+// COUPONS
+// ══════════════════════════════════════
+function setupCouponField() {
+  const input = document.getElementById('coupon-code');
+  const btn = document.getElementById('coupon-apply-btn');
+  if (!input || !btn) return;
+
+  btn.addEventListener('click', () => {
+    applyCoupon(input.value);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyCoupon(input.value);
+    }
+  });
+}
+
+function buildCouponItems() {
+  const items = [];
+  for (const [typeId, qty] of Object.entries(state.cart)) {
+    if (!qty || qty < 1) continue;
+    items.push({ ticket_type_id: typeId, quantity: qty });
+  }
+  return items;
+}
+
+function setCouponMessage(text, isError) {
+  const msg = document.getElementById('coupon-msg');
+  if (!msg) return;
+  msg.textContent = text || '';
+  msg.classList.toggle('hidden', !text);
+  msg.style.color = isError ? '#e53e3e' : '#38a169';
+}
+
+function updateCouponButtonState() {
+  const btn = document.getElementById('coupon-apply-btn');
+  if (!btn) return;
+  const now = Date.now();
+  if (state.couponCooldownUntil > now) {
+    btn.disabled = true;
+    btn.textContent = 'Patientez...';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Appliquer';
+  }
+}
+
+function clearCouponState() {
+  state.coupon = null;
+  setCouponMessage('', false);
+}
+
+async function applyCoupon(rawCode, options = {}) {
+  const input = document.getElementById('coupon-code');
+  const code = (rawCode || '').trim().toUpperCase();
+  if (input) input.value = code;
+
+  if (!code) {
+    clearCouponState();
+    updateOrderSummary();
+    return;
+  }
+
+  const now = Date.now();
+  if (state.couponCooldownUntil > now) {
+    setCouponMessage('Veuillez patienter avant de réessayer.', true);
+    return;
+  }
+
+  const items = buildCouponItems();
+  if (items.length === 0) {
+    setCouponMessage('Ajoutez au moins un billet avant d\'appliquer un coupon.', true);
+    return;
+  }
+
+  state.couponCooldownUntil = now + 3000;
+  updateCouponButtonState();
+  setTimeout(updateCouponButtonState, 3100);
+
+  try {
+    const response = await fetch(`${API_BASE}/coupons/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, items }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Coupon invalide');
+    }
+
+    if (!data.valid) {
+      clearCouponState();
+      setCouponMessage(data.message || 'Coupon invalide', true);
+      updateOrderSummary();
+      return;
+    }
+
+    const signature = JSON.stringify(items.sort((a, b) => a.ticket_type_id.localeCompare(b.ticket_type_id)));
+    state.coupon = {
+      code: data.code || code,
+      ticket_type_id: data.ticket_type_id || '',
+      applied_uses: data.applied_uses || 0,
+      remaining_uses: data.remaining_uses || 0,
+      discount_cents: data.discount_cents || 0,
+      lastSignature: signature,
+    };
+
+    setCouponMessage(data.message || 'Coupon appliqué', false);
+    updateOrderSummary();
+  } catch (error) {
+    clearCouponState();
+    setCouponMessage(error.message || 'Coupon invalide', true);
+    updateOrderSummary();
+  }
+}
+
+function scheduleCouponRefresh() {
+  if (!state.coupon || !state.coupon.code) return;
+  const items = buildCouponItems();
+  if (items.length === 0) return;
+
+  const signature = JSON.stringify(items.sort((a, b) => a.ticket_type_id.localeCompare(b.ticket_type_id)));
+  if (state.coupon.lastSignature === signature) return;
+
+  state.coupon.lastSignature = signature;
+  if (state.couponRefreshTimer) clearTimeout(state.couponRefreshTimer);
+  state.couponRefreshTimer = setTimeout(() => {
+    applyCoupon(state.coupon.code, { silent: true });
+  }, 350);
 }
 
 // ══════════════════════════════════════
@@ -779,6 +935,10 @@ function setupCheckoutForm() {
       wants_refund_insurance: document.getElementById('wants-refund-insurance')?.checked || false,
       items: items,
     };
+
+    if (state.coupon && state.coupon.code) {
+      body.coupon_code = state.coupon.code;
+    }
 
     if (!body.customer_first_name || !body.customer_last_name || !body.customer_email) {
       showNotification('Veuillez remplir tous les champs obligatoires', 'warning');

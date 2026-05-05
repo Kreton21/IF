@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/kreton/if-festival/internal/config"
 	"github.com/kreton/if-festival/internal/models"
 	"github.com/kreton/if-festival/internal/repository"
@@ -22,6 +23,7 @@ type TicketService struct {
 	cfg             *config.Config
 	ticketRepo      *repository.TicketRepository
 	orderRepo       *repository.OrderRepository
+	couponRepo      *repository.CouponRepository
 	paymentProvider PaymentProvider
 	qrService       *QRCodeService
 	emailService    *EmailService
@@ -32,6 +34,7 @@ func NewTicketService(
 	cfg *config.Config,
 	ticketRepo *repository.TicketRepository,
 	orderRepo *repository.OrderRepository,
+	couponRepo *repository.CouponRepository,
 	paymentProvider PaymentProvider,
 	qrService *QRCodeService,
 	emailService *EmailService,
@@ -41,6 +44,7 @@ func NewTicketService(
 		cfg:             cfg,
 		ticketRepo:      ticketRepo,
 		orderRepo:       orderRepo,
+		couponRepo:      couponRepo,
 		paymentProvider: paymentProvider,
 		qrService:       qrService,
 		emailService:    emailService,
@@ -255,6 +259,98 @@ func (s *TicketService) GetTicketTypesForEmail(ctx context.Context, email string
 	return result, nil
 }
 
+func (s *TicketService) PreviewCoupon(ctx context.Context, req models.CouponPreviewRequest) (*models.CouponPreviewResponse, error) {
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+	if code == "" {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Code requis"}, nil
+	}
+	if len(req.Items) == 0 {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Aucun ticket sélectionné"}, nil
+	}
+
+	coupon, err := s.couponRepo.GetCouponByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if coupon == nil {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Coupon introuvable"}, nil
+	}
+
+	remaining := coupon.MaxUses - coupon.UsedCount
+	if remaining <= 0 {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Coupon épuisé"}, nil
+	}
+
+	eligibleQty := 0
+	for _, item := range req.Items {
+		if item.TicketTypeID == coupon.TicketTypeID && item.Quantity > 0 {
+			eligibleQty += item.Quantity
+		}
+	}
+	if eligibleQty <= 0 {
+		return &models.CouponPreviewResponse{Valid: false, Message: "Coupon non applicable à ces tickets"}, nil
+	}
+
+	applied := eligibleQty
+	if remaining < applied {
+		applied = remaining
+	}
+
+	discount := applied * coupon.DiscountCents
+	msg := "Coupon appliqué"
+	if applied < eligibleQty {
+		msg = fmt.Sprintf("Coupon appliqué sur %d billet(s)", applied)
+	}
+
+	return &models.CouponPreviewResponse{
+		Valid:         true,
+		Message:       msg,
+		Code:          coupon.Code,
+		TicketTypeID:  coupon.TicketTypeID,
+		AppliedUses:   applied,
+		RemainingUses: remaining - applied,
+		DiscountCents: discount,
+	}, nil
+}
+
+func (s *TicketService) applyCouponInTx(ctx context.Context, tx pgx.Tx, code string, items []models.CheckoutItem) (*models.Coupon, int, int, error) {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		return nil, 0, 0, nil
+	}
+
+	coupon, err := s.couponRepo.GetCouponByCodeForUpdate(ctx, tx, code)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	if coupon == nil {
+		return nil, 0, 0, fmt.Errorf("coupon introuvable")
+	}
+
+	remaining := coupon.MaxUses - coupon.UsedCount
+	if remaining <= 0 {
+		return nil, 0, 0, fmt.Errorf("coupon épuisé")
+	}
+
+	eligibleQty := 0
+	for _, item := range items {
+		if item.TicketTypeID == coupon.TicketTypeID && item.Quantity > 0 {
+			eligibleQty += item.Quantity
+		}
+	}
+	if eligibleQty <= 0 {
+		return nil, 0, 0, fmt.Errorf("coupon non applicable à ces tickets")
+	}
+
+	applied := eligibleQty
+	if remaining < applied {
+		applied = remaining
+	}
+
+	discount := applied * coupon.DiscountCents
+	return coupon, applied, discount, nil
+}
+
 // CreateCheckout crée une commande et redirige vers HelloAsso
 func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutRequest, ipAddress, userAgent string) (*models.CheckoutResponse, error) {
 	if !isAdultFromDate(req.DateOfBirth) {
@@ -272,7 +368,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 
 	// 1. Valider les items et calculer le total
-	totalCents := 0
+	ticketTotalCents := 0
 	var validatedItems []struct {
 		ticketType *models.TicketType
 		quantity   int
@@ -361,16 +457,19 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 
 		req.Items[idx].Attendees = normalizedAttendees
 
-		totalCents += tt.PriceCents * item.Quantity
+		ticketTotalCents += tt.PriceCents * item.Quantity
 		validatedItems = append(validatedItems, struct {
 			ticketType *models.TicketType
 			quantity   int
 		}{tt, item.Quantity})
 	}
 
+	insuranceCents := 0
 	if req.WantsRefundInsurance {
-		totalCents += 100
+		insuranceCents = 100
 	}
+
+	totalCents := ticketTotalCents + insuranceCents
 
 	// 2. Réserver les tickets (avec lock pessimiste)
 	err := s.ticketRepo.ReserveTickets(ctx, req.Items)
@@ -386,6 +485,27 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	}
 	defer tx.Rollback(ctx)
 
+	var coupon *models.Coupon
+	var couponAppliedUses int
+	var couponDiscountCents int
+
+	if strings.TrimSpace(req.CouponCode) != "" {
+		var discount int
+		coupon, couponAppliedUses, discount, err = s.applyCouponInTx(ctx, tx, req.CouponCode, req.Items)
+		if err != nil {
+			s.ticketRepo.ReleaseTickets(ctx, req.Items)
+			return nil, err
+		}
+		couponDiscountCents = discount
+		if couponDiscountCents > ticketTotalCents {
+			couponDiscountCents = ticketTotalCents
+		}
+		totalCents = ticketTotalCents + insuranceCents - couponDiscountCents
+		if totalCents < 0 {
+			totalCents = 0
+		}
+	}
+
 	order := &models.Order{
 		CustomerEmail:     req.CustomerEmail,
 		CustomerFirstName: req.CustomerFirstName,
@@ -398,6 +518,14 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 		Status:            models.OrderStatusPending,
 		IPAddress:         ipAddress,
 		UserAgent:         userAgent,
+		CouponID:          "",
+		CouponCode:        "",
+		CouponDiscountCents: couponDiscountCents,
+		CouponUsesApplied: couponAppliedUses,
+	}
+	if coupon != nil {
+		order.CouponID = coupon.ID
+		order.CouponCode = coupon.Code
 	}
 
 	if err := s.orderRepo.CreateOrder(ctx, tx, order); err != nil {
@@ -408,6 +536,17 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 	if err := s.orderRepo.SaveOrderItems(ctx, tx, order.ID, req.Items); err != nil {
 		s.ticketRepo.ReleaseTickets(ctx, req.Items)
 		return nil, fmt.Errorf("erreur sauvegarde items commande: %w", err)
+	}
+
+	if coupon != nil && couponAppliedUses > 0 {
+		if err := s.couponRepo.IncrementCouponUsage(ctx, tx, coupon.ID, couponAppliedUses); err != nil {
+			s.ticketRepo.ReleaseTickets(ctx, req.Items)
+			return nil, err
+		}
+		if err := s.couponRepo.InsertCouponRedemption(ctx, tx, coupon.ID, order.ID, couponAppliedUses); err != nil {
+			s.ticketRepo.ReleaseTickets(ctx, req.Items)
+			return nil, err
+		}
 	}
 
 	if referral != nil {

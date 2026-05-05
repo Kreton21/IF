@@ -69,6 +69,13 @@ func NewRouter(
 			}
 		})
 
+		// --- Public : Coupons ---
+		if rateLimitDisabled {
+			r.Post("/coupons/validate", ticketHandler.ValidateCoupon)
+		} else {
+			r.With(middleware.RateLimitScoped(redisClient, "coupon_validate", 10, 1*time.Minute)).Post("/coupons/validate", ticketHandler.ValidateCoupon)
+		}
+
 		r.Route("/bus", func(r chi.Router) {
 			r.Get("/options", ticketHandler.GetBusOptions)
 			if rateLimitDisabled {
@@ -157,6 +164,8 @@ func NewRouter(
 				r.Get("/bus/tickets", adminHandler.ListBusTickets)
 				r.Get("/referrals", adminHandler.ListReferralLinks)
 				r.Post("/referrals", adminHandler.CreateReferralLink)
+				r.Get("/coupons", adminHandler.ListCoupons)
+				r.Post("/coupons", adminHandler.CreateCoupon)
 			})
 		})
 	})

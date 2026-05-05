@@ -126,6 +126,23 @@ func (h *TicketHandler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// ValidateCoupon validates a coupon for the current cart
+func (h *TicketHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request) {
+	var req models.CouponPreviewRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	resp, err := h.ticketService.PreviewCoupon(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (h *TicketHandler) HandleReferralRedirect(w http.ResponseWriter, r *http.Request) {
 	code := strings.TrimSpace(strings.ToLower(chi.URLParam(r, "code")))
 	if code == "" {
