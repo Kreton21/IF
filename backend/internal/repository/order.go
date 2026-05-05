@@ -715,35 +715,6 @@ func (r *OrderRepository) VerifyOrderByNumberAndEmail(ctx context.Context, order
 	return &o, nil
 }
 
-// VerifyOrderByNumberAndEmail confirms an order exists, belongs to that email, and is paid/confirmed.
-func (r *OrderRepository) VerifyOrderByNumberAndEmail(ctx context.Context, orderNumber, email string) (*models.Order, error) {
-	query := `
-		SELECT id, order_number, customer_email, customer_first_name, customer_last_name,
-		       COALESCE(customer_phone, ''), COALESCE(date_of_birth, ''), wants_camping, wants_refund_insurance, total_cents, status,
-		       COALESCE(helloasso_checkout_id, ''), COALESCE(helloasso_payment_id, ''),
-		       COALESCE(helloasso_checkout_url, ''), created_at, updated_at, paid_at, confirmed_at
-		FROM orders
-		WHERE order_number = $1
-		  AND LOWER(customer_email) = LOWER($2)
-		  AND status IN ('paid', 'confirmed')
-		LIMIT 1`
-
-	var o models.Order
-	err := r.pool.QueryRow(ctx, query, orderNumber, email).Scan(
-		&o.ID, &o.OrderNumber, &o.CustomerEmail, &o.CustomerFirstName, &o.CustomerLastName,
-		&o.CustomerPhone, &o.DateOfBirth, &o.WantsCamping, &o.WantsRefundInsurance, &o.TotalCents, &o.Status,
-		&o.HelloAssoCheckoutID, &o.HelloAssoPaymentID, &o.HelloAssoCheckoutURL,
-		&o.CreatedAt, &o.UpdatedAt, &o.PaidAt, &o.ConfirmedAt,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("erreur verify order: %w", err)
-	}
-	return &o, nil
-}
-
 func (r *OrderRepository) GetExpiredPendingOrderIDs(ctx context.Context, olderThan time.Time) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id
