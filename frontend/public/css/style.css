@@ -114,11 +114,8 @@ iframe:not(.hero-video) {
 .nav-logo {
 	font-family:var(--font-primary);
 	font-size:2.2rem; letter-spacing:3px;
-	flex:1;
-	min-width:0;
+	flex-shrink:0;
 	white-space:nowrap;
-	overflow:hidden;
-	text-overflow:ellipsis;
 	background:linear-gradient(135deg,var(--cream),var(--light));
 	-webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 	cursor:pointer; user-select:none;
@@ -332,16 +329,17 @@ iframe:not(.hero-video) {
 .sub { font-size:.88rem; color:var(--muted); margin-top:14px; max-width:540px; line-height:1.75; font-weight:500; }
 
 /* Scroll Reveal */
-.rv,.rv2,.rv3 { opacity:0; transform:translateY(32px); transition:all .65s cubic-bezier(.22,1,.36,1); }
+.rv,.rv2,.rv3,.rv4 { opacity:0; transform:translateY(32px); transition:all .65s cubic-bezier(.22,1,.36,1); }
 .rv2 { transition-delay:.12s; }
 .rv3 { transition-delay:.24s; }
-.rv.in,.rv2.in,.rv3.in { opacity:1; transform:none; }
+.rv4 { transition-delay:.36s; }
+.rv.in,.rv2.in,.rv3.in,.rv4.in { opacity:1; transform:none; }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 	 HEADLINERS
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .hl-sec { background:var(--offwhite); }
-.hl-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:42px; }
+.hl-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:42px; }
 .hl-card {
 	border-radius:var(--r); overflow:hidden; cursor:pointer;
 	background:linear-gradient(160deg,var(--night) 0%,var(--purple) 100%);
@@ -802,7 +800,7 @@ iframe:not(.hero-video) {
 	 RECAP
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .recap-sec { background:#fff; }
-.recap-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:42px; }
+.recap-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-top:42px; }
 .recap-card {
 	background: #fff;
 	border-radius: var(--r); padding: 28px 18px;

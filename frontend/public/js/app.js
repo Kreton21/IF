@@ -196,7 +196,7 @@ const obs = new IntersectionObserver(entries => {
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
 function initReveal() {
-  document.querySelectorAll('.page.active .rv, .page.active .rv2, .page.active .rv3')
+  document.querySelectorAll('.page.active .rv, .page.active .rv2, .page.active .rv3, .page.active .rv4')
     .forEach(el => obs.observe(el));
 }
 
