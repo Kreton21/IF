@@ -392,7 +392,7 @@ func (s *LydiaService) RefundTransaction(ctx context.Context, req LydiaRefundReq
 	if err != nil {
 		return fmt.Errorf("LYDIA_API_URL invalide: %w", err)
 	}
-	apiURL.Path = path.Join(apiURL.Path, "/api/transaction/cancel.json")
+	apiURL.Path = path.Join(apiURL.Path, "/api/transaction/refund.json")
 
 	targets := make([]url.Values, 0, 2)
 	buildForm := func() url.Values {
@@ -459,22 +459,22 @@ func (s *LydiaService) callLydiaRefund(ctx context.Context, apiURL string, form 
 
 	body, _ := io.ReadAll(resp.Body)
 	if s.cfg.LydiaDebug {
-		log.Printf("[LYDIA DEBUG] refund/cancel payload id=%s order_ref=%s amount=%s", form.Get("transaction_identifier"), form.Get("order_ref"), form.Get("amount"))
-		log.Printf("[LYDIA DEBUG] refund/cancel HTTP=%d body=%s", resp.StatusCode, string(body))
+		log.Printf("[LYDIA DEBUG] refund payload id=%s order_ref=%s amount=%s", form.Get("transaction_identifier"), form.Get("order_ref"), form.Get("amount"))
+		log.Printf("[LYDIA DEBUG] refund HTTP=%d body=%s", resp.StatusCode, string(body))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("erreur Lydia cancel (HTTP %d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("erreur Lydia refund (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
 	var out lydiaRefundResponse
 	if err := json.Unmarshal(body, &out); err != nil {
-		return fmt.Errorf("erreur décodage réponse Lydia cancel: %w", err)
+		return fmt.Errorf("erreur décodage réponse Lydia refund: %w", err)
 	}
 
 	if out.Error != "" && out.Error != "0" {
 		if out.Message == "" {
-			out.Message = "erreur Lydia cancel"
+			out.Message = "erreur Lydia refund"
 		}
 		return fmt.Errorf("Lydia erreur %s: %s", out.Error, out.Message)
 	}

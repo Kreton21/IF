@@ -378,7 +378,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	err = r.pool.QueryRow(ctx, `
 		SELECT 
 			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed')),
-			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL),
+			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL AND o.status IN ('paid', 'confirmed')),
 			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed') AND t.is_camping = true AND bt.ticket_id IS NULL)
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
@@ -392,7 +392,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	rows, err := r.pool.Query(ctx, `
 		SELECT 
 			tt.id, tt.name, tt.price_cents, tt.quantity_total, tt.quantity_sold,
-			COUNT(t.id) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL) as validated,
+			COUNT(t.id) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL AND o.status IN ('paid', 'confirmed')) as validated,
 			COALESCE(SUM(tt.price_cents) FILTER (WHERE o.status IN ('paid', 'confirmed')), 0) as revenue
 		FROM ticket_types tt
 		LEFT JOIN tickets t ON t.ticket_type_id = tt.id
