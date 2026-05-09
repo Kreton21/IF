@@ -50,7 +50,7 @@ type LydiaRefundRequest struct {
 
 type lydiaRefundResponse struct {
 	Error   string `json:"error"`
-	Message string `json:"message"`
+	Message json.RawMessage `json:"message"`
 }
 
 var lydiaRefSanitizer = regexp.MustCompile(`[^A-Za-z0-9_-]`)
@@ -473,13 +473,48 @@ func (s *LydiaService) callLydiaRefund(ctx context.Context, apiURL string, form 
 	}
 
 	if out.Error != "" && out.Error != "0" {
-		if out.Message == "" {
-			out.Message = "erreur Lydia refund"
+		msg := lydiaRefundMessageString(out.Message)
+		if msg == "" {
+			msg = "erreur Lydia refund"
 		}
-		return fmt.Errorf("Lydia erreur %s: %s", out.Error, out.Message)
+		return fmt.Errorf("Lydia erreur %s: %s", out.Error, msg)
 	}
 
 	return nil
+}
+
+func lydiaRefundMessageString(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+
+	var asString string
+	if err := json.Unmarshal(raw, &asString); err == nil {
+		return asString
+	}
+
+	var asBool bool
+	if err := json.Unmarshal(raw, &asBool); err == nil {
+		if asBool {
+			return "true"
+		}
+		return "false"
+	}
+
+	var asNumber float64
+	if err := json.Unmarshal(raw, &asNumber); err == nil {
+		return fmt.Sprintf("%v", asNumber)
+	}
+
+	var asObject map[string]interface{}
+	if err := json.Unmarshal(raw, &asObject); err == nil {
+		encoded, encErr := json.Marshal(asObject)
+		if encErr == nil {
+			return string(encoded)
+		}
+	}
+
+	return string(raw)
 }
 
 func (s *LydiaService) buildLydiaSignature(form url.Values, keysForSignature []string) string {
