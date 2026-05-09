@@ -273,12 +273,32 @@ func (r *OrderRepository) ListOrders(ctx context.Context, params models.OrderLis
 	}
 
 	if params.Search != "" {
-		conditions = append(conditions, fmt.Sprintf(
-			"(customer_email ILIKE $%d OR customer_first_name ILIKE $%d OR customer_last_name ILIKE $%d OR order_number ILIKE $%d)",
-			argIdx, argIdx, argIdx, argIdx,
-		))
-		args = append(args, "%"+params.Search+"%")
-		argIdx++
+		searchRaw := strings.TrimSpace(params.Search)
+		searchLower := strings.ToLower(searchRaw)
+		if strings.HasPrefix(searchLower, "/ticket ") {
+			ticketTerm := strings.TrimSpace(searchRaw[len("/ticket "):])
+			if ticketTerm != "" {
+				conditions = append(conditions, fmt.Sprintf(
+					`EXISTS (
+						SELECT 1
+						FROM order_items oi
+						JOIN ticket_types tt ON tt.id = oi.ticket_type_id
+						WHERE oi.order_id = orders.id
+						  AND tt.name ILIKE $%d
+					)`,
+					argIdx,
+				))
+				args = append(args, "%"+ticketTerm+"%")
+				argIdx++
+			}
+		} else {
+			conditions = append(conditions, fmt.Sprintf(
+				"(customer_email ILIKE $%d OR customer_first_name ILIKE $%d OR customer_last_name ILIKE $%d OR order_number ILIKE $%d)",
+				argIdx, argIdx, argIdx, argIdx,
+			))
+			args = append(args, "%"+searchRaw+"%")
+			argIdx++
+		}
 	}
 
 	whereClause := ""
