@@ -1280,6 +1280,47 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 	return nil
 }
 
+// RemoveOrderLocal marks an order as refunded locally without contacting the payment provider.
+func (s *TicketService) RemoveOrderLocal(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération commande %s: %w", orderID, err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable")
+	}
+
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return fmt.Errorf("seules les commandes payées/confirmées sont remboursables")
+	}
+
+	items, err := s.orderRepo.GetOrderItems(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération items: %w", err)
+	}
+
+	if len(items) > 0 {
+		if err := s.ticketRepo.ReleaseTickets(ctx, items); err != nil {
+			return fmt.Errorf("erreur libération stock: %w", err)
+		}
+	}
+
+	if len(items) == 0 {
+		if err := s.ticketRepo.ReleaseBusOrderRides(ctx, orderID); err != nil {
+			return fmt.Errorf("erreur libération places navette: %w", err)
+		}
+	}
+
+	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusRefunded); err != nil {
+		return fmt.Errorf("statut non mis à jour: %w", err)
+	}
+
+	s.redis.Del(ctx, fmt.Sprintf("order:%s:items", orderID))
+	s.redis.Del(ctx, "ticket_types:active")
+
+	return nil
+}
+
 func (s *TicketService) CancelPendingOrder(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
