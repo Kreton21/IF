@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -538,12 +539,12 @@ func (r *TicketRepository) ReleaseTickets(ctx context.Context, items []models.Ch
 
 func (r *TicketRepository) CreateTicket(ctx context.Context, tx pgx.Tx, ticket *models.Ticket) error {
 	query := `
-		INSERT INTO tickets (order_id, ticket_type_id, qr_token, qr_code_data, attendee_first_name, attendee_last_name, attendee_email, is_camping)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO tickets (order_id, ticket_type_id, category_id, qr_token, qr_code_data, attendee_first_name, attendee_last_name, attendee_email, is_camping)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at`
 
 	return tx.QueryRow(ctx, query,
-		ticket.OrderID, ticket.TicketTypeID, ticket.QRToken,
+		ticket.OrderID, ticket.TicketTypeID, nullIfEmpty(ticket.CategoryID), ticket.QRToken,
 		ticket.QRCodeData, ticket.AttendeeFirstName, ticket.AttendeeLastName, ticket.AttendeeEmail, ticket.IsCamping,
 	).Scan(&ticket.ID, &ticket.CreatedAt)
 }
@@ -597,7 +598,7 @@ func (r *TicketRepository) EnsureBusTicketType(ctx context.Context, tx pgx.Tx, n
 
 func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken string) (*models.Ticket, error) {
 	query := `
-		SELECT t.id, t.order_id, t.ticket_type_id, t.qr_token, t.is_validated, t.is_camping,
+		SELECT t.id, t.order_id, t.ticket_type_id, COALESCE(t.category_id::text, ''), t.qr_token, t.is_validated, t.is_refunded, t.refunded_at, t.is_camping,
 		       t.validated_at, COALESCE(t.validated_by, ''), t.attendee_first_name, t.attendee_last_name, COALESCE(t.attendee_email, ''),
 		       t.created_at, tt.name as ticket_type_name
 		FROM tickets t
@@ -606,7 +607,7 @@ func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken strin
 
 	var t models.Ticket
 	err := r.pool.QueryRow(ctx, query, qrToken).Scan(
-		&t.ID, &t.OrderID, &t.TicketTypeID, &t.QRToken, &t.IsValidated, &t.IsCamping,
+		&t.ID, &t.OrderID, &t.TicketTypeID, &t.CategoryID, &t.QRToken, &t.IsValidated, &t.IsRefunded, &t.RefundedAt, &t.IsCamping,
 		&t.ValidatedAt, &t.ValidatedBy, &t.AttendeeFirstName, &t.AttendeeLastName, &t.AttendeeEmail,
 		&t.CreatedAt, &t.TicketTypeName,
 	)
@@ -620,6 +621,132 @@ func (r *TicketRepository) GetTicketByQRToken(ctx context.Context, qrToken strin
 	return &t, nil
 }
 
+func (r *TicketRepository) ListOrderTickets(ctx context.Context, orderID string) ([]models.OrderTicketAdminRow, error) {
+	query := `
+		SELECT t.id, t.order_id, tt.name, tt.price_cents,
+		       COALESCE(tc.name, ''), t.qr_token, t.is_validated, t.is_refunded, t.refunded_at,
+		       t.is_camping, COALESCE(t.attendee_first_name, ''), COALESCE(t.attendee_last_name, ''), COALESCE(t.attendee_email, ''),
+		       (bt.ticket_id IS NOT NULL) as is_bus
+		FROM tickets t
+		JOIN ticket_types tt ON tt.id = t.ticket_type_id
+		LEFT JOIN ticket_categories tc ON tc.id = t.category_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE t.order_id = $1
+		ORDER BY t.created_at ASC`
+
+	rows, err := r.pool.Query(ctx, query, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query order tickets: %w", err)
+	}
+	defer rows.Close()
+
+	var out []models.OrderTicketAdminRow
+	for rows.Next() {
+		var row models.OrderTicketAdminRow
+		if err := rows.Scan(
+			&row.TicketID, &row.OrderID, &row.TicketTypeName, &row.PriceCents,
+			&row.CategoryName, &row.QRToken, &row.IsValidated, &row.IsRefunded, &row.RefundedAt,
+			&row.IsCamping, &row.AttendeeFirstName, &row.AttendeeLastName, &row.AttendeeEmail,
+			&row.IsBus,
+		); err != nil {
+			return nil, fmt.Errorf("erreur scan order ticket: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur lecture order tickets: %w", err)
+	}
+	return out, nil
+}
+
+func (r *TicketRepository) CountTicketsByOrder(ctx context.Context, orderID string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM tickets WHERE order_id = $1`, orderID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("erreur comptage tickets commande: %w", err)
+	}
+	return count, nil
+}
+
+func (r *TicketRepository) GetRefundTicketInfo(ctx context.Context, ticketID string) (*models.RefundTicketInfo, error) {
+	query := `
+		SELECT t.id, t.order_id, o.order_number, o.status, COALESCE(o.helloasso_payment_id, ''),
+		       tt.price_cents, t.is_validated, t.is_refunded,
+		       (bt.ticket_id IS NOT NULL) as is_bus
+		FROM tickets t
+		JOIN orders o ON o.id = t.order_id
+		JOIN ticket_types tt ON tt.id = t.ticket_type_id
+		LEFT JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE t.id = $1`
+
+	var info models.RefundTicketInfo
+	err := r.pool.QueryRow(ctx, query, ticketID).Scan(
+		&info.TicketID, &info.OrderID, &info.OrderNumber, &info.OrderStatus, &info.PaymentID,
+		&info.PriceCents, &info.IsValidated, &info.IsRefunded, &info.IsBus,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("erreur query refund ticket info: %w", err)
+	}
+	return &info, nil
+}
+
+func (r *TicketRepository) MarkTicketRefunded(ctx context.Context, ticketID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("erreur début transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var ticketTypeID string
+	var categoryID *string
+	var isRefunded bool
+	err = tx.QueryRow(ctx,
+		`SELECT ticket_type_id, category_id::text, is_refunded FROM tickets WHERE id = $1 FOR UPDATE`,
+		ticketID,
+	).Scan(&ticketTypeID, &categoryID, &isRefunded)
+	if err != nil {
+		return fmt.Errorf("ticket introuvable: %w", err)
+	}
+	if isRefunded {
+		return fmt.Errorf("ticket déjà remboursé")
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE tickets SET is_refunded = true, refunded_at = NOW() WHERE id = $1`,
+		ticketID,
+	)
+	if err != nil {
+		return fmt.Errorf("erreur mise à jour ticket remboursé: %w", err)
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE ticket_types SET quantity_sold = GREATEST(0, quantity_sold - 1) WHERE id = $1`,
+		ticketTypeID,
+	)
+	if err != nil {
+		return fmt.Errorf("erreur mise à jour stock type: %w", err)
+	}
+
+	if categoryID != nil && strings.TrimSpace(*categoryID) != "" {
+		_, err = tx.Exec(ctx,
+			`UPDATE ticket_categories SET quantity_sold = GREATEST(0, quantity_sold - 1) WHERE id = $1`,
+			*categoryID,
+		)
+		if err != nil {
+			return fmt.Errorf("erreur mise à jour stock catégorie: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("erreur commit: %w", err)
+	}
+
+	return nil
+}
+
 func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, validatedBy string) (*models.ValidateQRResponse, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -629,7 +756,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 
 	// Récupérer le ticket avec lock
 	query := `
-		SELECT t.id, t.order_id, t.is_validated, t.is_camping, t.attendee_first_name, t.attendee_last_name,
+		SELECT t.id, t.order_id, t.is_validated, t.is_refunded, t.is_camping, t.attendee_first_name, t.attendee_last_name,
 		       tt.name as ticket_type_name, o.order_number, o.status,
 		       COALESCE(bt.from_station, ''), COALESCE(bt.to_station, ''),
 		       od.departure_time, rd.departure_time, COALESCE(bt.is_round_trip, false)
@@ -646,6 +773,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		ticketID          string
 		orderID           string
 		isValidated       bool
+		isRefunded        bool
 		isCamping         bool
 		attendeeFirstName *string
 		attendeeLastName  *string
@@ -660,7 +788,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 	)
 
 	err = tx.QueryRow(ctx, query, qrToken).Scan(
-		&ticketID, &orderID, &isValidated, &isCamping, &attendeeFirstName, &attendeeLastName,
+		&ticketID, &orderID, &isValidated, &isRefunded, &isCamping, &attendeeFirstName, &attendeeLastName,
 		&ticketTypeName, &orderNumber, &orderStatus,
 		&fromStation, &toStation, &outboundAt, &returnAt, &isRoundTrip,
 	)
@@ -679,6 +807,22 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		return &models.ValidateQRResponse{
 			Valid:   false,
 			Message: fmt.Sprintf("Commande non valide (statut: %s)", orderStatus),
+		}, nil
+	}
+
+	if isRefunded {
+		return &models.ValidateQRResponse{
+			Valid:   false,
+			Message: "Ticket remboursé — accès refusé",
+			TicketID:          ticketID,
+			TicketTypeName:    ticketTypeName,
+			OrderNumber:       orderNumber,
+			IsCamping:         isCamping,
+			RideType:          busRideType(isRoundTrip, fromStation),
+			FromStation:       fromStation,
+			ToStation:         toStation,
+			DepartureAt:       formatTimePtr(outboundAt),
+			ReturnDepartureAt: formatTimePtr(returnAt),
 		}, nil
 	}
 

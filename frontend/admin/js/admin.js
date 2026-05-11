@@ -14,6 +14,7 @@ let latestSalesStats = null;
 let salesChartRange = '1j';
 let salesChart = null;
 const expandedOrderIds = new Set();
+const orderTicketsCache = new Map();
 let salesCustomStart = '';
 let salesCustomEnd = '';
 
@@ -892,6 +893,10 @@ async function loadOrders() {
 
         document.getElementById('orders-table').innerHTML = renderOrdersTable(data.orders || [], { withDetails: true });
         renderPagination(data.total_count, data.page, data.page_size);
+
+        expandedOrderIds.forEach((orderID) => {
+            loadOrderTickets(orderID);
+        });
     } catch (error) {
         console.error('Erreur chargement commandes:', error);
     }
@@ -942,6 +947,9 @@ function renderOrdersTable(orders, options = {}) {
                                 <button class="btn btn-sm" onclick="resendOrderEmailFromDetails('${o.id}')">Renvoyer</button>
                                 <button class="btn btn-sm btn-danger" onclick="refundOrderTotalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Rembourser</button>
                                 <button class="btn btn-sm btn-warning" onclick="removeOrderLocalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Supprimer local</button>
+                            </div>
+                            <div id="order-tickets-${o.id}" style="margin-top:16px;">
+                                <p style="margin:0;color:#718096;">Chargement des tickets...</p>
                             </div>
                         ` : `
                             <p style="margin:0;color:#718096;">Cette commande n'est pas modifiable (statut: ${statusLabel(o.status)}).</p>
@@ -1011,7 +1019,7 @@ async function resendOrderEmailFromDetails(orderID) {
 
 async function refundOrderTotalFromDetails(orderID, orderNumber) {
     const label = orderNumber ? ` (${orderNumber})` : '';
-    if (!confirm(`Confirmer le remboursement total de cette commande${label} ?\nCette action mettra le statut à "Remboursé" et les tickets deviendront invalides au scan.`)) {
+    if (!confirm(`Confirmer le remboursement total de cette commande${label} ?\nLe remboursement gardera 1€ par ticket.\nCette action mettra le statut à "Remboursé" et les tickets deviendront invalides au scan.`)) {
         return;
     }
 
@@ -1025,6 +1033,95 @@ async function refundOrderTotalFromDetails(orderID, orderNumber) {
         }
         await loadOrders();
         alert('✅ Commande remboursée et statut mis à jour');
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
+}
+
+async function loadOrderTickets(orderID) {
+    const container = document.getElementById(`order-tickets-${orderID}`);
+    if (!container) return;
+
+    if (orderTicketsCache.has(orderID)) {
+        container.innerHTML = orderTicketsCache.get(orderID);
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}/tickets`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur chargement tickets');
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<p style="margin:0;color:#718096;">Aucun ticket pour cette commande.</p>';
+            orderTicketsCache.set(orderID, container.innerHTML);
+            return;
+        }
+
+        const rows = data.map((t) => {
+            const attendee = [t.attendee_first_name, t.attendee_last_name].filter(Boolean).join(' ').trim();
+            const attendeeLabel = attendee || 'Participant';
+            const statusBadge = t.is_refunded
+                ? '<span class="badge badge-refunded">Remboursé</span>'
+                : (t.is_validated ? '<span class="badge badge-confirmed">Validé</span>' : '<span class="badge badge-paid">Actif</span>');
+            const disableRefund = t.is_refunded || t.is_validated || t.is_bus;
+            const btnLabel = t.is_bus ? 'Navette' : 'Rembourser ce ticket';
+            const btnAttrs = disableRefund ? 'disabled' : '';
+            const categoryLabel = t.category_name ? ` · ${escapeHtml(t.category_name)}` : '';
+
+            return `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #edf2f7;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;">${escapeHtml(t.ticket_type_name || '')}${categoryLabel}</div>
+                        <div style="font-size:.82rem;color:#718096;">
+                            ${escapeHtml(attendeeLabel)}${t.attendee_email ? ` · ${escapeHtml(t.attendee_email)}` : ''}
+                        </div>
+                        <div style="font-size:.74rem;color:#a0aec0;">QR: ${escapeHtml(t.qr_token || '')}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        ${statusBadge}
+                        <button class="btn btn-sm btn-danger" ${btnAttrs} onclick="refundSingleTicket('${orderID}', '${t.ticket_id}', '${escapeAttr(t.ticket_type_name || '')}', ${t.price_cents || 0})">${btnLabel}</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const html = `<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;background:#f9fafb;">
+            <div style="font-size:.78rem;color:#718096;margin-bottom:6px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;">Tickets</div>
+            ${rows}
+        </div>`;
+
+        container.innerHTML = html;
+        orderTicketsCache.set(orderID, html);
+    } catch (error) {
+        container.innerHTML = `<p style="margin:0;color:#e53e3e;">❌ ${escapeHtml(error.message)}</p>`;
+    }
+}
+
+async function refundSingleTicket(orderID, ticketID, ticketTypeName, priceCents) {
+    const label = ticketTypeName ? ` (${ticketTypeName})` : '';
+    const priceEuros = (priceCents || 0) / 100;
+    const refundEuros = Math.max(0, (priceCents || 0) - 100) / 100;
+    const msg = `Confirmer le remboursement de ce ticket${label} ?\nLe remboursement gardera 1€ pour ce ticket.` +
+        (priceCents ? `\nPrix: ${priceEuros.toFixed(2)} € → Remboursé: ${refundEuros.toFixed(2)} €` : '');
+
+    if (!confirm(msg)) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}/tickets/${ticketID}/refund`, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors du remboursement du ticket');
+        }
+        orderTicketsCache.delete(orderID);
+        await loadOrders();
+        alert('✅ Ticket remboursé');
     } catch (error) {
         alert(`❌ ${error.message}`);
     }

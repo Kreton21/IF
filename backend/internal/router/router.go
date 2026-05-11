@@ -145,6 +145,8 @@ func NewRouter(
 				r.Put("/orders/{id}", adminHandler.UpdateSuccessfulOrder)
 				r.Post("/orders/{id}/resend-email", adminHandler.ResendOrderConfirmationEmail)
 				r.Post("/orders/{id}/refund-total", adminHandler.RefundOrderTotal)
+				r.Get("/orders/{id}/tickets", adminHandler.GetOrderTickets)
+				r.Post("/orders/{id}/tickets/{ticketID}/refund", adminHandler.RefundSingleTicket)
 				r.Post("/orders/{id}/remove-local", adminHandler.RemoveOrderLocal)
 				r.Post("/orders/resend-confirmations", adminHandler.ResendAllConfirmationEmails)
 				r.Post("/validate-qr", adminHandler.ValidateQR)

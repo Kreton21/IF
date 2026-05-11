@@ -416,6 +416,66 @@ func (h *AdminHandler) RefundOrderTotal(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Commande remboursée"})
 }
 
+// GetOrderTickets lists tickets for a specific order (admin only)
+func (h *AdminHandler) GetOrderTickets(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	if strings.TrimSpace(orderID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande requis"})
+		return
+	}
+
+	rows, err := h.ticketService.ListOrderTickets(r.Context(), orderID)
+	if err != nil {
+		log.Printf("Erreur chargement tickets commande %s: %v", orderID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	if rows == nil {
+		rows = []models.OrderTicketAdminRow{}
+	}
+	writeJSON(w, http.StatusOK, rows)
+}
+
+// RefundSingleTicket refunds a single ticket for an order (keeps 1 euro)
+func (h *AdminHandler) RefundSingleTicket(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	ticketID := chi.URLParam(r, "ticketID")
+	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(ticketID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande et ticket requis"})
+		return
+	}
+
+	if err := h.ticketService.RefundSingleTicket(r.Context(), orderID, ticketID); err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "introuvable") {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": msg})
+			return
+		}
+		if strings.Contains(msg, "Lydia") || strings.Contains(msg, "remboursables") || strings.Contains(msg, "ticket") {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+			return
+		}
+		log.Printf("Erreur remboursement ticket %s: %v", ticketID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Ticket remboursé"})
+}
+
 // RemoveOrderLocal marks an order as refunded locally without contacting payment provider
 func (h *AdminHandler) RemoveOrderLocal(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())

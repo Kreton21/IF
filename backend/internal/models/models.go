@@ -104,9 +104,12 @@ type Ticket struct {
 	ID                string     `json:"id"`
 	OrderID           string     `json:"order_id"`
 	TicketTypeID      string     `json:"ticket_type_id"`
+	CategoryID        string     `json:"category_id,omitempty"`
 	QRToken           string     `json:"qr_token"`
 	QRCodeData        []byte     `json:"-"`
 	IsValidated       bool       `json:"is_validated"`
+	IsRefunded        bool       `json:"is_refunded"`
+	RefundedAt        *time.Time `json:"refunded_at,omitempty"`
 	IsCamping         bool       `json:"is_camping"`
 	ValidatedAt       *time.Time `json:"validated_at,omitempty"`
 	ValidatedBy       string     `json:"validated_by,omitempty"`
@@ -115,6 +118,35 @@ type Ticket struct {
 	AttendeeEmail     string     `json:"attendee_email,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	TicketTypeName    string     `json:"ticket_type_name,omitempty"` // Jointure
+}
+
+type OrderTicketAdminRow struct {
+	TicketID          string     `json:"ticket_id"`
+	OrderID           string     `json:"order_id"`
+	TicketTypeName    string     `json:"ticket_type_name"`
+	PriceCents        int        `json:"price_cents"`
+	CategoryName      string     `json:"category_name,omitempty"`
+	QRToken           string     `json:"qr_token"`
+	IsValidated       bool       `json:"is_validated"`
+	IsRefunded        bool       `json:"is_refunded"`
+	RefundedAt        *time.Time `json:"refunded_at,omitempty"`
+	IsCamping         bool       `json:"is_camping"`
+	AttendeeFirstName string     `json:"attendee_first_name,omitempty"`
+	AttendeeLastName  string     `json:"attendee_last_name,omitempty"`
+	AttendeeEmail     string     `json:"attendee_email,omitempty"`
+	IsBus             bool       `json:"is_bus"`
+}
+
+type RefundTicketInfo struct {
+	TicketID   string       `json:"ticket_id"`
+	OrderID    string       `json:"order_id"`
+	OrderNumber string      `json:"order_number"`
+	OrderStatus OrderStatus `json:"order_status"`
+	PaymentID  string       `json:"payment_id"`
+	PriceCents int          `json:"price_cents"`
+	IsValidated bool        `json:"is_validated"`
+	IsRefunded  bool        `json:"is_refunded"`
+	IsBus       bool        `json:"is_bus"`
 }
 
 // ============================================
