@@ -12,9 +12,14 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F97FA0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Interfilières 2026">
 
 <!-- ══ SEO principal ══ -->
-<title>Écran géant Finale Ligue des Champions PSG Arsenal — L'Interfilières 2026 · 30 Mai Paris-Saclay</title>
+<title>L'Interfilières 2026 · 30 mai</title>
 <meta name="description" content="L'Interfilières 2026 — festival étudiant Paris-Saclay le 30 mai avec Gazo, Shad Hottaboy, Vladimir Cauchemar, Basstrick. Fan Zone écran géant pour la finale Ligue des Champions PSG vs Arsenal. Domaine de Saint-Jean-de-Beauregard.">
 <meta name="keywords" content="ligue des champions, finale ligue des champions, écran géant ligue des champions, PSG Arsenal finale, fan zone PSG, Interfilières 2026, festival étudiant Paris-Saclay, Gazo concert, Shad Hottaboy, Vladimir Cauchemar, Basstrick, festival Paris-Saclay 2026, concert Paris-Saclay, finale UEFA Champions League 2026">
 <meta name="robots" content="index, follow">
@@ -50,6 +55,8 @@
 <link rel="icon" type="image/png" sizes="16x16" href="img/favicon_io/favicon-16x16.png">
 <link rel="icon" href="img/favicon_io/favicon.ico">
 <link rel="manifest" href="img/favicon_io/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 
@@ -181,6 +188,29 @@
 }
 </script>
 
+<!-- ══ JSON-LD : Organisation ══ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Comité d'Organisation de L'Interfilières (COI)",
+  "url": "https://interfilieres.fr/",
+  "logo": "https://interfilieres.fr/img/favicon_io/android-chrome-512x512.png",
+  "email": "festival@interfilieres.fr",
+  "sameAs": [
+    "https://www.instagram.com/interfilieres_upsaclay/",
+    "https://www.tiktok.com/@linterfilieres_ups",
+    "https://www.facebook.com/interfilieres.upsaclay/"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "festival@interfilieres.fr",
+    "contactType": "customer support",
+    "availableLanguage": "French"
+  }
+}
+</script>
+
 <!-- ══ JSON-LD : FAQ ══ -->
 <script type="application/ld+json">
 {
@@ -208,7 +238,7 @@
       "name": "C'est quoi L'Interfilières 2026 ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "L'Interfilières 2026 est le grand festival étudiant de Paris-Saclay, le samedi 30 mai 2026 au Domaine de Saint-Jean-de-Beauregard (91940). Au programme : concerts avec Gazo, Shad Hottaboy, Vladimir Cauchemar, Basstrick, animations, camping, et une Fan Zone écran géant pour la finale de la Ligue des Champions PSG vs Arsenal."
+        "text": "L'Interfilières 2026 est le grand événement de Paris-Saclay, le samedi 30 mai 2026 au Domaine de Saint-Jean-de-Beauregard (91940). Au programme : concerts avec Gazo, Shad Hottaboy, Vladimir Cauchemar, Basstrick, animations, camping, et une Fan Zone écran géant pour la finale de la Ligue des Champions PSG vs Arsenal."
       }
     },
     {
@@ -224,7 +254,7 @@
       "name": "Comment acheter des billets pour L'Interfilières 2026 ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Les billets pour L'Interfilières 2026 sont disponibles sur interfilieres.fr. Le festival est réservé aux étudiants de Paris-Saclay et écoles partenaires."
+        "text": "Les billets pour L'Interfilières 2026 sont disponibles sur interfilieres.fr. L'événement est réservé aux étudiants de Paris-Saclay et écoles partenaires."
       }
     }
   ]
@@ -283,10 +313,8 @@
 		<p class="hero-date">Samedi 30 Mai 2026</p>
 		<h1>L'&#8288;Interfilières<br><em>2026</em></h1>
 		<div class="hero-eyebrow">Domaine de Saint-Jean-de-Beauregard<br/>Paris-Saclay</div>
-		<p onclick="go('anims')" style="margin-top:14px;font-family:'Montserrat',sans-serif;font-size:clamp(.9rem,2.2vw,1.18rem);font-weight:800;color:#FFD700;letter-spacing:.5px;text-shadow:0 2px 12px rgba(0,0,0,.35);cursor:pointer;">⚽ Et si on allait en festival regarder la LDC ?</p>
 	      <div class="hero-horaires" style="margin-top:10px;font-size:clamp(.78rem,1.85vw,1.35rem);font-weight:400;letter-spacing:clamp(.1px,.12vw,1px);text-transform:none;color:rgba(255,255,255,.82);line-height:1.45;font-family:'Montserrat',sans-serif;">
-        Horaires :<br>
-        15h-5h animations et concerts<br>
+             15h-5h animations et concerts<br>
         Camping jusqu'à midi le dimanche
       </div>
 		
@@ -322,31 +350,32 @@
 	  <div class="bar rv"></div>
 	  <div class="hl-grid">
     <div class="hl-card rv" onclick="go('prog')" style="cursor:pointer;" title="Voir la programmation">
-      <img src="img/Gazo.jpeg" alt="Gazo en concert — L'Interfilières 2026 festival Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 42%; opacity:0.6; z-index:0; border-radius:inherit;">
+      <img src="img/Gazo.jpeg" alt="Gazo en concert — L'Interfilières 2026 Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 42%; opacity:0.6; z-index:0; border-radius:inherit;">
       <div class="hl-num">01</div>
       <div class="hl-name" style="position:relative; z-index:1;">GAZO</div>
       <div class="hl-pill">Rap · Headliner</div>
     </div>
     <div class="hl-card rv2" onclick="go('prog')" style="cursor:pointer;" title="Voir la programmation">
-      <img src="img/Shad_home.jpeg" alt="Shad Hottaboy en concert — L'Interfilières 2026 festival étudiant Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:32% 30%; opacity:0.68; z-index:0; border-radius:inherit;">
+      <img src="img/Shad_home.jpeg" alt="Shad Hottaboy en concert — L'Interfilières 2026 Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:32% 30%; opacity:0.68; z-index:0; border-radius:inherit;">
       <div class="hl-num">02</div>
       <div class="hl-name" style="position:relative; z-index:1;">SHAD<br>HOTTABOY</div>
       <div class="hl-pill">Shatta · Headliner</div>
 		</div>
 		<div class="hl-card rv3">
-      <img src="img/Vladimir_home.jpeg" alt="Vladimir Cauchemar DJ set — L'Interfilières 2026 festival étudiant Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 35%; opacity:0.68; z-index:0; border-radius:inherit;">
+      <img src="img/Vladimir_home.jpeg" alt="Vladimir Cauchemar DJ set — L'Interfilières 2026 Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 35%; opacity:0.68; z-index:0; border-radius:inherit;">
 		  <div class="hl-num">03</div>
       <div class="hl-name" style="position:relative; z-index:1;">VLADIMIR<br>CAUCHEMAR</div>
       <div class="hl-pill">Electro · Headliner</div>
 		</div>
 		<div class="hl-card rv4" onclick="go('prog')" style="cursor:pointer;" title="Voir la programmation">
-      <img src="img/Basstrick_home.jpeg" alt="Basstrick en concert — L'Interfilières 2026 festival Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; opacity:0.68; z-index:0; border-radius:inherit;">
+      <img src="img/Basstrick_home.jpeg" alt="Basstrick en concert — L'Interfilières 2026 Paris-Saclay" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; opacity:0.68; z-index:0; border-radius:inherit;">
 		  <div class="hl-num">04</div>
       <div class="hl-name" style="position:relative; z-index:1;">BASSTRICK</div>
       <div class="hl-pill">Headliner</div>
 		</div>
 	  </div>
 	  <p class="hl-more rv">+ <strong>DJ & artistes étudiants</strong> sur 2 scènes tout au long de la journée</p>
+	  <p onclick="go('anims')" style="margin-top:14px;font-family:'Montserrat',sans-serif;font-size:clamp(.9rem,2.2vw,1.18rem);font-weight:800;letter-spacing:.5px;cursor:pointer;text-align:center;background:linear-gradient(90deg,#FF9A5F,#FFD700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"> Et si on allait à L'&#8288;Interfilières pour la fan zone de la finale de la LDC ?</p>
 	</div>
   </section>
 
@@ -960,7 +989,7 @@
 	  <div class="bar rv"></div>
 
 	  <!-- FAN ZONE FINALE UCL -->
-	  <div class="rv" style="margin-top:36px;border-radius:20px;overflow:hidden;background:linear-gradient(135deg,#001529 0%,#003087 45%,#CC0000 100%);box-shadow:0 16px 56px rgba(0,48,135,.38);">
+	  <div class="rv fanzone-glow" style="margin-top:36px;border-radius:20px;overflow:hidden;background:linear-gradient(135deg,#001529 0%,#003087 45%,#CC0000 100%);">
 
 		<!-- Affiche complète -->
 		<div style="width:100%;line-height:0;">
@@ -969,15 +998,14 @@
 
 		<!-- Contenu texte -->
 		<div style="padding:34px 36px;position:relative;">
-		  <span style="position:absolute;right:16px;top:-20px;font-size:110px;opacity:.06;line-height:1;pointer-events:none;user-select:none">⚽</span>
+		  <span class="anim-float" style="position:absolute;right:22px;top:-20px;font-size:96px;opacity:.12;line-height:1;pointer-events:none;user-select:none">⚽</span>
 		  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
 			<span style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#001529;border-radius:50px;padding:4px 16px;font-size:.68rem;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;white-space:nowrap">⚽ Fan Zone</span>
 			<span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);border-radius:50px;padding:4px 14px;font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">30 mai 2026</span>
 		  </div>
-		  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,6vw,3.4rem);letter-spacing:2px;color:#fff;line-height:1.1;margin-bottom:10px">FAN ZONE LDC 📺<br><span style="color:#FFD700">FINALE LIGUE DES CHAMPIONS</span></h1>
-		  <p style="font-size:1.18rem;font-weight:900;color:#fff;margin-bottom:8px;font-style:italic;letter-spacing:.3px">Et si on allait en festival regarder la LDC ?</p>
+		  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,6vw,3.4rem);letter-spacing:2px;color:#fff;line-height:1.1;margin-bottom:10px">FAN ZONE LDC 📺<br><span style="color:#FFD700">FINALE LIGUE DES CHAMPIONS</span></h2>
 		  <p style="font-size:1rem;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:12px">PSG - Arsenal en finale — on la regarde ensemble sur écran géant !</p>
-		  <p style="font-size:.88rem;color:rgba(255,255,255,.65);line-height:1.7;max-width:580px">Concert, camping… et la <strong style="color:#fff">finale de la Champions League</strong> en direct sur écran géant. L'&#8288;Interfilières 2026, c'est le seul endroit où tu peux vivre la LDC en festival.</p>
+		  <p style="font-size:.88rem;color:rgba(255,255,255,.65);line-height:1.7;max-width:580px">Concert, camping… et la <strong style="color:#fff">finale de la Champions League</strong> en direct sur écran géant. L'&#8288;Interfilières 2026, c'est le seul endroit où tu peux vivre la LDC en direct.</p>
 
 		  <!-- Carte match -->
 		  <div style="margin-top:24px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:20px 24px;">
@@ -1006,9 +1034,88 @@
 		</div>
 	  </div>
 
-	  <div class="anim-coming-soon" style="margin-top:36px">
-		<button class="btn-coming-soon">Autres animations à venir 🤫</button>
+	  <!-- GRILLE ANIMATIONS CONFIRMÉES -->
+	  <span class="tag rv" style="margin-top:52px;display:inline-block">✦ Au programme</span>
+	  <h3 class="title rv" style="font-size:clamp(1.6rem,3.5vw,2.4rem);margin-top:4px">Ce qui vous attend</h3>
+	  <div class="bar rv"></div>
+
+	  <div class="anim-grid" style="margin-top:28px;">
+
+		<div class="anim-card ac-confirmed rv">
+		  <div class="ac-thumb ac-fire">
+			<span class="ac-thumb-emoji">🎵</span>
+		  </div>
+		  <div class="ac-body">
+			<div class="ac-title">2 Scènes lives</div>
+			<p class="ac-desc">Scène principale et scène secondaire avec des concerts non-stop de 15h à 5h du matin.</p>
+		  </div>
+		</div>
+
+		<div class="anim-card ac-confirmed rv2">
+		  <div class="ac-thumb ac-sky">
+			<span class="ac-thumb-emoji" style="animation-delay:.5s">🤝</span>
+		  </div>
+		  <div class="ac-body">
+			<div class="ac-title">Village asso</div>
+			<p class="ac-desc">Stands des associations étudiantes de Paris-Saclay, jeux, défis et animations tout au long de la journée.</p>
+		  </div>
+		</div>
+
+		<div class="anim-card ac-confirmed rv3">
+		  <div class="ac-thumb ac-sun">
+			<span class="ac-thumb-emoji" style="animation-delay:1s">🍔</span>
+		  </div>
+		  <div class="ac-body">
+			<div class="ac-title">Food trucks</div>
+			<p class="ac-desc">Restauration variée sur place : burgers, tacos, desserts et boissons pour tenir toute la nuit.</p>
+		  </div>
+		</div>
+
+		<div class="anim-card ac-confirmed rv">
+		  <div class="ac-thumb ac-night">
+			<span class="ac-thumb-emoji" style="animation-delay:1.5s">⛺</span>
+		  </div>
+		  <div class="ac-body">
+			<div class="ac-title">Camping</div>
+			<p class="ac-desc">Camping gratuit sur réservation — reste jusqu'au dimanche midi et profite de la nuit au max.</p>
+		  </div>
+		</div>
+
+		<div class="anim-card ac-soon rv2">
+		  <div class="ac-thumb ac-purple">
+			<span class="ac-thumb-emoji" style="animation-delay:.8s">🎡</span>
+		  </div>
+		  <div class="ac-body">
+			<span class="ac-status soon">Bientôt</span>
+			<div class="ac-title">Surprise #1</div>
+			<p class="ac-desc">Une grosse animation est en cours de préparation. Reste connecté pour la découvrir en avant-première !</p>
+		  </div>
+		</div>
+
+		<div class="anim-card ac-soon rv3">
+		  <div class="ac-thumb ac-green">
+			<span class="ac-thumb-emoji" style="animation-delay:1.3s">🎨</span>
+		  </div>
+		  <div class="ac-body">
+			<span class="ac-status soon">Bientôt</span>
+			<div class="ac-title">Surprise #2</div>
+			<p class="ac-desc">On prépare encore d'autres surprises... Abonne-toi à nos réseaux pour ne rien manquer.</p>
+		  </div>
+		</div>
+
 	  </div>
+
+	  <!-- TEASER RÉSEAUX -->
+	  <div class="anim-teaser rv">
+		<p class="anim-teaser-title">D'autres surprises arrivent 🤫</p>
+		<p class="anim-teaser-sub">Suis nos réseaux pour être les premiers à découvrir les prochaines annonces.</p>
+		<div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:20px">
+		  <a href="https://www.instagram.com/interfilieres_upsaclay/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border-radius:50px;padding:11px 22px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:.85rem;text-decoration:none;letter-spacing:.4px">📸 Instagram</a>
+		  <a href="https://www.tiktok.com/@linterfilieres_ups" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#010101;color:#fff;border-radius:50px;padding:11px 22px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:.85rem;text-decoration:none;letter-spacing:.4px">🎵 TikTok</a>
+		  <a href="https://www.facebook.com/interfilieres.upsaclay/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#1877f2;color:#fff;border-radius:50px;padding:11px 22px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:.85rem;text-decoration:none;letter-spacing:.4px">👍 Facebook</a>
+		</div>
+	  </div>
+
 	</div>
   </section>
 </div>
@@ -1138,7 +1245,7 @@
     <div>
       <p class="ph-eyebrow">✦ Rejoins l'équipe · 30 mai 2026</p>
       <h1 class="ph-title">VENIR<br>STAFFER</h1>
-      <p class="ph-sub">Vis le festival comme personne d'autre</p>
+      <p class="ph-sub">Vis l'événement comme personne d'autre</p>
       <div class="ph-horaires" style="margin-top:18px; color:#fff; font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.18rem; letter-spacing:0.5px; text-shadow:0 2px 8px rgba(0,0,0,0.18);">
         Horaires :<br>
         <span style="color:#fff; font-weight:600;">15h-5h animations et concerts<br>Camping jusqu'à midi le dimanche</span>
@@ -1158,7 +1265,7 @@
         <p style="font-size:.95rem;color:var(--muted);line-height:1.7;margin-bottom:36px">
           Envie de rencontrer du monde, de t'ambiancer et de vivre L'&#8288;Interfilières autrement ?<br>Rejoins le staff.
         </p>
-        <a href="#" onclick="document.getElementById('staff-form').scrollIntoView({behavior:'smooth'});return false;" style="
+        <a href="https://vorg.fr/interfilieres2026/interfilieres" target="_blank" rel="noopener" style="
           display:inline-block;
           background:linear-gradient(135deg,var(--rose),var(--peach));
           color:#fff;border-radius:50px;
@@ -1170,33 +1277,44 @@
         "
         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 40px rgba(249,127,160,.6)'"
         onmouseout="this.style.transform='none';this.style.boxShadow='0 8px 32px rgba(249,127,160,.45)'">
-          🙋 S'inscrire maintenant !
+          🙋 S'inscrire sur Vorg !
         </a>
       </div>
 
       <span class="tag rv">✦ Pourquoi nous rejoindre ?</span>
       <h2 class="title rv">Ce que tu vas y gagner</h2>
       <div class="bar rv"></div>
-      <div class="why-grid rv2" style="margin-top:28px">
+      <div class="why-grid rv2" style="margin-top:28px;grid-template-columns:repeat(3,1fr)">
         <div class="why-card">
-          <div class="why-ico">🤝</div>
-          <div class="why-t">Équipe soudée &amp; ouverte</div>
-          <p class="why-d">Une ambiance festive et conviviale, des liens qui durent bien après L'&#8288;Interfilières.</p>
-        </div>
-        <div class="why-card">
-          <div class="why-ico">⭐</div>
-          <div class="why-t">Un rôle clé, une fierté</div>
-          <p class="why-d">Tu fais partie de ceux qui rendent la magie possible. Le jour J, c'est aussi ton événement.</p>
+          <div class="why-ico">🎪</div>
+          <div class="why-t">Vis l'événement de l'intérieur</div>
+          <p class="why-d">Un événement porté par les asso étudiantes — et toi tu fais partie de ceux qui le font vivre.</p>
         </div>
         <div class="why-card">
           <div class="why-ico">🚀</div>
-          <div class="why-t">Une expérience valorisante</div>
-          <p class="why-d">Organisation, gestion terrain, communication, travail d'équipe : des compétences concrètes pour ton CV.</p>
+          <div class="why-t">Gagne en expérience</div>
+          <p class="why-d">Orga, gestion terrain, logistique, communication : des compétences concrètes à valoriser sur ton CV.</p>
         </div>
         <div class="why-card">
-          <div class="why-ico">🎉</div>
-          <div class="why-t">Tu vis l'événement de l'intérieur</div>
-          <p class="why-d">Vue backstage, accès privilégié, ambiance unique. Tu vis L'&#8288;Interfilières de l'intérieur, pas juste en spectateur.</p>
+          <div class="why-ico">🔍</div>
+          <div class="why-t">Découvre les postes</div>
+          <p class="why-d">Bar, animations, brigade anti-VSS, entrée, navettes… Tu indiques tes préférences, on s'adapte.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-ico">🤝</div>
+          <div class="why-t">Fais plein de rencontres</div>
+          <p class="why-d">Rencontre des gens de toutes les filières, crée des liens qui durent bien après L'&#8288;Interfilières.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-ico">👯</div>
+          <div class="why-t">Viens avec tes potes</div>
+          <p class="why-d">Crée ton équipe avec tes amis et demandez à être sur le même créneau lors de l'inscription !</p>
+        </div>
+        <div class="why-card" style="border:2px solid var(--rose);position:relative">
+          <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;border-radius:50px;padding:3px 14px;font-size:.6rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;white-space:nowrap">🎁 Inclus</div>
+          <div class="why-ico">👕</div>
+          <div class="why-t">T-shirt + place offerts</div>
+          <p class="why-d">Ton t-shirt staff et ton entrée sont gratuits. Tu viens, tu vis l'événement, et tu repars avec un souvenir.</p>
         </div>
       </div>
 
@@ -1211,6 +1329,11 @@
         <div style="background:#fff;border-radius:14px;padding:22px 14px;text-align:center;box-shadow:var(--sh);transition:all .25s;cursor:default" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--sh-lg)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--sh)'">
           <div style="font-size:2rem;margin-bottom:10px">🎪</div>
           <div style="font-weight:800;font-size:.85rem;color:var(--text)">Animation</div>
+        </div>
+
+        <div style="background:#fff;border-radius:14px;padding:22px 14px;text-align:center;box-shadow:var(--sh);transition:all .25s;cursor:default" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--sh-lg)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--sh)'">
+          <div style="font-size:2rem;margin-bottom:10px">🛡️</div>
+          <div style="font-weight:800;font-size:.85rem;color:var(--text)">Brigade anti-VSS</div>
         </div>
 
         <div style="background:#fff;border-radius:14px;padding:22px 14px;text-align:center;box-shadow:var(--sh);transition:all .25s;cursor:default" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--sh-lg)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--sh)'">
@@ -1279,7 +1402,7 @@
           Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard<br>
           Places limitées — inscris-toi dès maintenant.
         </p>
-        <a href="#" style="
+        <a href="https://vorg.fr/interfilieres2026/interfilieres" target="_blank" rel="noopener" style="
           display:inline-block;
           background:linear-gradient(135deg,var(--rose),var(--peach));
           color:#fff;border-radius:50px;
@@ -1291,7 +1414,7 @@
         "
         onmouseover="this.style.transform='translateY(-3px) scale(1.03)';this.style.boxShadow='0 14px 44px rgba(249,127,160,.65)'"
         onmouseout="this.style.transform='none';this.style.boxShadow='0 8px 36px rgba(249,127,160,.5)'">
-		  Bientôt disponible
+          🙋 Je m'inscris sur Vorg !
         </a>
       </div>
 
