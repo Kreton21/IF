@@ -941,6 +941,7 @@ function renderOrdersTable(orders, options = {}) {
                                 <button class="btn btn-sm btn-primary" onclick="saveOrderDetails('${o.id}')">Confirmer</button>
                                 <button class="btn btn-sm" onclick="resendOrderEmailFromDetails('${o.id}')">Renvoyer</button>
                                 <button class="btn btn-sm btn-danger" onclick="refundOrderTotalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Rembourser</button>
+                                <button class="btn btn-sm btn-warning" onclick="removeOrderLocalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Supprimer local</button>
                             </div>
                         ` : `
                             <p style="margin:0;color:#718096;">Cette commande n'est pas modifiable (statut: ${statusLabel(o.status)}).</p>
@@ -1024,6 +1025,27 @@ async function refundOrderTotalFromDetails(orderID, orderNumber) {
         }
         await loadOrders();
         alert('✅ Commande remboursée et statut mis à jour');
+    } catch (error) {
+        alert(`❌ ${error.message}`);
+    }
+}
+
+async function removeOrderLocalFromDetails(orderID, orderNumber) {
+    const label = orderNumber ? ` (${orderNumber})` : '';
+    if (!confirm(`Confirmer la suppression locale de cette commande${label} ?\nLa personne ne sera PAS remboursée. Les tickets deviendront invalides au scan.`)) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/${orderID}/remove-local`, {
+            method: 'POST',
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de la suppression locale');
+        }
+        await loadOrders();
+        alert('✅ Commande supprimée localement');
     } catch (error) {
         alert(`❌ ${error.message}`);
     }

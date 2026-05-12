@@ -416,6 +416,38 @@ func (h *AdminHandler) RefundOrderTotal(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Commande remboursée"})
 }
 
+// RemoveOrderLocal marks an order as refunded locally without contacting payment provider
+func (h *AdminHandler) RemoveOrderLocal(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	orderID := chi.URLParam(r, "id")
+	if strings.TrimSpace(orderID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID commande requis"})
+		return
+	}
+
+	if err := h.ticketService.RemoveOrderLocal(r.Context(), orderID); err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "introuvable") {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": msg})
+			return
+		}
+		if strings.Contains(msg, "remboursables") {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": msg})
+			return
+		}
+		log.Printf("Erreur suppression locale commande %s: %v", orderID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Commande supprimée localement"})
+}
+
 func (h *AdminHandler) ResendAllConfirmationEmails(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {
