@@ -25,7 +25,6 @@ DUMP_FILE="$BACKUP_DIR/backup_$(date +%Y%m%d_%H%M%S).dump"
 ./scripts/export_db_dump.sh -o "$DUMP_FILE"
 
 # Send to remote
-rsync -av --compress -e "ssh -p 7493" "$DUMP_FILE" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
-
+rsync -av --compress -e "ssh -p 7493 -i ~/.ssh/id_ed25519" "$DUMP_FILE" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
 # (optional) prune local backups older than 14 days
 find "$BACKUP_DIR" -type f -name "backup_*.dump" -mtime +14 -delete
