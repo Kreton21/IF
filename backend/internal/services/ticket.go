@@ -1040,6 +1040,7 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 			ticket := &models.Ticket{
 				OrderID:           order.ID,
 				TicketTypeID:      item.TicketTypeID,
+					CategoryID:        item.CategoryID,
 				QRToken:           qrToken,
 				QRCodeData:        qrPNG,
 				IsCamping:         order.WantsCamping,
@@ -1215,6 +1216,73 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 	return sent, failed, nil
 }
 
+func (s *TicketService) ListOrderTickets(ctx context.Context, orderID string) ([]models.OrderTicketAdminRow, error) {
+	if strings.TrimSpace(orderID) == "" {
+		return nil, fmt.Errorf("id commande manquant")
+	}
+	return s.ticketRepo.ListOrderTickets(ctx, orderID)
+}
+
+func (s *TicketService) RefundSingleTicket(ctx context.Context, orderID, ticketID string) error {
+	if strings.TrimSpace(ticketID) == "" {
+		return fmt.Errorf("id ticket manquant")
+	}
+
+	info, err := s.ticketRepo.GetRefundTicketInfo(ctx, ticketID)
+	if err != nil {
+		return err
+	}
+	if info == nil {
+		return fmt.Errorf("ticket introuvable")
+	}
+	if strings.TrimSpace(orderID) != "" && info.OrderID != orderID {
+		return fmt.Errorf("ticket n'appartient pas à la commande")
+	}
+	if info.OrderStatus != models.OrderStatusPaid && info.OrderStatus != models.OrderStatusConfirmed {
+		return fmt.Errorf("seules les commandes payées/confirmées sont remboursables")
+	}
+	if info.IsBus {
+		return fmt.Errorf("remboursement par ticket non disponible pour les navettes")
+	}
+	if info.IsValidated {
+		return fmt.Errorf("ticket déjà validé")
+	}
+	if info.IsRefunded {
+		return fmt.Errorf("ticket déjà remboursé")
+	}
+
+	if s.paymentProvider == nil || s.paymentProvider.Name() != "lydia" {
+		return fmt.Errorf("remboursement automatique disponible uniquement pour Lydia")
+	}
+	lydiaProvider, ok := s.paymentProvider.(*LydiaService)
+	if !ok {
+		return fmt.Errorf("provider Lydia indisponible")
+	}
+
+	refundCents := info.PriceCents - 100
+	if refundCents <= 0 {
+		return fmt.Errorf("montant à rembourser invalide (prix %d centimes)", info.PriceCents)
+	}
+
+	if err := lydiaProvider.RefundTransaction(ctx, LydiaRefundRequest{
+		TransactionIdentifier: strings.TrimSpace(info.PaymentID),
+		OrderRef:              info.OrderNumber,
+		AmountCents:           refundCents,
+		NotifyPayer:           true,
+		NotifyCollecter:       true,
+	}); err != nil {
+		return fmt.Errorf("échec remboursement Lydia: %w", err)
+	}
+
+	if err := s.ticketRepo.MarkTicketRefunded(ctx, ticketID); err != nil {
+		return err
+	}
+
+	s.redis.Del(ctx, "ticket_types:active")
+
+	return nil
+}
+
 func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
@@ -1237,7 +1305,27 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 		return fmt.Errorf("provider Lydia indisponible")
 	}
 
-	refundCents := order.TotalCents - 100
+	items, err := s.orderRepo.GetOrderItems(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur récupération items: %w", err)
+	}
+
+	ticketCount := 0
+	for _, item := range items {
+		ticketCount += item.Quantity
+	}
+	if ticketCount == 0 {
+		count, err := s.ticketRepo.CountTicketsByOrder(ctx, orderID)
+		if err != nil {
+			return fmt.Errorf("erreur comptage tickets: %w", err)
+		}
+		ticketCount = count
+	}
+	if ticketCount <= 0 {
+		return fmt.Errorf("aucun ticket à rembourser")
+	}
+
+	refundCents := order.TotalCents - (ticketCount * 100)
 	if refundCents <= 0 {
 		return fmt.Errorf("montant à rembourser invalide (total %d centimes)", order.TotalCents)
 	}
@@ -1251,11 +1339,6 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 		NotifyCollecter:       true,
 	}); err != nil {
 		return fmt.Errorf("échec remboursement Lydia: %w", err)
-	}
-
-	items, err := s.orderRepo.GetOrderItems(ctx, orderID)
-	if err != nil {
-		return fmt.Errorf("remboursement effectué mais erreur récupération items: %w", err)
 	}
 
 	if len(items) > 0 {
