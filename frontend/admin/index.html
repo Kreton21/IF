@@ -230,6 +230,22 @@
         <!-- Tab: Commandes -->
         <section id="tab-orders" class="tab-content">
             <div class="card">
+                <div class="filters">
+                    <input type="text" id="order-search" placeholder="🔍 Rechercher (email, nom, n° commande)" 
+                           oninput="debounceSearch()">
+                    <select id="order-status-filter" onchange="loadOrders()">
+                        <option value="">Tous les statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="paid">Payé</option>
+                        <option value="confirmed">Confirmé</option>
+                        <option value="cancelled">Annulé</option>
+                        <option value="refunded">Remboursé</option>
+                    </select>
+                </div>
+                <div id="orders-table" class="table-container"></div>
+                <div id="orders-pagination" class="pagination"></div>
+            </div>
+            <div class="card">
                 <h3>🎟 Creer un billet invite</h3>
                 <p style="margin-top:6px;color:#718096;font-size:.9rem;">Cree une commande gratuite et envoie les tickets par email.</p>
                 <div class="form-row" style="align-items:flex-end;">
@@ -255,22 +271,6 @@
                     <button class="btn btn-primary" onclick="createCompedOrder()">Creer et envoyer</button>
                     <span id="comped-order-msg" class="form-msg hidden"></span>
                 </div>
-            </div>
-            <div class="card">
-                <div class="filters">
-                    <input type="text" id="order-search" placeholder="🔍 Rechercher (email, nom, n° commande)" 
-                           oninput="debounceSearch()">
-                    <select id="order-status-filter" onchange="loadOrders()">
-                        <option value="">Tous les statuts</option>
-                        <option value="pending">En attente</option>
-                        <option value="paid">Payé</option>
-                        <option value="confirmed">Confirmé</option>
-                        <option value="cancelled">Annulé</option>
-                        <option value="refunded">Remboursé</option>
-                    </select>
-                </div>
-                <div id="orders-table" class="table-container"></div>
-                <div id="orders-pagination" class="pagination"></div>
             </div>
         </section>
 
