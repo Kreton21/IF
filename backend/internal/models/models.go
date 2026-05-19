@@ -359,6 +359,15 @@ type UpdateSuccessfulOrderRequest struct {
 	WantsRefundInsurance bool   `json:"wants_refund_insurance"`
 }
 
+type CreateCompedOrderRequest struct {
+	TicketTypeID string `json:"ticket_type_id"`
+	CategoryID   string `json:"category_id,omitempty"`
+	Quantity     int    `json:"quantity"`
+	Email        string `json:"email"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+}
+
 type CreateTicketTypeRequest struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`

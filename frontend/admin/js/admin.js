@@ -17,6 +17,9 @@ const expandedOrderIds = new Set();
 const orderTicketsCache = new Map();
 let salesCustomStart = '';
 let salesCustomEnd = '';
+let compedTicketTypes = [];
+const compedCategoriesCache = new Map();
+let compedFormReady = false;
 
 // ==========================================
 // Initialisation
@@ -877,6 +880,7 @@ function renderRecentOrders(orders) {
 // ==========================================
 
 async function loadOrders() {
+    await initCompedOrderForm();
     const search = document.getElementById('order-search').value;
     const status = document.getElementById('order-status-filter').value;
 
@@ -1175,6 +1179,179 @@ function debounceSearch() {
         currentPage = 1;
         loadOrders();
     }, 300);
+}
+
+async function initCompedOrderForm() {
+    if (compedFormReady) return;
+    const select = document.getElementById('comped-ticket-type');
+    const categorySelect = document.getElementById('comped-ticket-category');
+    const msg = document.getElementById('comped-order-msg');
+    if (!select || !categorySelect) return;
+
+    compedFormReady = true;
+    select.disabled = true;
+    select.innerHTML = '<option value="">Chargement...</option>';
+    categorySelect.innerHTML = '<option value="">Aucune</option>';
+    categorySelect.disabled = true;
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/ticket-types`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur chargement ticket types');
+        }
+
+        compedTicketTypes = (data || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (compedTicketTypes.length === 0) {
+            select.innerHTML = '<option value="">Aucun type disponible</option>';
+            return;
+        }
+
+        const options = compedTicketTypes.map((tt) => {
+            const masked = tt.is_masked ? ' (masque)' : '';
+            return `<option value="${escapeAttr(tt.id)}">${escapeHtml(tt.name || '')}${masked}</option>`;
+        });
+        select.innerHTML = '<option value="">Selectionner...</option>' + options.join('');
+        select.disabled = false;
+        handleCompedTicketTypeChange();
+    } catch (error) {
+        select.innerHTML = '<option value="">Erreur chargement</option>';
+        if (msg) {
+            msg.textContent = `❌ ${error.message}`;
+            msg.className = 'form-msg error-text';
+            msg.classList.remove('hidden');
+        }
+    }
+}
+
+function handleCompedTicketTypeChange() {
+    const select = document.getElementById('comped-ticket-type');
+    const categorySelect = document.getElementById('comped-ticket-category');
+    if (!select || !categorySelect) return;
+
+    const ticketTypeID = select.value;
+    if (!ticketTypeID) {
+        categorySelect.innerHTML = '<option value="">Aucune</option>';
+        categorySelect.disabled = true;
+        return;
+    }
+
+    loadCompedCategories(ticketTypeID);
+}
+
+async function loadCompedCategories(ticketTypeID) {
+    const categorySelect = document.getElementById('comped-ticket-category');
+    if (!categorySelect) return;
+
+    if (compedCategoriesCache.has(ticketTypeID)) {
+        const cached = compedCategoriesCache.get(ticketTypeID);
+        applyCompedCategoryOptions(cached);
+        return;
+    }
+
+    categorySelect.disabled = true;
+    categorySelect.innerHTML = '<option value="">Chargement...</option>';
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/ticket-types/${ticketTypeID}/categories`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur chargement categories');
+        }
+
+        const categories = Array.isArray(data) ? data : [];
+        compedCategoriesCache.set(ticketTypeID, categories);
+        applyCompedCategoryOptions(categories);
+    } catch (error) {
+        categorySelect.innerHTML = '<option value="">Erreur chargement</option>';
+        categorySelect.disabled = true;
+    }
+}
+
+function applyCompedCategoryOptions(categories) {
+    const categorySelect = document.getElementById('comped-ticket-category');
+    if (!categorySelect) return;
+
+    if (!categories || categories.length === 0) {
+        categorySelect.innerHTML = '<option value="">Aucune</option>';
+        categorySelect.disabled = true;
+        return;
+    }
+
+    const options = categories.map((cat) => {
+        const masked = cat.is_masked ? ' (masque)' : '';
+        return `<option value="${escapeAttr(cat.id)}">${escapeHtml(cat.name || '')}${masked}</option>`;
+    });
+    categorySelect.innerHTML = '<option value="">Aucune</option>' + options.join('');
+    categorySelect.disabled = false;
+}
+
+async function createCompedOrder() {
+    const msg = document.getElementById('comped-order-msg');
+    const ticketTypeID = document.getElementById('comped-ticket-type')?.value || '';
+    const categoryID = document.getElementById('comped-ticket-category')?.value || '';
+    const quantityRaw = document.getElementById('comped-quantity')?.value || '1';
+    const firstName = (document.getElementById('comped-first-name')?.value || '').trim();
+    const lastName = (document.getElementById('comped-last-name')?.value || '').trim();
+    const email = (document.getElementById('comped-email')?.value || '').trim();
+
+    if (msg) {
+        msg.classList.add('hidden');
+    }
+
+    const quantity = Math.max(1, parseInt(quantityRaw, 10) || 1);
+    if (!ticketTypeID || !firstName || !lastName || !email) {
+        if (msg) {
+            msg.textContent = '❌ Type de ticket, prenom, nom et email requis';
+            msg.className = 'form-msg error-text';
+            msg.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (!confirm('Confirmer la creation de cette commande gratuite ? Un email sera envoye immediatement.')) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`${API_BASE}/admin/orders/comped`, {
+            method: 'POST',
+            body: JSON.stringify({
+                ticket_type_id: ticketTypeID,
+                category_id: categoryID,
+                quantity,
+                email,
+                first_name: firstName,
+                last_name: lastName,
+            }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur creation commande');
+        }
+
+        if (msg) {
+            const orderNumber = data.order_number ? ` (${data.order_number})` : '';
+            msg.textContent = `✅ Commande gratuite creee${orderNumber}`;
+            msg.className = 'form-msg success-text';
+            msg.classList.remove('hidden');
+        }
+
+        document.getElementById('comped-quantity').value = '1';
+        document.getElementById('comped-first-name').value = '';
+        document.getElementById('comped-last-name').value = '';
+        document.getElementById('comped-email').value = '';
+
+        orderTicketsCache.clear();
+        currentPage = 1;
+        await loadOrders();
+    } catch (error) {
+        if (msg) {
+            msg.textContent = `❌ ${error.message}`;
+            msg.className = 'form-msg error-text';
+            msg.classList.remove('hidden');
+        }
+    }
 }
 
 // ==========================================

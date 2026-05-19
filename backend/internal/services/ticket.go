@@ -1283,6 +1283,176 @@ func (s *TicketService) RefundSingleTicket(ctx context.Context, orderID, ticketI
 	return nil
 }
 
+func (s *TicketService) CreateCompedOrder(ctx context.Context, req models.CreateCompedOrderRequest, ipAddress, userAgent string) (*models.Order, error) {
+	qty := req.Quantity
+	if qty < 1 {
+		qty = 1
+	}
+
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+	if email == "" {
+		return nil, fmt.Errorf("email requis")
+	}
+	firstName := strings.TrimSpace(req.FirstName)
+	lastName := strings.TrimSpace(req.LastName)
+	if firstName == "" || lastName == "" {
+		return nil, fmt.Errorf("prénom et nom requis")
+	}
+
+	tt, err := s.ticketRepo.GetTicketTypeByID(ctx, req.TicketTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur récupération type ticket: %w", err)
+	}
+	if tt == nil {
+		return nil, fmt.Errorf("type de ticket introuvable")
+	}
+
+	if tt.OneTicketPerEmail && qty != 1 {
+		return nil, fmt.Errorf("le ticket '%s' est limité à 1 billet par email", tt.Name)
+	}
+	effectiveMaxPerOrder := tt.MaxPerOrder
+	if !tt.OneTicketPerEmail && effectiveMaxPerOrder < 2 {
+		effectiveMaxPerOrder = 10
+	}
+	if qty > effectiveMaxPerOrder {
+		return nil, fmt.Errorf("maximum %d tickets '%s' par commande", effectiveMaxPerOrder, tt.Name)
+	}
+
+	if strings.TrimSpace(req.CategoryID) != "" {
+		cats, err := s.ticketRepo.GetCategoriesByTicketType(ctx, tt.ID)
+		if err != nil {
+			return nil, fmt.Errorf("erreur récupération catégories: %w", err)
+		}
+		var matched *models.TicketCategory
+		for idx := range cats {
+			if cats[idx].ID == req.CategoryID {
+				matched = &cats[idx]
+				break
+			}
+		}
+		if matched == nil {
+			return nil, fmt.Errorf("catégorie invalide pour ce ticket")
+		}
+		remaining := matched.QuantityAllocated - matched.QuantitySold
+		if remaining < qty {
+			return nil, fmt.Errorf("stock insuffisant dans cette catégorie")
+		}
+	}
+
+	attendees := make([]models.CheckoutAttendee, 0, qty)
+	for i := 0; i < qty; i++ {
+		attendees = append(attendees, models.CheckoutAttendee{
+			FirstName: firstName,
+			LastName:  lastName,
+			Email:     email,
+		})
+	}
+
+	items := []models.CheckoutItem{
+		{
+			TicketTypeID: tt.ID,
+			CategoryID:   strings.TrimSpace(req.CategoryID),
+			Quantity:     qty,
+			Attendees:    attendees,
+		},
+	}
+
+	if err := s.ticketRepo.ReserveTickets(ctx, items); err != nil {
+		return nil, fmt.Errorf("erreur réservation: %w", err)
+	}
+
+	tx, err := s.orderRepo.BeginTx(ctx)
+	if err != nil {
+		s.ticketRepo.ReleaseTickets(ctx, items)
+		return nil, fmt.Errorf("erreur transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	order := &models.Order{
+		CustomerEmail:     email,
+		CustomerFirstName: firstName,
+		CustomerLastName:  lastName,
+		TotalCents:        0,
+		Status:            models.OrderStatusConfirmed,
+		IPAddress:         ipAddress,
+		UserAgent:         userAgent,
+	}
+
+	if err := s.orderRepo.CreateOrder(ctx, tx, order); err != nil {
+		s.ticketRepo.ReleaseTickets(ctx, items)
+		return nil, fmt.Errorf("erreur création commande: %w", err)
+	}
+
+	if err := s.orderRepo.SaveOrderItems(ctx, tx, order.ID, items); err != nil {
+		s.ticketRepo.ReleaseTickets(ctx, items)
+		return nil, fmt.Errorf("erreur sauvegarde items: %w", err)
+	}
+
+	var emailTickets []TicketEmailData
+	for _, item := range items {
+		for i := 0; i < item.Quantity; i++ {
+			qrToken, err := s.qrService.GenerateToken()
+			if err != nil {
+				s.ticketRepo.ReleaseTickets(ctx, items)
+				return nil, fmt.Errorf("erreur génération token QR: %w", err)
+			}
+			qrPNG, err := s.qrService.GenerateQRCode(qrToken)
+			if err != nil {
+				s.ticketRepo.ReleaseTickets(ctx, items)
+				return nil, fmt.Errorf("erreur génération QR code: %w", err)
+			}
+
+			attendee := item.Attendees[i]
+			attendeeName := strings.TrimSpace(fmt.Sprintf("%s %s", attendee.FirstName, attendee.LastName))
+
+			ticket := &models.Ticket{
+				OrderID:           order.ID,
+				TicketTypeID:      item.TicketTypeID,
+				CategoryID:        item.CategoryID,
+				QRToken:           qrToken,
+				QRCodeData:        qrPNG,
+				IsCamping:         false,
+				AttendeeFirstName: attendee.FirstName,
+				AttendeeLastName:  attendee.LastName,
+				AttendeeEmail:     attendee.Email,
+			}
+
+			if err := s.ticketRepo.CreateTicket(ctx, tx, ticket); err != nil {
+				s.ticketRepo.ReleaseTickets(ctx, items)
+				return nil, fmt.Errorf("erreur création ticket: %w", err)
+			}
+
+			s.redis.Set(ctx, fmt.Sprintf("qr:%s", qrToken), order.ID, 0)
+
+			emailTickets = append(emailTickets, TicketEmailData{
+				TicketTypeName: tt.Name,
+				AttendeeName:   attendeeName,
+				DateOfBirth:    order.DateOfBirth,
+				RecipientEmail: attendee.Email,
+				QRToken:        qrToken,
+				QRCodePNG:      qrPNG,
+			})
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		s.ticketRepo.ReleaseTickets(ctx, items)
+		return nil, fmt.Errorf("erreur commit tickets: %w", err)
+	}
+
+	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusConfirmed); err != nil {
+		log.Printf("WARN: erreur mise à jour statut confirmed: %v", err)
+	}
+
+	if err := s.dispatchFestivalTicketEmails(order, emailTickets); err != nil {
+		log.Printf("ERROR: erreur envoi email: %v", err)
+	}
+
+	s.redis.Del(ctx, "ticket_types:active")
+
+	return order, nil
+}
+
 func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {

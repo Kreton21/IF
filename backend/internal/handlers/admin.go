@@ -416,6 +416,47 @@ func (h *AdminHandler) RefundOrderTotal(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Commande remboursée"})
 }
 
+func (h *AdminHandler) CreateCompedOrder(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	var req models.CreateCompedOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	req.TicketTypeID = strings.TrimSpace(req.TicketTypeID)
+	req.CategoryID = strings.TrimSpace(req.CategoryID)
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	req.FirstName = strings.TrimSpace(req.FirstName)
+	req.LastName = strings.TrimSpace(req.LastName)
+
+	if req.TicketTypeID == "" || req.Email == "" || req.FirstName == "" || req.LastName == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Type de ticket, prénom, nom et email sont requis"})
+		return
+	}
+	if req.Quantity < 1 {
+		req.Quantity = 1
+	}
+	if !isValidEmail(req.Email) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Email invalide"})
+		return
+	}
+
+	ip := extractClientIP(r)
+	order, err := h.ticketService.CreateCompedOrder(r.Context(), req, ip, r.UserAgent())
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, order)
+}
+
 // GetOrderTickets lists tickets for a specific order (admin only)
 func (h *AdminHandler) GetOrderTickets(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
