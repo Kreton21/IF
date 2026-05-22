@@ -898,10 +898,7 @@ iframe:not(.hero-video) {
 /* == Page Animations == */
 .anim-sec { background:#FFF8F5; }
 
-.anim-grid {
-	display:grid; grid-template-columns:repeat(3,1fr);
-	gap:22px; margin-top:44px;
-}
+
 .anim-card {
 	background:#fff; border-radius:var(--r); overflow:hidden;
 	box-shadow:var(--sh); transition:transform .3s, box-shadow .3s;
@@ -967,11 +964,7 @@ iframe:not(.hero-video) {
 .anim-teaser-dot:nth-child(4) { animation-delay:1.05s; }
 
 @media(max-width:900px) {
-	.anim-grid { grid-template-columns:repeat(2,1fr); }
 	.anim-teaser { padding:34px 22px; }
-}
-@media(max-width:580px) {
-	.anim-grid { grid-template-columns:1fr; }
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1210,8 +1203,8 @@ footer {
 	#nav.scrolled .nav-links.open{background:rgba(30,8,69,.97)}
 	.nav-links.open a{font-size:1rem;color:#fff!important;padding:12px 24px}
 	/* ── Grilles ── */
-	.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid{grid-template-columns:repeat(2,1fr)}
-	.recap-grid{grid-template-columns:repeat(3,1fr)}
+	.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid{grid-template-columns:repeat(2,1fr)}
+	.recap-grid{grid-template-columns:repeat(2,1fr)}
 	.qnav-grid{grid-template-columns:repeat(2,1fr);justify-content:center}
 	.tkt-preview .tkt-grid{grid-template-columns:repeat(2,1fr)}
 	.tkt-grid-alt{grid-template-columns:repeat(2,1fr)}
@@ -1244,8 +1237,8 @@ footer {
 @media(max-width:580px){
 	#nav{padding:0 12px}
 	.nav-logo{font-size:1.25rem;letter-spacing:1.5px}
-	.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid,.opts-grid{grid-template-columns:1fr}
-		.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.anim-grid,.opts-grid{grid-template-columns:1fr}
+	.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.opts-grid{grid-template-columns:1fr}
+		.hl-grid,.tkt-grid,.t3,.why-grid,.poles-grid,.expect-grid,.opts-grid{grid-template-columns:1fr}
 		.tkt-grid{gap:30px}
 	.tkt-preview .tkt-grid{grid-template-columns:repeat(2,1fr);align-items:stretch}
 	.tkt-grid-alt{grid-template-columns:repeat(2,1fr);align-items:stretch}
