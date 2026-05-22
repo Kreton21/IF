@@ -343,16 +343,18 @@
   </section>
 
   <!-- OUVERT À TOUS -->
-  <section class="sec" style="background:linear-gradient(135deg,#1a0840 0%,#2A1060 50%,#3d1060 100%);padding-top:52px;padding-bottom:52px;text-align:center;position:relative;overflow:hidden;">
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%,rgba(249,127,160,.12) 0%,transparent 70%);pointer-events:none;"></div>
-    <div class="inner rv" style="position:relative;z-index:1;">
-      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(249,127,160,.15);border:1px solid rgba(249,127,160,.3);border-radius:50px;padding:5px 18px;margin-bottom:18px;">
-        <span style="width:7px;height:7px;border-radius:50%;background:var(--rose);display:inline-block;animation:pulse 1.8s infinite;"></span>
-        <span style="font-family:'Montserrat',sans-serif;font-size:.68rem;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--rose);">Accessible à tous</span>
+  <section class="sec" style="background:var(--offwhite);padding-top:36px;padding-bottom:36px;">
+    <div class="inner rv" style="max-width:620px;margin:0 auto;background:linear-gradient(135deg,#1a0840 0%,#2A1060 55%,#3d1060 100%);border-radius:24px;padding:44px 40px;text-align:center;position:relative;overflow:hidden;box-shadow:0 12px 48px rgba(42,16,96,.18);">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 65% 40%,rgba(249,127,160,.15) 0%,transparent 65%);pointer-events:none;"></div>
+      <div style="position:relative;z-index:1;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(249,127,160,.15);border:1px solid rgba(249,127,160,.3);border-radius:50px;padding:5px 18px;margin-bottom:18px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--rose);display:inline-block;animation:pulse 1.8s infinite;"></span>
+          <span style="font-family:'Montserrat',sans-serif;font-size:.68rem;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--rose);">Accessible à tous</span>
+        </div>
+        <div style="font-family:var(--font-primary),sans-serif;font-size:clamp(1.8rem,4.5vw,2.8rem);letter-spacing:1px;color:#fff;line-height:1.1;margin-bottom:14px;">Ouvert à <span style="background:linear-gradient(90deg,var(--rose),var(--peach));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">tous</span><br>étudiants &amp; externes</div>
+        <p style="font-family:'Montserrat',sans-serif;font-size:.95rem;font-weight:600;color:rgba(255,255,255,.68);line-height:1.65;margin:0 auto 24px;">Étudiant à Paris-Saclay ou non, tout le monde est le bienvenu&nbsp;!</p>
+        <button onclick="goTickets()" style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;padding:14px 36px;border-radius:50px;border:none;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;cursor:pointer;box-shadow:0 6px 28px rgba(249,127,160,.4);transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 36px rgba(249,127,160,.55)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 6px 28px rgba(249,127,160,.4)'">🎟 Prendre ma place</button>
       </div>
-      <div style="font-family:var(--font-primary),sans-serif;font-size:clamp(2.4rem,7vw,4.2rem);letter-spacing:1px;color:#fff;line-height:1.05;margin-bottom:16px;">Ouvert à <span style="background:linear-gradient(90deg,var(--rose),var(--peach));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">tous</span><br>étudiants &amp; externes</div>
-      <p style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:600;color:rgba(255,255,255,.68);line-height:1.65;max-width:480px;margin:0 auto 28px;">Quel que tu sois étudiant à Paris-Saclay ou pas&nbsp; tout le monde est le bienvenu&nbsp;!</p>
-      <button onclick="goTickets()" style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;padding:16px 40px;border-radius:50px;border:none;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;cursor:pointer;box-shadow:0 6px 28px rgba(249,127,160,.4);transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 36px rgba(249,127,160,.55)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 6px 28px rgba(249,127,160,.4)'">🎟 Prendre ma place</button>
     </div>
   </section>
 
@@ -406,7 +408,7 @@
           Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard
         </p>
         <p style="margin-top:8px;font-size:.82rem;font-weight:700">
-          <span style="color:#D4145A">🔥 Tarif Regular en cours — places limitées</span>
+          <span style="color:#D4145A">🔥 Tarif Regular en cours · places limitées</span>
         </p>
       </div>
 
@@ -630,13 +632,6 @@
 		  <label for="dateOfBirth">Date de naissance *</label>
 		  <input type="date" id="dateOfBirth" name="dateOfBirth" required lang="fr" autocomplete="bday">
 		  <small>Accès réservé aux personnes de 18 ans et plus</small>
-		</div>
-
-		<div class="camping-opt-in">
-		  <label>
-			<input type="checkbox" id="wants-refund-insurance" name="wants-refund-insurance">
-			Je souhaite la garantie remboursement (+1,00 €) (remboursables jusqu'au 15 mai 2026 à 23h59)
-		  </label>
 		</div>
 
 		<div id="attendees-forms" class="attendees-forms hidden"></div>
@@ -1016,7 +1011,7 @@
 			<span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);border-radius:50px;padding:4px 14px;font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">30 mai 2026</span>
 		  </div>
 		  <h2 style="font-family:var(--font-primary),sans-serif;font-size:clamp(1.6rem,5vw,2.6rem);letter-spacing:1px;color:#fff;line-height:1.1;margin-bottom:8px">FAN ZONE LDC 📺<br><span style="color:#FFD700">FINALE LIGUE DES CHAMPIONS</span></h2>
-		  <p style="font-size:.95rem;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:10px">PSG - Arsenal en finale — on la regarde ensemble sur écran géant !</p>
+		  <p style="font-size:.95rem;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:10px">PSG - Arsenal en finale, on la regarde ensemble sur écran géant !</p>
 		  <p style="font-size:.84rem;color:rgba(255,255,255,.72);line-height:1.65;max-width:580px">Concert, camping… et la <strong style="color:#FFD700">finale de la Champions League</strong> en direct sur écran géant. L'&#8288;Interfilières 2026, c'est le seul endroit où tu peux vivre la LDC en direct.</p>
 
 		  <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
@@ -1028,15 +1023,24 @@
 	  <!-- BANNER GRATUIT -->
 	  <div class="rv" style="margin-top:44px;background:var(--night);border-radius:18px;padding:22px 32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;text-align:center;">
 		<div style="font-family:var(--font-primary),sans-serif;font-size:clamp(1.6rem,4.5vw,2.6rem);letter-spacing:1px;color:#fff;line-height:1.1;">🎉 Toutes les animations sont <span style="background:linear-gradient(90deg,var(--rose),var(--peach));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">gratuites et illimitées</span></div>
-		<p style="width:100%;font-family:'Montserrat',sans-serif;font-size:.88rem;font-weight:600;color:rgba(255,255,255,.6);margin-top:4px;">Inclus dans votre billet — profitez sans limite !</p>
+		<p style="width:100%;font-family:'Montserrat',sans-serif;font-size:.88rem;font-weight:600;color:rgba(255,255,255,.6);margin-top:4px;">Inclus dans votre billet, profitez sans limite !</p>
 	  </div>
 
 	  <!-- GRILLE ANIMATIONS AVEC PHOTOS -->
 	  <div style="margin-top:32px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;">
 
+		<div class="rv" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid rgba(255,200,0,.35);border-top:3px solid #FFD700;">
+		  <div style="height:155px;overflow:hidden;position:relative;background:linear-gradient(135deg,#3d1a6e 0%,#7b2d8b 45%,#c0392b 80%,#e67e22 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+			<span style="font-size:3rem;line-height:1;">⚽</span>
+			<span style="font-family:var(--font-primary),sans-serif;font-size:1rem;letter-spacing:1px;color:#FFD700;text-align:center;line-height:1.2;">FINALE LDC<br><span style="color:#fff;font-size:.8rem;">30 MAI · 18H</span></span>
+			<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);border-radius:50px;padding:3px 10px;font-size:.65rem;font-weight:800;color:#FFD700;letter-spacing:1px;">📺 Écran géant</span>
+		  </div>
+		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;background:linear-gradient(90deg,#d4a000,#e67e22);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:5px;">⚽ Fan Zone LDC 📺</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">PSG vs Arsenal sur écran géant, on la regarde ensemble !</p></div>
+		</div>
+
 		<div class="rv" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);">
 		  <div style="height:155px;overflow:hidden;"><img src="img/auto tamponeuses.jpg" alt="Auto-tamponneuses — L'Interfilières 2026" style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'"></div>
-		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Auto-tamponneuses</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Montez dans les bolides et rentrez dedans — fun garanti !</p></div>
+		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Auto-tamponneuses</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Montez dans les bolides et rentrez dedans, fun garanti !</p></div>
 		</div>
 
 		<div class="rv2" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);">
@@ -1046,17 +1050,17 @@
 
 		<div class="rv3" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);">
 		  <div style="height:155px;overflow:hidden;"><img src="img/color party.jpg" alt="Color Party — L'Interfilières 2026" style="width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transition:transform .4s;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'"></div>
-		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Color Party</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Des poudres de couleurs dans tous les sens — le show de la journée !</p></div>
+		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Color Party</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Des poudres de couleurs dans tous les sens, le show de la journée !</p></div>
 		</div>
 
 		<div class="rv" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);">
 		  <div style="height:155px;overflow:hidden;"><img src="img/ghostider.jpg" alt="Ghostrider — L'Interfilières 2026" style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'"></div>
-		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Ghostrider</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">La grande attraction foraine — sensations fortes garanties !</p></div>
+		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Ghostrider</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">La grande attraction foraine, sensations fortes garanties !</p></div>
 		</div>
 
 		<div class="rv2" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--border);">
 		  <div style="height:155px;overflow:hidden;"><img src="img/Volley.jpg" alt="Beach Volley — L'Interfilières 2026" style="width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block;transition:transform .4s;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'"></div>
-		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Beach Volley</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Tournoi sur place — inscriptions sur site, venez en équipe !</p></div>
+		  <div style="padding:16px 18px;"><div style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--text);margin-bottom:5px;">Beach Volley</div><p style="font-size:.82rem;color:var(--muted);line-height:1.6;">Tournoi sur place, inscriptions sur site, venez en équipe !</p></div>
 		</div>
 
 	  </div>
@@ -1066,7 +1070,7 @@
 		<span style="font-size:2rem;flex-shrink:0;">⛺</span>
 		<div>
 		  <div style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--text);font-size:.98rem;">Camping gratuit · Sur réservation · Nuit du 30 au 31 mai</div>
-		  <p style="font-size:.82rem;color:var(--muted);margin-top:3px;line-height:1.5;">Reste jusqu'au dimanche midi — camping inclus dans le billet, sur réservation en ligne.</p>
+		  <p style="font-size:.82rem;color:var(--muted);margin-top:3px;line-height:1.5;">Reste jusqu'au dimanche midi, camping inclus dans le billet, sur réservation en ligne.</p>
 		</div>
 		<button onclick="go('camping')" style="margin-left:auto;flex-shrink:0;font-family:'Montserrat',sans-serif;font-size:.85rem;font-weight:800;padding:11px 24px;border-radius:50px;border:2px solid var(--night);background:transparent;color:var(--night);cursor:pointer;transition:all .2s;" onmouseover="this.style.background='var(--night)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--night)'">En savoir plus →</button>
 	  </div>
@@ -1173,7 +1177,7 @@
       <div class="rv" style="background:linear-gradient(135deg,#B8A4F0 0%,#C4B8F8 46%,#A9CCFF 100%);border-radius:18px;padding:32px 36px;margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;box-shadow:0 12px 40px rgba(155,143,212,.32);position:relative;overflow:hidden;">
         <span style="position:absolute;right:-10px;top:-10px;font-size:110px;opacity:.06;line-height:1;pointer-events:none">⛺</span>
         <div>
-          <div style="font-family:'Paytone One',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">⛺ Camping gratuit — sur réservation</div>
+          <div style="font-family:'Paytone One',sans-serif;font-size:1.9rem;letter-spacing:1px;color:#fff">⛺ Camping gratuit · sur réservation</div>
           <p style="font-size:.86rem;color:rgba(255,255,255,.7);margin-top:6px;font-weight:600">200 emplacements disponibles · premier arrivé premier servi</p>
         </div>
         <button style="font-size:.95rem;padding:16px 34px;flex-shrink:0;white-space:nowrap;background:linear-gradient(135deg,#E06090,#FF9A5F);color:#fff;border:none;border-radius:50px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 4px 18px rgba(224,96,144,.32);transition:all .25s" onmouseover="this.style.background='linear-gradient(135deg,#D45080,#FF8040)'" onmouseout="this.style.background='linear-gradient(135deg,#E06090,#FF9A5F)'" onclick="goCampingForm()">⛺ Réserver le camping</button>
@@ -1254,7 +1258,7 @@
         <div class="why-card">
           <div class="why-ico">🎪</div>
           <div class="why-t">Vis l'événement de l'intérieur</div>
-          <p class="why-d">Un événement porté par les asso étudiantes — et toi tu fais partie de ceux qui le font vivre.</p>
+          <p class="why-d">Un événement porté par les asso étudiantes, et toi tu fais partie de ceux qui le font vivre.</p>
         </div>
         <div class="why-card">
           <div class="why-ico">🚀</div>
@@ -1366,7 +1370,7 @@
         <h2 class="title on-dark" style="margin-bottom:14px;font-size:clamp(2rem,5vw,3rem)">Prêt(e) à faire partie<br>de l'équipe ?</h2>
         <p style="color:rgba(255,255,255,.65);margin-bottom:36px;font-size:.95rem;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6">
           Samedi 30 mai 2026 · Domaine de Saint-Jean-de-Beauregard<br>
-          Places limitées — inscris-toi dès maintenant.
+          Places limitées, inscris-toi dès maintenant.
         </p>
         <a href="https://vorg.fr/interfilieres2026/interfilieres" target="_blank" rel="noopener" style="
           display:inline-block;
@@ -1889,7 +1893,7 @@
 
       <!-- Annexe : Droit à l'image -->
       <div class="rv" style="margin-top:56px;background:var(--offwhite);border-radius:var(--r);padding:32px;box-shadow:var(--sh);border-top:3px solid var(--rose)">
-        <h2 class="title" style="font-size:1.2rem;margin-bottom:12px">Annexe — Autorisation de droit à l'image et traitement des données personnelles</h2>
+        <h2 class="title" style="font-size:1.2rem;margin-bottom:12px">Annexe · Autorisation de droit à l'image et traitement des données personnelles</h2>
         <div style="line-height:1.85;font-size:.88rem;color:var(--text)">
           <p>En assistant au présent événement, dans le cadre du Règlement Général sur la Protection des Données du Parlement européen et du Conseil du 27 avril 2016, j'autorise le COI, sans contrepartie financière, à :</p>
           <ul style="margin-top:10px;padding-left:20px;line-height:2">
@@ -1958,15 +1962,15 @@ L'&#8288;Interfilières 2026
     <div id="cookie-custom" style="display:none;padding:16px 18px;background:var(--light);border-radius:12px;margin-bottom:16px">
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:default;opacity:.55">
         <input type="checkbox" checked disabled style="width:16px;height:16px;accent-color:var(--rose)">
-        <span style="font-size:.82rem;color:var(--text)"><strong>Techniques</strong> — obligatoires</span>
+        <span style="font-size:.82rem;color:var(--text)"><strong>Techniques</strong> · obligatoires</span>
       </label>
       <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
         <input type="checkbox" id="ck-analytics" checked style="width:16px;height:16px;accent-color:var(--rose)">
-        <span style="font-size:.82rem;color:var(--text)"><strong>Mesure d'audience</strong> — améliorer le site</span>
+        <span style="font-size:.82rem;color:var(--text)"><strong>Mesure d'audience</strong> · améliorer le site</span>
       </label>
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
         <input type="checkbox" id="ck-marketing" style="width:16px;height:16px;accent-color:var(--rose)">
-        <span style="font-size:.82rem;color:var(--text)"><strong>Marketing</strong> — le cas échéant</span>
+        <span style="font-size:.82rem;color:var(--text)"><strong>Marketing</strong> · le cas échéant</span>
       </label>
       <button onclick="cookieConsent('save')" style="cursor:pointer;margin-top:14px;padding:10px 24px;border:none;border-radius:50px;background:linear-gradient(135deg,var(--rose),var(--peach));color:#fff;font-family:var(--font-text);font-weight:800;font-size:.8rem;letter-spacing:.5px;box-shadow:0 4px 14px rgba(249,127,160,.3);transition:all .22s">Enregistrer mes choix</button>
     </div>
