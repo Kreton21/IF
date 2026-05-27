@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/kreton/if-festival/internal/config"
 	"github.com/kreton/if-festival/internal/database"
