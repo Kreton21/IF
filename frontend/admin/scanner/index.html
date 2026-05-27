@@ -12,6 +12,7 @@
   --night: #1E0845;
   --purple: #7B3FA8;
   --green: #38C97A;
+  --blue: #2B6CB0;
   --red: #E53E3E;
   --white: #FFFFFF;
   --offwhite: #FBF7FF;
@@ -35,6 +36,7 @@ body {
   transition: border-color 0.15s;
 }
 .border-flash.success { border-color: var(--green); }
+.border-flash.bus { border-color: var(--blue); }
 .border-flash.error   { border-color: var(--red); }
 
 /* -- Login screen -- */
@@ -157,6 +159,7 @@ body {
   gap: 16px;
 }
 .result-overlay.success-bg { background: rgba(251,247,255,.94); }
+.result-overlay.bus-bg { background: rgba(235,246,255,.95); }
 .result-overlay.error-bg { background: rgba(251,247,255,.94); }
 
 .result-icon {
@@ -173,6 +176,7 @@ body {
   font-size: 2.8rem; letter-spacing: 2px;
 }
 .result-status.valid { color: var(--green); }
+.result-status.bus { color: var(--blue); }
 .result-status.invalid { color: var(--red); }
 
 .result-name {
@@ -458,22 +462,32 @@ function showResult(data) {
 
   flash.className = 'border-flash';
 
+  const isBus = !!(data.ride_type && (data.from_station || data.to_station));
   const busDetails = data.ride_type
     ? `<br>Départ : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
     : '';
-  const campingDetails = `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}`;
+  const campingDetails = (!isBus && data.is_camping) ? '<br>Camping : Oui' : '';
+  const alreadyValidated = data.already_validated && !isBus;
 
-  if (data.valid && !data.already_validated) {
+  if (data.valid && !alreadyValidated) {
     // ✅ Valid - first scan
-    flash.classList.add('success');
-    overlay.className = 'result-overlay success-bg';
-    icon.textContent = '✅';
-    status.textContent = 'ENTRÉE VALIDÉE';
-    status.className = 'result-status valid';
+    if (isBus) {
+      flash.classList.add('bus');
+      overlay.className = 'result-overlay bus-bg';
+      icon.textContent = '🚌';
+      status.textContent = 'NAVETTE VALIDÉE';
+      status.className = 'result-status bus';
+    } else {
+      flash.classList.add('success');
+      overlay.className = 'result-overlay success-bg';
+      icon.textContent = '✅';
+      status.textContent = 'ENTRÉE VALIDÉE';
+      status.className = 'result-status valid';
+    }
     name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim() || 'Festivalier';
     detail.innerHTML = `${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || ''}${campingDetails}${busDetails}`;
     btn.className = 'result-btn btn-ok';
-  } else if (data.already_validated) {
+  } else if (alreadyValidated) {
     // ⚠️ Already scanned
     flash.classList.add('error');
     overlay.className = 'result-overlay error-bg';

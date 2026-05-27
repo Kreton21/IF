@@ -826,8 +826,10 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		}, nil
 	}
 
+	isBus := strings.TrimSpace(fromStation) != "" || strings.TrimSpace(toStation) != ""
+
 	// Vérifier si déjà validé
-	if isValidated {
+	if isValidated && !isBus {
 		firstName := ""
 		lastName := ""
 		if attendeeFirstName != nil {
@@ -845,6 +847,32 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 			TicketTypeName:    ticketTypeName,
 			OrderNumber:       orderNumber,
 			AlreadyValidated:  true,
+			IsCamping:         isCamping,
+			RideType:          busRideType(isRoundTrip, fromStation),
+			FromStation:       fromStation,
+			ToStation:         toStation,
+			DepartureAt:       formatTimePtr(outboundAt),
+			ReturnDepartureAt: formatTimePtr(returnAt),
+		}, nil
+	}
+
+	if isBus {
+		firstName := ""
+		lastName := ""
+		if attendeeFirstName != nil {
+			firstName = *attendeeFirstName
+		}
+		if attendeeLastName != nil {
+			lastName = *attendeeLastName
+		}
+		return &models.ValidateQRResponse{
+			Valid:             true,
+			Message:           "🚌 Ticket navette scanné",
+			TicketID:          ticketID,
+			AttendeeFirstName: firstName,
+			AttendeeLastName:  lastName,
+			TicketTypeName:    ticketTypeName,
+			OrderNumber:       orderNumber,
 			IsCamping:         isCamping,
 			RideType:          busRideType(isRoundTrip, fromStation),
 			FromStation:       fromStation,
