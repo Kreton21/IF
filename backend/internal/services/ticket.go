@@ -953,15 +953,11 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 		return nil
 	}
 
-	// 2. Mettre à jour le statut
+	// 2. Enregistrer l'identifiant de paiement
 	if paymentID != "" {
 		if err := s.orderRepo.SetHelloAssoPaymentID(ctx, order.ID, paymentID); err != nil {
 			log.Printf("WARN: erreur enregistrement payment ID: %v", err)
 		}
-	}
-
-	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusPaid); err != nil {
-		return fmt.Errorf("erreur mise à jour statut: %w", err)
 	}
 
 	// 3. Récupérer les items de la commande (Redis cache puis fallback DB)
@@ -984,7 +980,12 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 		return s.processBusOrderPaymentConfirmed(ctx, order, paymentID)
 	}
 
-	// 4. Générer les tickets avec QR codes
+	// 4. Mettre à jour le statut (festival uniquement)
+	if err := s.orderRepo.UpdateOrderStatus(ctx, order.ID, models.OrderStatusPaid); err != nil {
+		return fmt.Errorf("erreur mise à jour statut: %w", err)
+	}
+
+	// 5. Générer les tickets avec QR codes
 	tx, err := s.ticketRepo.BeginTx(ctx)
 	if err != nil {
 		return fmt.Errorf("erreur transaction: %w", err)
@@ -1040,7 +1041,7 @@ func (s *TicketService) ProcessOrderPaymentConfirmed(ctx context.Context, orderI
 			ticket := &models.Ticket{
 				OrderID:           order.ID,
 				TicketTypeID:      item.TicketTypeID,
-					CategoryID:        item.CategoryID,
+				CategoryID:        item.CategoryID,
 				QRToken:           qrToken,
 				QRCodeData:        qrPNG,
 				IsCamping:         order.WantsCamping,
@@ -1478,6 +1479,9 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 	items, err := s.orderRepo.GetOrderItems(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("erreur récupération items: %w", err)
+	}
+	if len(items) == 0 {
+		return fmt.Errorf("navettes non remboursables")
 	}
 
 	ticketCount := 0
