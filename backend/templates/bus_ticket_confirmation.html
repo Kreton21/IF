@@ -1,42 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Confirmation ticket navette</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.FestivalName}} — Ticket navette — Commande {{.OrderNumber}}</title>
+  <!--[if mso]><style>table,td{font-family:Arial,Helvetica,sans-serif!important;}</style><![endif]-->
 </head>
-<body style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; background:#f8fafc; color:#1f2937;">
-  <div style="background:#0f766e; color:#fff; border-radius:12px; padding:24px; text-align:center;">
-    <h1 style="margin:0; font-size:28px;">🚌 {{.FestivalName}}</h1>
-    <p style="margin:8px 0 0 0; opacity:.95;">Votre ticket navette est confirmé</p>
-  </div>
+<body style="margin:0;padding:0;width:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#f4f0eb;font-family:Arial,Helvetica,sans-serif;">
 
-  <div style="background:#fff; border-radius:12px; padding:22px; margin-top:16px; border:1px solid #e5e7eb;">
-    <p style="margin:0 0 12px 0;">Bonjour <strong>{{.CustomerName}}</strong>,</p>
-    <p style="margin:0 0 8px 0;">Votre commande navette <strong>{{.OrderNumber}}</strong> est confirmée ✅</p>
-    <p style="margin:0; color:#6b7280;">Présentez le QR code ci-dessous au point d’embarquement.</p>
-  </div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f0eb;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;border-collapse:collapse;">
 
-  {{range $ticket := .Tickets}}
-  <div style="background:#fff; border-radius:12px; padding:20px; margin-top:14px; border:1px solid #e5e7eb; text-align:center;">
-    <h3 style="margin:0 0 6px 0; color:#0f766e;">{{$ticket.TicketTypeName}}</h3>
-    {{if $ticket.AttendeeName}}<p style="margin:0 0 10px 0; color:#374151;">{{$ticket.AttendeeName}}</p>{{end}}
-    <p style="margin:0 0 12px 0; color:#6b7280; font-size:13px;">Ticket navette — usage unique</p>
-    <img src="cid:{{$ticket.CID}}" alt="QR Code navette" style="max-width:240px; width:100%; height:auto; border:1px solid #e5e7eb; border-radius:8px;" />
-  </div>
-  {{end}}
+        {{if .BannerDataURI}}
+        <tr>
+          <td align="center" bgcolor="#2b1a0e" style="background-color:#2b1a0e;padding:0;line-height:0;font-size:0;">
+            <img src="{{.BannerDataURI}}" alt="{{.FestivalName}}" width="600" style="width:100%;max-width:600px;height:auto;display:block;border:0;">
+          </td>
+        </tr>
+        {{end}}
 
-  <div style="background:#ecfeff; border:1px solid #a5f3fc; border-radius:10px; padding:14px; margin-top:16px; color:#155e75; font-size:13px; line-height:1.5;">
-    Présentez-vous quelques minutes avant l’horaire de départ.
-    Le QR code est valide une seule fois.
-  </div>
+        <tr>
+          <td align="center" bgcolor="#7f1713" style="background-color:#7f1713;padding:30px 24px;text-align:center;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td align="center" style="font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#ffd5c6;padding-bottom:10px;font-family:Arial,Helvetica,sans-serif;">
+                  CONFIRMATION NAVETTE
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="font-size:30px;font-weight:bold;text-transform:uppercase;color:#ffffff;padding-bottom:6px;line-height:1.1;font-family:Arial,Helvetica,sans-serif;">
+                  {{.FestivalName}}
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="font-size:15px;font-weight:bold;color:#ffe9d2;font-family:Arial,Helvetica,sans-serif;">
+                  {{.EventDateText}}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-  <p style="margin-top:18px; color:#6b7280; font-size:12px; line-height:1.5;">
-    Besoin d’aide : {{.SupportEmail}}
-  </p>
+        <tr>
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:28px 30px 10px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
+                  Bonjour <strong>{{.CustomerName}}</strong>,
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
+                  Votre commande navette <strong>{{.OrderNumber}}</strong> a bien &eacute;t&eacute; confirm&eacute;e.
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:15px;line-height:24px;color:#3f1a10;font-family:Arial,Helvetica,sans-serif;">
+                  Pr&eacute;sentez le QR code ci-dessous au point d&rsquo;embarquement.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-  <p style="margin-top:8px; color:#9ca3af; font-size:11px; text-align:center;">
-    {{.FestivalName}} — {{.FestivalDate}}
-  </p>
+        <tr>
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
+              <tr>
+                <td bgcolor="#ffffff" style="background-color:#ffffff;padding:18px 20px;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="font-size:16px;font-weight:bold;color:#d83a21;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;">
+                        Informations navette
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
+                        <strong>Date :</strong> {{.EventDateText}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">
+                        <strong>Commande :</strong> {{.OrderNumber}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;font-family:Arial,Helvetica,sans-serif;">
+                        <strong>Client :</strong> {{.CustomerName}} &lt;{{.CustomerEmail}}&gt;
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        {{if .Tickets}}
+        <tr>
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
+              <tr>
+                <td bgcolor="#ffffff" style="background-color:#ffffff;padding:18px 20px;text-align:center;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="font-size:16px;font-weight:bold;color:#d83a21;padding-bottom:12px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+                        Votre billet navette
+                      </td>
+                    </tr>
+                    {{range $ticket := .Tickets}}
+                    <tr>
+                      <td style="font-size:14px;line-height:22px;color:#3f1a10;padding-bottom:8px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+                        &#128652; <strong>{{$ticket.TicketTypeName}}</strong>{{if $ticket.AttendeeName}} &mdash; {{$ticket.AttendeeName}}{{end}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding-bottom:10px;text-align:center;">
+                        <img src="cid:{{$ticket.CID}}" alt="QR code navette" style="max-width:240px;width:100%;height:auto;border:1px solid #f0ddd0;border-radius:8px;" />
+                      </td>
+                    </tr>
+                    {{end}}
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        {{end}}
+
+        <tr>
+          <td bgcolor="#fffdfa" style="background-color:#fffdfa;padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;">
+              <tr>
+                <td bgcolor="#fff6ef" style="background-color:#fff6ef;padding:18px 20px;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="font-size:15px;font-weight:bold;color:#7f1713;padding-bottom:10px;font-family:Arial,Helvetica,sans-serif;">
+                        Consignes navette
+                      </td>
+                    </tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Pr&eacute;sentez-vous quelques minutes avant l&rsquo;horaire de d&eacute;part</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;padding-bottom:4px;font-family:Arial,Helvetica,sans-serif;">&bull; Le QR code est valable pour l&rsquo;aller et le retour (si option aller-retour)</td></tr>
+                    <tr><td style="font-size:13px;line-height:22px;color:#422917;font-family:Arial,Helvetica,sans-serif;">&bull; Gardez ce mail (ou le QR code) &agrave; port&eacute;e au moment de l&rsquo;embarquement</td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center" bgcolor="#7f1713" style="background-color:#7f1713;padding:20px 26px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr><td align="center" style="font-size:12px;color:#ffcba4;font-family:Arial,Helvetica,sans-serif;">Contact : {{.SupportEmail}}</td></tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>
