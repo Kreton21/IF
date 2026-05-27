@@ -2037,7 +2037,7 @@ function renderBusDeparturesTable(departures) {
 
     departures.sort((a, b) => new Date(a.departure_time) - new Date(b.departure_time));
     let html = `<table><thead><tr>
-        <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th><th>Statut</th><th>Actions</th>
+        <th>Station</th><th>Direction</th><th>Départ</th><th>Prix</th><th>Vendus</th><th>Capacité</th><th>Remplissage</th><th>Statut</th><th>Actions</th>
     </tr></thead><tbody>`;
 
     departures.forEach(d => {
@@ -2045,6 +2045,7 @@ function renderBusDeparturesTable(departures) {
         const maskLabel = d.is_active ? 'Masquer' : 'Démasquer';
         const departureLocalValue = toDateTimeLocalValue(d.departure_time);
         const stationOptions = stations.map(s => `<option value="${s.id}" ${s.id === d.station_id ? 'selected' : ''}>${s.name}</option>`).join('');
+        const fillPercent = d.capacity > 0 ? Math.round((d.sold / d.capacity) * 100) : 0;
         html += `<tr>
             <td>${d.station_name}</td>
             <td>${d.direction === 'to_festival' ? 'Aller' : 'Retour'}</td>
@@ -2052,6 +2053,7 @@ function renderBusDeparturesTable(departures) {
             <td>${formatPrice(d.price_cents)}</td>
             <td>${d.sold}</td>
             <td>${d.capacity}</td>
+            <td>${fillPercent}%</td>
             <td>${status}</td>
             <td style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
@@ -2061,7 +2063,7 @@ function renderBusDeparturesTable(departures) {
         </tr>`;
 
         html += `<tr id="bus-edit-row-${d.id}" class="hidden">
-            <td colspan="8" style="background:#f8fafc;padding:0;">
+            <td colspan="9" style="background:#f8fafc;padding:0;">
                 <div style="margin:10px 12px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#f7fafc;">
                     <div class="form-row">
                         <div class="form-group">
