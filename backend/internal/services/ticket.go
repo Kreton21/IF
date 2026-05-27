@@ -1985,8 +1985,12 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		return fmt.Errorf("trajet navette introuvable")
 	}
 
+	busLocation, locErr := time.LoadLocation("Europe/Paris")
+	if locErr != nil {
+		busLocation = time.Local
+	}
 	formatBusTime := func(t time.Time) string {
-		return t.Local().Format("02/01 15:04")
+		return t.In(busLocation).Format("02/01 15:04")
 	}
 
 	departureInfo := ""
