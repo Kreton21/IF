@@ -1225,6 +1225,7 @@ func (s *TicketService) buildBusEmailTicketsForOrder(ctx context.Context, order 
 			DepartureInfo:  departureInfo,
 			QRToken:        row.QRToken,
 			QRCodePNG:      qrPNG,
+			IsBus:          true,
 		})
 	}
 
@@ -2164,6 +2165,7 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		DepartureInfo:  departureInfo,
 		QRToken:        qrToken,
 		QRCodePNG:      qrPNG,
+		IsBus:          true,
 	}}); err != nil {
 		log.Printf("ERROR: erreur envoi email bus: %v", err)
 	}

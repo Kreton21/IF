@@ -299,7 +299,11 @@
             </table>
 
             <div class="main-footer">
+              {{if .Ticket.IsBus}}
+              Le QR code est scanné une seule fois par trajet. Présentez votre QR code au moment de l'embarquement. Pour toute question : {{.SupportEmail}}<br>
+              {{else}}
               Ce billet est personnel et ne peut être validé qu'une seule fois. Présentez votre QR code à l'entrée du festival. Pour toute question : {{.SupportEmail}}<br>
+              {{end}}
               L'événement est filmé et photographié.
             </div>
           </div>

@@ -114,6 +114,7 @@ type TicketEmailData struct {
 	QRToken        string
 	QRCodePNG      []byte
 	CID            string
+	IsBus          bool
 }
 
 func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber string, tickets []TicketEmailData, templatePath string) (string, error) {
