@@ -1985,6 +1985,25 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		return fmt.Errorf("trajet navette introuvable")
 	}
 
+	formatBusTime := func(t time.Time) string {
+		return t.Local().Format("02/01 15:04")
+	}
+
+	departureInfo := ""
+	if dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, outboundDepartureID); depErr == nil && dep != nil {
+		departureInfo = fmt.Sprintf("Aller : %s", formatBusTime(dep.DepartureTime))
+	}
+	if returnDepartureID != nil {
+		if ret, retErr := s.ticketRepo.GetBusDepartureByID(ctx, *returnDepartureID); retErr == nil && ret != nil {
+			retInfo := fmt.Sprintf("Retour : %s", formatBusTime(ret.DepartureTime))
+			if departureInfo != "" {
+				departureInfo = departureInfo + " • " + retInfo
+			} else {
+				departureInfo = retInfo
+			}
+		}
+	}
+
 	tx, err := s.ticketRepo.BeginTx(ctx)
 	if err != nil {
 		return fmt.Errorf("erreur transaction ticket bus: %w", err)
@@ -2058,6 +2077,7 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 	if err := s.emailService.SendBusTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
 		TicketTypeName: busLabel,
 		AttendeeName:   details,
+		DepartureInfo:  departureInfo,
 		QRToken:        qrToken,
 		QRCodePNG:      qrPNG,
 	}}); err != nil {
