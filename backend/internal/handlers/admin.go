@@ -144,6 +144,72 @@ func (h *AdminHandler) ExportDatabaseCSV(w http.ResponseWriter, r *http.Request)
 	_, _ = w.Write(csvData)
 }
 
+func (h *AdminHandler) ExportFestivalTicketsCSV(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	csvData, err := h.adminService.ExportFestivalTicketsCSV(r.Context())
+	if err != nil {
+		log.Printf("Erreur export tickets festival CSV: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur export CSV"})
+		return
+	}
+
+	filename := "festival_tickets_" + time.Now().UTC().Format("20060102_150405") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(csvData)
+}
+
+func (h *AdminHandler) ExportBusTicketsCSV(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	csvData, err := h.adminService.ExportBusTicketsCSV(r.Context())
+	if err != nil {
+		log.Printf("Erreur export tickets bus CSV: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur export CSV"})
+		return
+	}
+
+	filename := "bus_tickets_" + time.Now().UTC().Format("20060102_150405") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(csvData)
+}
+
+func (h *AdminHandler) ExportOrdersCSV(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	csvData, err := h.adminService.ExportOrdersCSV(r.Context())
+	if err != nil {
+		log.Printf("Erreur export commandes CSV: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur export CSV"})
+		return
+	}
+
+	filename := "orders_" + time.Now().UTC().Format("20060102_150405") + ".csv"
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(csvData)
+}
+
 func (h *AdminHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 	if !h.adminService.IsTestEmailEnabled() {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "fonction non disponible"})

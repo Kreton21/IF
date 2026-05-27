@@ -99,6 +99,18 @@ func (s *AdminService) ExportDatabaseCSV(ctx context.Context) ([]byte, error) {
 	return s.adminRepo.ExportDatabaseCSV(ctx)
 }
 
+func (s *AdminService) ExportFestivalTicketsCSV(ctx context.Context) ([]byte, error) {
+	return s.adminRepo.ExportFestivalTicketsCSV(ctx)
+}
+
+func (s *AdminService) ExportBusTicketsCSV(ctx context.Context) ([]byte, error) {
+	return s.adminRepo.ExportBusTicketsCSV(ctx)
+}
+
+func (s *AdminService) ExportOrdersCSV(ctx context.Context) ([]byte, error) {
+	return s.adminRepo.ExportOrdersCSV(ctx)
+}
+
 func (s *AdminService) SendTestEmail(ctx context.Context, to string) error {
 	if !s.cfg.EnableAdminTestEmail {
 		return fmt.Errorf("envoi de test email désactivé")

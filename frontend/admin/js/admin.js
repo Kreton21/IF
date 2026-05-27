@@ -552,9 +552,9 @@ function renderBusStats(rows) {
     renderBusTicketsTable(rows, 'stats-bus-tickets');
 }
 
-async function exportDatabaseCSV() {
-    const button = document.getElementById('btn-export-db-csv');
-    const msg = document.getElementById('export-db-msg');
+async function exportCSV(url, buttonId, msgId, fallbackName) {
+    const button = document.getElementById(buttonId);
+    const msg = document.getElementById(msgId);
     if (!button || !msg) return;
 
     button.disabled = true;
@@ -563,7 +563,7 @@ async function exportDatabaseCSV() {
     msg.classList.add('hidden');
 
     try {
-        const response = await fetch(`${API_BASE}/admin/stats/export-csv`, {
+        const response = await fetch(url, {
             method: 'GET',
             headers: apiHeaders(),
         });
@@ -583,18 +583,18 @@ async function exportDatabaseCSV() {
         }
 
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const urlBlob = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         const disposition = response.headers.get('Content-Disposition') || '';
         const match = disposition.match(/filename="?([^";]+)"?/i);
-        const filename = (match && match[1]) ? match[1] : 'database_export.csv';
+        const filename = (match && match[1]) ? match[1] : fallbackName;
 
-        link.href = url;
+        link.href = urlBlob;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(urlBlob);
 
         msg.textContent = '✅ Export téléchargé';
         msg.className = 'form-msg success-text';
@@ -605,6 +605,18 @@ async function exportDatabaseCSV() {
         button.disabled = false;
         button.textContent = initialLabel;
     }
+}
+
+async function exportFestivalTicketsCSV() {
+    return exportCSV(`${API_BASE}/admin/stats/export-festival-tickets`, 'btn-export-festival-tickets', 'export-csv-msg', 'festival_tickets.csv');
+}
+
+async function exportBusTicketsCSV() {
+    return exportCSV(`${API_BASE}/admin/stats/export-bus-tickets`, 'btn-export-bus-tickets', 'export-csv-msg', 'bus_tickets.csv');
+}
+
+async function exportOrdersCSV() {
+    return exportCSV(`${API_BASE}/admin/stats/export-orders`, 'btn-export-orders', 'export-csv-msg', 'orders.csv');
 }
 
 async function sendTestEmail() {
