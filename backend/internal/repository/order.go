@@ -397,7 +397,7 @@ func (r *OrderRepository) GetSalesStats(ctx context.Context) (*models.SalesStats
 	// Tickets vendus et validés
 	err = r.pool.QueryRow(ctx, `
 		SELECT 
-			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed')),
+			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed') AND bt.ticket_id IS NULL),
 			COUNT(*) FILTER (WHERE t.is_validated = true AND bt.ticket_id IS NULL AND o.status IN ('paid', 'confirmed')),
 			COUNT(*) FILTER (WHERE o.status IN ('paid', 'confirmed') AND t.is_camping = true AND bt.ticket_id IS NULL)
 		FROM tickets t
