@@ -1131,6 +1131,14 @@ func (s *TicketService) dispatchFestivalTicketEmails(order *models.Order, emailT
 	return firstErr
 }
 
+func (s *TicketService) formatBusTime(t time.Time) string {
+	busLocation, locErr := time.LoadLocation("Europe/Paris")
+	if locErr != nil {
+		busLocation = time.Local
+	}
+	return t.In(busLocation).Format("02/01 15:04")
+}
+
 func (s *TicketService) buildFestivalEmailTicketsForOrder(ctx context.Context, order *models.Order) ([]TicketEmailData, error) {
 	tickets, err := s.ticketRepo.GetTicketsByOrderID(ctx, order.ID)
 	if err != nil {
@@ -1173,6 +1181,60 @@ func (s *TicketService) buildFestivalEmailTicketsForOrder(ctx context.Context, o
 	return emailTickets, nil
 }
 
+func (s *TicketService) buildBusEmailTicketsForOrder(ctx context.Context, order *models.Order) ([]TicketEmailData, error) {
+	rows, err := s.ticketRepo.ListBusTicketsByOrderID(ctx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("aucun ticket bus pour la commande %s", order.OrderNumber)
+	}
+
+	emailTickets := make([]TicketEmailData, 0, len(rows))
+	for _, row := range rows {
+		qrPNG, qrErr := s.ticketRepo.GetQRCodeDataByToken(ctx, row.QRToken)
+		if qrErr != nil || len(qrPNG) == 0 {
+			qrPNG, qrErr = s.qrService.GenerateQRCode(row.QRToken)
+			if qrErr != nil {
+				log.Printf("WARN: QR indisponible pour ticket bus (%s): %v", row.QRToken, qrErr)
+				continue
+			}
+		}
+
+		details := fmt.Sprintf("%s → %s", row.FromStation, row.ToStation)
+		if row.IsRoundTrip {
+			details += " · Aller-retour"
+		}
+
+		departureInfo := ""
+		if !row.DepartureTime.IsZero() {
+			departureInfo = fmt.Sprintf("Aller : %s", s.formatBusTime(row.DepartureTime))
+		}
+		if row.ReturnDepartureTime != nil {
+			retInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(*row.ReturnDepartureTime))
+			if departureInfo != "" {
+				departureInfo = departureInfo + " • " + retInfo
+			} else {
+				departureInfo = retInfo
+			}
+		}
+
+		emailTickets = append(emailTickets, TicketEmailData{
+			TicketTypeName: row.TicketTypeName,
+			AttendeeName:   details,
+			DepartureInfo:  departureInfo,
+			QRToken:        row.QRToken,
+			QRCodePNG:      qrPNG,
+		})
+	}
+
+	if len(emailTickets) == 0 {
+		return nil, fmt.Errorf("aucun ticket bus envoyable pour la commande %s", order.OrderNumber)
+	}
+
+	return emailTickets, nil
+}
+
 func (s *TicketService) ResendOrderConfirmationEmail(ctx context.Context, orderID string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
@@ -1183,6 +1245,32 @@ func (s *TicketService) ResendOrderConfirmationEmail(ctx context.Context, orderI
 	}
 	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
 		return fmt.Errorf("commande %s ignorée (statut %s)", order.OrderNumber, order.Status)
+	}
+
+	totalTickets, err := s.ticketRepo.CountTicketsByOrder(ctx, order.ID)
+	if err != nil {
+		return err
+	}
+	if totalTickets == 0 {
+		return fmt.Errorf("aucun ticket pour la commande %s", order.OrderNumber)
+	}
+
+	busTickets, err := s.ticketRepo.CountBusTicketsByOrder(ctx, order.ID)
+	if err != nil {
+		return err
+	}
+	if busTickets > 0 && busTickets == totalTickets {
+		emailTickets, err := s.buildBusEmailTicketsForOrder(ctx, order)
+		if err != nil {
+			return err
+		}
+
+		customerName := strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
+		if err := s.emailService.SendBusTicketEmail(order.CustomerEmail, customerName, order.OrderNumber, emailTickets); err != nil {
+			return fmt.Errorf("échec renvoi email bus commande %s: %w", order.OrderNumber, err)
+		}
+
+		return nil
 	}
 
 	emailTickets, err := s.buildFestivalEmailTicketsForOrder(ctx, order)
@@ -1985,21 +2073,13 @@ func (s *TicketService) processBusOrderPaymentConfirmed(ctx context.Context, ord
 		return fmt.Errorf("trajet navette introuvable")
 	}
 
-	busLocation, locErr := time.LoadLocation("Europe/Paris")
-	if locErr != nil {
-		busLocation = time.Local
-	}
-	formatBusTime := func(t time.Time) string {
-		return t.In(busLocation).Format("02/01 15:04")
-	}
-
 	departureInfo := ""
 	if dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, outboundDepartureID); depErr == nil && dep != nil {
-		departureInfo = fmt.Sprintf("Aller : %s", formatBusTime(dep.DepartureTime))
+		departureInfo = fmt.Sprintf("Aller : %s", s.formatBusTime(dep.DepartureTime))
 	}
 	if returnDepartureID != nil {
 		if ret, retErr := s.ticketRepo.GetBusDepartureByID(ctx, *returnDepartureID); retErr == nil && ret != nil {
-			retInfo := fmt.Sprintf("Retour : %s", formatBusTime(ret.DepartureTime))
+			retInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(ret.DepartureTime))
 			if departureInfo != "" {
 				departureInfo = departureInfo + " • " + retInfo
 			} else {

@@ -521,6 +521,16 @@ type BusTicketAdminRow struct {
 	CreatedAt           time.Time  `json:"created_at"`
 }
 
+type BusTicketEmailRow struct {
+	TicketTypeName      string     `json:"ticket_type_name"`
+	QRToken             string     `json:"qr_token"`
+	FromStation         string     `json:"from_station"`
+	ToStation           string     `json:"to_station"`
+	DepartureTime       time.Time  `json:"departure_time"`
+	ReturnDepartureTime *time.Time `json:"return_departure_time,omitempty"`
+	IsRoundTrip         bool       `json:"is_round_trip"`
+}
+
 type CreateReferralLinkRequest struct {
 	Name       string `json:"name"`
 	CustomCode string `json:"custom_code"`

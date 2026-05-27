@@ -668,6 +668,19 @@ func (r *TicketRepository) CountTicketsByOrder(ctx context.Context, orderID stri
 	return count, nil
 }
 
+func (r *TicketRepository) CountBusTicketsByOrder(ctx context.Context, orderID string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM tickets t
+		JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE t.order_id = $1`, orderID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("erreur comptage tickets bus commande: %w", err)
+	}
+	return count, nil
+}
+
 func (r *TicketRepository) GetRefundTicketInfo(ctx context.Context, ticketID string) (*models.RefundTicketInfo, error) {
 	query := `
 		SELECT t.id, t.order_id, o.order_number, o.status, COALESCE(o.helloasso_payment_id, ''),
@@ -1362,6 +1375,49 @@ func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]mod
 		}
 		row.ReturnDepartureTime = returnDeparture
 		out = append(out, row)
+	}
+
+	return out, nil
+}
+
+func (r *TicketRepository) ListBusTicketsByOrderID(ctx context.Context, orderID string) ([]models.BusTicketEmailRow, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT tt.name, t.qr_token,
+		       bt.from_station, bt.to_station, od.departure_time, rd.departure_time,
+		       bt.is_round_trip
+		FROM bus_tickets bt
+		JOIN tickets t ON t.id = bt.ticket_id
+		JOIN ticket_types tt ON tt.id = t.ticket_type_id
+		JOIN bus_departures od ON od.id = bt.outbound_departure_id
+		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
+		WHERE t.order_id = $1
+		ORDER BY t.created_at ASC`, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query tickets bus commande: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]models.BusTicketEmailRow, 0)
+	for rows.Next() {
+		var row models.BusTicketEmailRow
+		var returnDeparture *time.Time
+		if err := rows.Scan(
+			&row.TicketTypeName,
+			&row.QRToken,
+			&row.FromStation,
+			&row.ToStation,
+			&row.DepartureTime,
+			&returnDeparture,
+			&row.IsRoundTrip,
+		); err != nil {
+			return nil, fmt.Errorf("erreur scan ticket bus commande: %w", err)
+		}
+		row.ReturnDepartureTime = returnDeparture
+		out = append(out, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("erreur lecture tickets bus commande: %w", err)
 	}
 
 	return out, nil
