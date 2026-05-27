@@ -391,7 +391,7 @@ func (h *AdminHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Quantité d'utilisation invalide"})
 		return
 	}
-	if req.DiscountCents < 1 {
+	if req.DiscountCents == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Réduction invalide"})
 		return
 	}

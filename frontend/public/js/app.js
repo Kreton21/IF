@@ -689,14 +689,15 @@ function updateOrderSummary() {
 
   const wantsRefundInsurance = document.getElementById('wants-refund-insurance')?.checked || false;
   let insuranceCents = 0;
-  let discountCents = (state.coupon && state.coupon.discount_cents) ? state.coupon.discount_cents : 0;
-  if (discountCents > ticketTotal) discountCents = ticketTotal;
+  let discountCents = (state.coupon && typeof state.coupon.discount_cents === 'number') ? state.coupon.discount_cents : 0;
+  if (discountCents > ticketTotal && discountCents > 0) discountCents = ticketTotal;
 
-  if (discountCents > 0) {
+  if (discountCents !== 0) {
     const label = state.coupon && state.coupon.code ? `Coupon ${state.coupon.code}` : 'Coupon';
+    const sign = discountCents > 0 ? '- ' : '+ ';
     html += `<div class="summary-item">
       <span>${label}</span>
-      <span>- ${formatPrice(discountCents)}</span>
+      <span>${sign}${formatPrice(Math.abs(discountCents))}</span>
     </div>`;
   }
 
@@ -823,7 +824,7 @@ async function applyCoupon(rawCode, options = {}) {
       ticket_type_id: data.ticket_type_id || '',
       applied_uses: data.applied_uses || 0,
       remaining_uses: data.remaining_uses || 0,
-      discount_cents: data.discount_cents || 0,
+      discount_cents: (typeof data.discount_cents === 'number') ? data.discount_cents : 0,
       lastSignature: signature,
     };
 

@@ -503,7 +503,7 @@ func (s *TicketService) CreateCheckout(ctx context.Context, req models.CheckoutR
 			return nil, err
 		}
 		couponDiscountCents = discount
-		if couponDiscountCents > ticketTotalCents {
+		if couponDiscountCents > ticketTotalCents && couponDiscountCents > 0 {
 			couponDiscountCents = ticketTotalCents
 		}
 		totalCents = ticketTotalCents + insuranceCents - couponDiscountCents
