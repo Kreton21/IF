@@ -2068,7 +2068,7 @@ function renderBusDeparturesTable(departures) {
             <td>${formatPrice(d.price_cents)}</td>
             <td>${d.sold}</td>
             <td>${d.capacity}</td>
-            <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:999px;background:${fillColor};display:inline-block;"></span>${fillPercent}%</span></td>
+            <td><span style="display:inline-flex;align-items:center;gap:8px;"><span style="width:16px;height:16px;border-radius:999px;background:${fillColor};display:inline-block;box-shadow:0 0 0 2px rgba(15,23,42,0.12);"></span><strong>${fillPercent}%</strong></span></td>
             <td>${status}</td>
             <td style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
