@@ -2060,6 +2060,7 @@ function renderBusDeparturesTable(departures) {
         const departureLocalValue = toDateTimeLocalValue(d.departure_time);
         const stationOptions = stations.map(s => `<option value="${s.id}" ${s.id === d.station_id ? 'selected' : ''}>${s.name}</option>`).join('');
         const fillPercent = d.capacity > 0 ? Math.round((d.sold / d.capacity) * 100) : 0;
+        const fillColor = getFillRateColor(fillPercent);
         html += `<tr>
             <td>${d.station_name}</td>
             <td>${d.direction === 'to_festival' ? 'Aller' : 'Retour'}</td>
@@ -2067,7 +2068,7 @@ function renderBusDeparturesTable(departures) {
             <td>${formatPrice(d.price_cents)}</td>
             <td>${d.sold}</td>
             <td>${d.capacity}</td>
-            <td>${fillPercent}%</td>
+            <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:999px;background:${fillColor};display:inline-block;"></span>${fillPercent}%</span></td>
             <td>${status}</td>
             <td style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
@@ -2316,6 +2317,12 @@ async function deleteBusDeparture(departureID) {
 
 function formatPrice(cents) {
     return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+}
+
+function getFillRateColor(percent) {
+    const clamped = Math.max(0, Math.min(100, percent));
+    const hue = (120 * (100 - clamped)) / 100;
+    return `hsl(${hue}, 70%, 45%)`;
 }
 
 function formatDate(dateStr) {
