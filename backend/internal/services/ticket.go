@@ -726,6 +726,9 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		if dep == nil || dep.Direction != "to_festival" || !dep.IsActive {
 			return nil, fmt.Errorf("horaire aller invalide")
 		}
+		if dep.IsSoldOut {
+			return nil, fmt.Errorf("horaire aller complet")
+		}
 		st, ok := stationByID[dep.StationID]
 		if !ok || !st.IsActive {
 			return nil, fmt.Errorf("station de départ invalide")
@@ -747,6 +750,9 @@ func (s *TicketService) CreateBusCheckout(ctx context.Context, req models.BusChe
 		}
 		if dep == nil || dep.Direction != "from_festival" || !dep.IsActive {
 			return nil, fmt.Errorf("horaire retour invalide")
+		}
+		if dep.IsSoldOut {
+			return nil, fmt.Errorf("horaire retour complet")
 		}
 		st, ok := stationByID[dep.StationID]
 		if !ok || !st.IsActive {
@@ -919,6 +925,13 @@ func (s *TicketService) ToggleBusDepartureMask(ctx context.Context, id string) (
 		return nil, fmt.Errorf("id départ navette manquant")
 	}
 	return s.ticketRepo.ToggleBusDepartureMask(ctx, id)
+}
+
+func (s *TicketService) ToggleBusDepartureSoldOut(ctx context.Context, id string) (*models.BusDeparture, error) {
+	if strings.TrimSpace(id) == "" {
+		return nil, fmt.Errorf("id départ navette manquant")
+	}
+	return s.ticketRepo.ToggleBusDepartureSoldOut(ctx, id)
 }
 
 func (s *TicketService) DeleteBusDeparture(ctx context.Context, id string) error {

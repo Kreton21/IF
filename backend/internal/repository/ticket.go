@@ -1067,7 +1067,7 @@ func (r *TicketRepository) GetBusStations(ctx context.Context) ([]models.BusStat
 
 func (r *TicketRepository) GetBusDepartures(ctx context.Context, direction string) ([]models.BusDeparture, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.created_at, d.updated_at
+		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.is_sold_out, d.created_at, d.updated_at
 		FROM bus_departures d
 		JOIN bus_stations s ON s.id = d.station_id
 		WHERE d.direction = $1
@@ -1080,7 +1080,7 @@ func (r *TicketRepository) GetBusDepartures(ctx context.Context, direction strin
 	departures := make([]models.BusDeparture, 0)
 	for rows.Next() {
 		var d models.BusDeparture
-		if err := rows.Scan(&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("erreur scan départ bus: %w", err)
 		}
 		departures = append(departures, d)
@@ -1107,10 +1107,10 @@ func (r *TicketRepository) CreateBusDeparture(ctx context.Context, req models.Cr
 	err := r.pool.QueryRow(ctx, `
 		INSERT INTO bus_departures (station_id, direction, departure_time, price_cents, capacity, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`,
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, is_sold_out, created_at, updated_at`,
 		req.StationID, req.Direction, req.DepartureTime, req.PriceCents, req.Capacity, req.IsActive,
 	).Scan(
-		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("erreur création départ bus: %w", err)
@@ -1145,10 +1145,10 @@ func (r *TicketRepository) UpdateBusDeparture(ctx context.Context, id string, re
 		    is_active = $7,
 		    updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`,
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, is_sold_out, created_at, updated_at`,
 		id, req.StationID, req.Direction, req.DepartureTime, req.PriceCents, req.Capacity, req.IsActive,
 	).Scan(
-		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("erreur mise à jour départ navette: %w", err)
@@ -1165,15 +1165,37 @@ func (r *TicketRepository) ToggleBusDepartureMask(ctx context.Context, id string
 		SET is_active = NOT is_active,
 		    updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, created_at, updated_at`, id,
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, is_sold_out, created_at, updated_at`, id,
 	).Scan(
-		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("départ navette introuvable")
 		}
 		return nil, fmt.Errorf("erreur masquage départ navette: %w", err)
+	}
+
+	_ = r.pool.QueryRow(ctx, `SELECT name FROM bus_stations WHERE id = $1`, d.StationID).Scan(&d.StationName)
+	return &d, nil
+}
+
+func (r *TicketRepository) ToggleBusDepartureSoldOut(ctx context.Context, id string) (*models.BusDeparture, error) {
+	var d models.BusDeparture
+	err := r.pool.QueryRow(ctx, `
+		UPDATE bus_departures
+		SET is_sold_out = NOT is_sold_out,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, station_id, direction, departure_time, price_cents, capacity, sold, is_active, is_sold_out, created_at, updated_at`, id,
+	).Scan(
+		&d.ID, &d.StationID, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("départ navette introuvable")
+		}
+		return nil, fmt.Errorf("erreur soldout départ navette: %w", err)
 	}
 
 	_ = r.pool.QueryRow(ctx, `SELECT name FROM bus_stations WHERE id = $1`, d.StationID).Scan(&d.StationName)
@@ -1215,11 +1237,11 @@ func (r *TicketRepository) DeleteBusDeparture(ctx context.Context, id string) er
 func (r *TicketRepository) GetBusDepartureByID(ctx context.Context, id string) (*models.BusDeparture, error) {
 	var d models.BusDeparture
 	err := r.pool.QueryRow(ctx, `
-		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.created_at, d.updated_at
+		SELECT d.id, d.station_id, s.name, d.direction, d.departure_time, d.price_cents, d.capacity, d.sold, d.is_active, d.is_sold_out, d.created_at, d.updated_at
 		FROM bus_departures d
 		JOIN bus_stations s ON s.id = d.station_id
 		WHERE d.id = $1`, id).Scan(
-		&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+		&d.ID, &d.StationID, &d.StationName, &d.Direction, &d.DepartureTime, &d.PriceCents, &d.Capacity, &d.Sold, &d.IsActive, &d.IsSoldOut, &d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {

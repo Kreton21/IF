@@ -169,6 +169,7 @@ func NewRouter(
 				r.Post("/bus/departures", adminHandler.CreateBusDeparture)
 				r.Put("/bus/departures/{departureID}", adminHandler.UpdateBusDeparture)
 				r.Post("/bus/departures/{departureID}/mask", adminHandler.ToggleBusDepartureMask)
+				r.Post("/bus/departures/{departureID}/soldout", adminHandler.ToggleBusDepartureSoldOut)
 				r.Delete("/bus/departures/{departureID}", adminHandler.DeleteBusDeparture)
 				r.Get("/bus/tickets", adminHandler.ListBusTickets)
 				r.Get("/referrals", adminHandler.ListReferralLinks)

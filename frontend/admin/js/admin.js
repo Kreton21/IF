@@ -2053,8 +2053,10 @@ function renderBusDeparturesTable(departures) {
     </tr></thead><tbody>`;
 
     departures.forEach(d => {
-        const status = d.is_active ? 'Visible' : 'Masqué';
+        const isSoldOut = !!d.is_sold_out;
+        const status = isSoldOut ? 'Complet' : (d.is_active ? 'Visible' : 'Masqué');
         const maskLabel = d.is_active ? 'Masquer' : 'Démasquer';
+        const soldOutLabel = isSoldOut ? 'Annuler soldout' : 'Mettre en soldout';
         const departureLocalValue = toDateTimeLocalValue(d.departure_time);
         const stationOptions = stations.map(s => `<option value="${s.id}" ${s.id === d.station_id ? 'selected' : ''}>${s.name}</option>`).join('');
         const fillPercent = d.capacity > 0 ? Math.round((d.sold / d.capacity) * 100) : 0;
@@ -2069,6 +2071,7 @@ function renderBusDeparturesTable(departures) {
             <td>${status}</td>
             <td style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-sm btn-primary" onclick="editBusDeparture('${d.id}')">Modifier</button>
+                <button class="btn btn-sm" onclick="toggleBusDepartureSoldOut('${d.id}')">${soldOutLabel}</button>
                 <button class="btn btn-sm btn-warning" onclick="toggleBusDepartureMask('${d.id}')">${maskLabel}</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteBusDeparture('${d.id}')">Supprimer</button>
             </td>
@@ -2283,6 +2286,16 @@ async function toggleBusDepartureMask(departureID) {
         await loadBusAdminData();
     } catch (error) {
         alert(`Erreur masquage: ${error.message}`);
+    }
+}
+
+async function toggleBusDepartureSoldOut(departureID) {
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures/${departureID}/soldout`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur soldout: ${error.message}`);
     }
 }
 

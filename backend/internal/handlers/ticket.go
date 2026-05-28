@@ -205,6 +205,7 @@ func (h *TicketHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
 			DepartureTime: dep.DepartureTime,
 			PriceCents:    dep.PriceCents,
 			IsActive:      dep.IsActive,
+			IsSoldOut:     dep.IsSoldOut,
 		})
 	}
 
@@ -217,6 +218,7 @@ func (h *TicketHandler) GetBusOptions(w http.ResponseWriter, r *http.Request) {
 			DepartureTime: dep.DepartureTime,
 			PriceCents:    dep.PriceCents,
 			IsActive:      dep.IsActive,
+			IsSoldOut:     dep.IsSoldOut,
 		})
 	}
 

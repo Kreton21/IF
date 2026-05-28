@@ -1177,12 +1177,12 @@ function populateBusFormOptions() {
   }
 
   if (stations.length > 0) {
-    const stationWithOutbound = stations.find(s => outbound.some(d => d.station_id === s.id));
+    const stationWithOutbound = stations.find(s => outbound.some(d => d.station_id === s.id && !d.is_sold_out));
     const defaultStationID = stationWithOutbound ? stationWithOutbound.id : stations[0].id;
     fromSelect.value = defaultStationID;
     if (returnStationSelect) {
       const returnDepartures = (state.busOptions.return_departures || []).filter(d => d.is_active);
-      const stationWithReturn = stations.find(s => returnDepartures.some(d => d.station_id === s.id));
+      const stationWithReturn = stations.find(s => returnDepartures.some(d => d.station_id === s.id && !d.is_sold_out));
       const defaultReturnStationID = stationWithReturn ? stationWithReturn.id : stations[0].id;
       returnStationSelect.value = defaultReturnStationID;
     }
@@ -1215,12 +1215,17 @@ function refreshOutboundDepartureOptions() {
   if (departures.length === 0) {
     html += '<option value="" disabled>Aucun horaire disponible pour cette station</option>';
   } else {
-    html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+    html += departures.map(d => {
+      const soldOutLabel = d.is_sold_out ? ' — Complet' : '';
+      const disabled = d.is_sold_out ? 'disabled' : '';
+      return `<option value="${d.id}" ${disabled}>${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}${soldOutLabel}</option>`;
+    }).join('');
   }
   select.innerHTML = html;
 
-  if (departures.length > 0) {
-    select.value = departures[0].id;
+  const firstAvailable = departures.find(d => !d.is_sold_out);
+  if (firstAvailable) {
+    select.value = firstAvailable.id;
   }
 }
 
@@ -1230,11 +1235,16 @@ function refreshReturnDepartureOptions() {
   const departures = (state.busOptions?.return_departures || []).filter(d => d.is_active && (!selectedStation || d.station_id === selectedStation));
 
   let html = '<option value="">Choisir un horaire retour</option>';
-  html += departures.map(d => `<option value="${d.id}">${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`).join('');
+  html += departures.map(d => {
+    const soldOutLabel = d.is_sold_out ? ' — Complet' : '';
+    const disabled = d.is_sold_out ? 'disabled' : '';
+    return `<option value="${d.id}" ${disabled}>${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}${soldOutLabel}</option>`;
+  }).join('');
   select.innerHTML = html;
 
-  if (departures.length > 0) {
-    select.value = departures[0].id;
+  const firstAvailable = departures.find(d => !d.is_sold_out);
+  if (firstAvailable) {
+    select.value = firstAvailable.id;
   }
 }
 

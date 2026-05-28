@@ -989,6 +989,28 @@ func (h *AdminHandler) ToggleBusDepartureMask(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, dep)
 }
 
+func (h *AdminHandler) ToggleBusDepartureSoldOut(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	departureID := chi.URLParam(r, "departureID")
+	if departureID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID départ navette manquant"})
+		return
+	}
+
+	dep, err := h.ticketService.ToggleBusDepartureSoldOut(r.Context(), departureID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, dep)
+}
+
 func (h *AdminHandler) DeleteBusDeparture(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {

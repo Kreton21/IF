@@ -434,6 +434,7 @@ type PublicBusDeparture struct {
 	DepartureTime time.Time `json:"departure_time"`
 	PriceCents    int       `json:"price_cents"`
 	IsActive      bool      `json:"is_active"`
+	IsSoldOut     bool      `json:"is_sold_out"`
 }
 
 type PublicBusOptionsResponse struct {
@@ -460,6 +461,7 @@ type BusDeparture struct {
 	Capacity      int       `json:"capacity"`
 	Sold          int       `json:"sold"`
 	IsActive      bool      `json:"is_active"`
+	IsSoldOut     bool      `json:"is_sold_out"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
