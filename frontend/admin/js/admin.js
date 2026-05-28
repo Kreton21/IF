@@ -10,6 +10,7 @@ let adminRole = localStorage.getItem('admin_role') || 'admin';
 let searchTimeout = null;
 let currentPage = 1;
 let busOptionsCache = null;
+let busTicketsCache = [];
 let latestSalesStats = null;
 let salesChartRange = '1j';
 let salesChart = null;
@@ -2018,11 +2019,12 @@ async function loadBusAdminData() {
         ]);
 
         busOptionsCache = await optionsRes.json();
-        const busTickets = await ticketsRes.json();
+        busTicketsCache = await ticketsRes.json();
 
         renderBusStationsSelects(busOptionsCache.stations || []);
         renderBusDeparturesTable([...(busOptionsCache.outbound_departures || []), ...(busOptionsCache.return_departures || [])]);
-        renderBusTicketsTable(busTickets || []);
+        populateBusTicketNavetteFilter();
+        applyBusTicketsFilters();
     } catch (error) {
         console.error('Erreur chargement bus admin:', error);
     }
@@ -2147,6 +2149,73 @@ function renderBusTicketsTable(rows, containerId = 'bus-tickets-table') {
     });
 
     container.innerHTML = html + '</tbody></table>';
+}
+
+function populateBusTicketNavetteFilter() {
+    const select = document.getElementById('bus-ticket-filter-navette');
+    if (!select) return;
+
+    const stations = busOptionsCache?.stations || [];
+    const stationByID = new Map(stations.map(s => [s.id, s.name]));
+    const allDepartures = [
+        ...(busOptionsCache?.outbound_departures || []),
+        ...(busOptionsCache?.return_departures || []),
+    ];
+
+    const entries = [];
+    const seen = new Set();
+    allDepartures.forEach(dep => {
+        const stationName = stationByID.get(dep.station_id) || dep.station_id;
+        const key = `${dep.direction}|${stationName}|${dep.departure_time}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const directionLabel = dep.direction === 'to_festival' ? 'Aller' : 'Retour';
+        entries.push({
+            key,
+            label: `${directionLabel} ${stationName} — ${formatDateTime(dep.departure_time)}`,
+            time: new Date(dep.departure_time).getTime(),
+        });
+    });
+
+    entries.sort((a, b) => a.time - b.time);
+    const options = ['<option value="">Toutes les navettes</option>']
+        .concat(entries.map(e => `<option value="${escapeAttr(e.key)}">${e.label}</option>`));
+    select.innerHTML = options.join('');
+}
+
+function applyBusTicketsFilters() {
+    const query = (document.getElementById('bus-ticket-search')?.value || '').trim().toLowerCase();
+    const navetteKey = document.getElementById('bus-ticket-filter-navette')?.value || '';
+
+    const rows = (busTicketsCache || []).filter(r => {
+        if (query) {
+            const name = `${r.customer_first_name || ''} ${r.customer_last_name || ''}`.trim().toLowerCase();
+            const email = (r.customer_email || '').trim().toLowerCase();
+            if (!name.includes(query) && !email.includes(query)) {
+                return false;
+            }
+        }
+
+        if (navetteKey) {
+            const outboundKey = `to_festival|${r.from_station}|${r.departure_time}`;
+            const returnKey = r.return_departure_time ? `from_festival|${r.to_station}|${r.return_departure_time}` : '';
+            if (navetteKey !== outboundKey && navetteKey !== returnKey) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    renderBusTicketsTable(rows);
+}
+
+function resetBusTicketsFilters() {
+    const search = document.getElementById('bus-ticket-search');
+    const navette = document.getElementById('bus-ticket-filter-navette');
+    if (search) search.value = '';
+    if (navette) navette.value = '';
+    applyBusTicketsFilters();
 }
 
 async function createBusStation() {
