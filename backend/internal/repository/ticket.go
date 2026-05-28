@@ -1430,20 +1430,18 @@ type BusTicketChangeRow struct {
 func (r *TicketRepository) GetBusTicketForChange(ctx context.Context, tx pgx.Tx, ticketID string) (*BusTicketChangeRow, error) {
 	var row BusTicketChangeRow
 	var returnDepartureID *string
-	var returnDirection string
 	err := tx.QueryRow(ctx, `
 		SELECT t.id, t.order_id, t.ticket_type_id, COALESCE(t.attendee_first_name, ''), COALESCE(t.attendee_last_name, ''), COALESCE(t.attendee_email, ''),
 		       t.is_camping, bt.is_round_trip, bt.from_station, bt.to_station,
-		       bt.outbound_departure_id, bt.return_departure_id, od.direction, COALESCE(rd.direction, '')
+		       bt.outbound_departure_id, bt.return_departure_id, od.direction
 		FROM tickets t
 		JOIN bus_tickets bt ON bt.ticket_id = t.id
 		JOIN bus_departures od ON od.id = bt.outbound_departure_id
-		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
 		WHERE t.id = $1
-		FOR UPDATE`, ticketID).Scan(
+		FOR UPDATE OF t, bt, od`, ticketID).Scan(
 		&row.TicketID, &row.OrderID, &row.TicketTypeID, &row.AttendeeFirstName, &row.AttendeeLastName, &row.AttendeeEmail,
 		&row.IsCamping, &row.IsRoundTrip, &row.FromStation, &row.ToStation,
-		&row.OutboundDepartureID, &returnDepartureID, &row.OutboundDirection, &returnDirection,
+		&row.OutboundDepartureID, &returnDepartureID, &row.OutboundDirection,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -1452,7 +1450,9 @@ func (r *TicketRepository) GetBusTicketForChange(ctx context.Context, tx pgx.Tx,
 		return nil, fmt.Errorf("erreur chargement ticket bus: %w", err)
 	}
 	row.ReturnDepartureID = returnDepartureID
-	row.ReturnDirection = returnDirection
+	if returnDepartureID != nil && *returnDepartureID != "" {
+		row.ReturnDirection = "from_festival"
+	}
 	return &row, nil
 }
 
