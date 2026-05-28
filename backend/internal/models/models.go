@@ -509,6 +509,10 @@ type UpdateBusDepartureRequest struct {
 
 type BusTicketAdminRow struct {
 	TicketID            string     `json:"ticket_id"`
+	OutboundDepartureID string     `json:"outbound_departure_id"`
+	ReturnDepartureID   *string    `json:"return_departure_id,omitempty"`
+	OutboundDirection   string     `json:"outbound_direction"`
+	ReturnDirection     string     `json:"return_direction,omitempty"`
 	OrderNumber         string     `json:"order_number"`
 	OrderTotalCents     int        `json:"order_total_cents"`
 	CustomerFirstName   string     `json:"customer_first_name"`
@@ -521,6 +525,11 @@ type BusTicketAdminRow struct {
 	IsRoundTrip         bool       `json:"is_round_trip"`
 	IsValidated         bool       `json:"is_validated"`
 	CreatedAt           time.Time  `json:"created_at"`
+}
+
+type ChangeBusTicketDepartureRequest struct {
+	Direction   string `json:"direction"`
+	DepartureID string `json:"departure_id"`
 }
 
 type BusTicketEmailRow struct {

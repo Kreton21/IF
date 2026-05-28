@@ -2132,11 +2132,15 @@ function renderBusTicketsTable(rows, containerId = 'bus-tickets-table') {
         return;
     }
 
+    const showActions = containerId === 'bus-tickets-table';
+
     let html = `<table><thead><tr>
-        <th>Commande</th><th>Client</th><th>Trajet</th><th>Départ</th><th>Retour</th><th>Total</th><th>Scan</th>
+        <th>Commande</th><th>Client</th><th>Trajet</th><th>Départ</th><th>Retour</th><th>Total</th><th>Scan</th>${showActions ? '<th>Action</th>' : ''}
     </tr></thead><tbody>`;
 
     rows.forEach(r => {
+        const hasReturn = !!r.return_departure_id;
+        const outboundLabel = r.outbound_direction === 'from_festival' ? 'Retour' : 'Aller';
         html += `<tr>
             <td>${r.order_number}</td>
             <td>${r.customer_first_name} ${r.customer_last_name}<br><small>${r.customer_email}</small></td>
@@ -2145,10 +2149,98 @@ function renderBusTicketsTable(rows, containerId = 'bus-tickets-table') {
             <td>${r.return_departure_time ? formatDateTime(r.return_departure_time) : '-'}</td>
             <td>${formatPrice(r.order_total_cents || 0)}</td>
             <td>${r.is_validated ? '✅' : '⏳'}</td>
+            ${showActions ? `<td style="text-align:right;"><button class="btn btn-sm" onclick="toggleBusTicketEdit('${r.ticket_id}')">Modifier</button></td>` : ''}
         </tr>`;
+
+        if (showActions) {
+            html += `<tr id="bus-ticket-edit-${r.ticket_id}" class="hidden">
+                <td colspan="8" style="background:#f8fafc;padding:0;">
+                    <div style="margin:10px 12px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#f7fafc;">
+                        <div style="display:grid;gap:10px;">
+                            <div class="form-row" style="align-items:flex-end;">
+                                <div class="form-group" style="min-width:260px;">
+                                    <label>${outboundLabel}</label>
+                                    <select id="bus-ticket-select-${r.ticket_id}-outbound">${buildBusDepartureOptions(r.outbound_direction, r.outbound_departure_id)}</select>
+                                </div>
+                                <div class="form-group" style="display:flex;align-items:flex-end;">
+                                    <button class="btn btn-sm btn-primary" onclick="changeBusTicketDeparture('${r.ticket_id}', '${r.outbound_direction}', 'bus-ticket-select-${r.ticket_id}-outbound')">Changer de navette</button>
+                                </div>
+                            </div>
+                            ${hasReturn ? `
+                            <div class="form-row" style="align-items:flex-end;">
+                                <div class="form-group" style="min-width:260px;">
+                                    <label>Retour</label>
+                                    <select id="bus-ticket-select-${r.ticket_id}-return">${buildBusDepartureOptions(r.return_direction || 'from_festival', r.return_departure_id)}</select>
+                                </div>
+                                <div class="form-group" style="display:flex;align-items:flex-end;">
+                                    <button class="btn btn-sm btn-primary" onclick="changeBusTicketDeparture('${r.ticket_id}', 'from_festival', 'bus-ticket-select-${r.ticket_id}-return')">Changer de navette</button>
+                                </div>
+                            </div>` : ''}
+                            <div style="display:flex;justify-content:flex-end;">
+                                <button class="btn btn-sm" onclick="toggleBusTicketEdit('${r.ticket_id}')">Fermer</button>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+        }
     });
 
     container.innerHTML = html + '</tbody></table>';
+}
+
+function toggleBusTicketEdit(ticketID) {
+    const row = document.getElementById(`bus-ticket-edit-${ticketID}`);
+    if (!row) return;
+    row.classList.toggle('hidden');
+}
+
+function buildBusDepartureOptions(direction, selectedID) {
+    const stations = busOptionsCache?.stations || [];
+    const stationByID = new Map(stations.map(s => [s.id, s.name]));
+    const departures = [
+        ...(busOptionsCache?.outbound_departures || []),
+        ...(busOptionsCache?.return_departures || []),
+    ].filter(d => d.direction === direction && d.is_active && (d.capacity - d.sold) > 0);
+
+    const options = departures.map(d => {
+        const stationName = stationByID.get(d.station_id) || '';
+        const selected = d.id === selectedID ? 'selected' : '';
+        return `<option value="${d.id}" ${selected}>${stationName} — ${formatDateTime(d.departure_time)} — ${formatPrice(d.price_cents)}</option>`;
+    });
+
+    if (selectedID && !departures.some(d => d.id === selectedID)) {
+        options.unshift(`<option value="${selectedID}" selected>Horaire actuel</option>`);
+    }
+
+    if (options.length === 0) {
+        return '<option value="" disabled>Aucun horaire disponible</option>';
+    }
+
+    return options.join('');
+}
+
+async function changeBusTicketDeparture(ticketID, direction, selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const departureId = select.value;
+    if (!departureId) {
+        alert('Choisissez un horaire');
+        return;
+    }
+
+    if (!confirm('Changer la navette et envoyer le nouveau ticket par email ?')) return;
+
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/tickets/${ticketID}/change-departure`, {
+            method: 'POST',
+            body: JSON.stringify({ direction, departure_id: departureId }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur modification navette: ${error.message}`);
+    }
 }
 
 function populateBusTicketNavetteFilter() {

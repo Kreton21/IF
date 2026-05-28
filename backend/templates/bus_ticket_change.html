@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Changement d'horaire navette</title>
+</head>
+<body style="margin:0;padding:0;background:#fdf6f1;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fdf6f1;padding:24px 12px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#fffdfa;border:1px solid #f0ddd0;">
+        <tr>
+          <td style="padding:26px 30px 10px;">
+            <div style="font-size:20px;font-weight:700;color:#7f1713;">Changement d'horaire navette</div>
+            <div style="margin-top:6px;color:#6b7280;font-size:13px;">Commande {{.OrderNumber}}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 30px 20px;">
+            <p style="margin:0 0 10px 0;color:#3f1a10;line-height:1.5;font-size:14px;">
+              Bonjour {{.CustomerName}},
+            </p>
+            <p style="margin:0;color:#3f1a10;line-height:1.6;font-size:14px;">
+              En raison d'une surcharge des navettes, nous nous r&eacute;organisons et modifions votre horaire.
+              Vous trouverez ci-dessous votre nouveau ticket navette, ainsi que le PDF en pi&egrave;ce jointe.
+            </p>
+          </td>
+        </tr>
+
+        {{range .Tickets}}
+        <tr>
+          <td style="padding:0 30px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0ddd0;background:#fff6ef;">
+              <tr>
+                <td style="padding:16px 18px;">
+                  <div style="font-size:15px;font-weight:700;color:#7f1713;">{{.TicketTypeName}}</div>
+                  <div style="margin-top:4px;color:#3f1a10;font-size:13px;">{{.AttendeeName}}</div>
+                  {{if .DepartureInfo}}
+                  <div style="margin-top:6px;color:#3f1a10;font-size:13px;"><strong>Horaire :</strong> {{.DepartureInfo}}</div>
+                  {{end}}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        {{end}}
+
+        <tr>
+          <td style="padding:0 30px 24px;">
+            <p style="margin:0;color:#3f1a10;font-size:13px;line-height:1.6;">
+              Merci de votre compr&eacute;hension. Gardez ce mail (ou le QR code) &agrave; port&eacute;e au moment de l&rsquo;embarquement.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" bgcolor="#7f1713" style="background-color:#7f1713;padding:18px 26px;">
+            <div style="font-size:12px;color:#ffcba4;">Contact : {{.SupportEmail}}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1043,6 +1043,33 @@ func (h *AdminHandler) ListBusTickets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
+func (h *AdminHandler) ChangeBusTicketDeparture(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	ticketID := chi.URLParam(r, "ticketID")
+	if strings.TrimSpace(ticketID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ID ticket requis"})
+		return
+	}
+
+	var req models.ChangeBusTicketDepartureRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Données invalides"})
+		return
+	}
+
+	if err := h.ticketService.ChangeBusTicketDeparture(r.Context(), ticketID, req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Navette modifiée"})
+}
+
 func (h *AdminHandler) CreateReferralLink(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {

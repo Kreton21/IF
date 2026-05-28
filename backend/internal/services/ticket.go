@@ -945,6 +945,183 @@ func (s *TicketService) ListBusTicketsAdmin(ctx context.Context) ([]models.BusTi
 	return s.ticketRepo.ListBusTickets(ctx, 300)
 }
 
+func (s *TicketService) ChangeBusTicketDeparture(ctx context.Context, ticketID string, req models.ChangeBusTicketDepartureRequest) error {
+	direction := strings.TrimSpace(strings.ToLower(req.Direction))
+	if direction != "to_festival" && direction != "from_festival" {
+		return fmt.Errorf("direction invalide")
+	}
+	departureID := strings.TrimSpace(req.DepartureID)
+	if departureID == "" {
+		return fmt.Errorf("départ requis")
+	}
+
+	tx, err := s.ticketRepo.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("erreur transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	current, err := s.ticketRepo.GetBusTicketForChange(ctx, tx, ticketID)
+	if err != nil {
+		return err
+	}
+	if current == nil {
+		return fmt.Errorf("ticket bus introuvable")
+	}
+
+	oldDepartureID := ""
+	updateOutbound := direction == "to_festival"
+	if direction == "from_festival" {
+		if current.ReturnDepartureID != nil && *current.ReturnDepartureID != "" {
+			oldDepartureID = *current.ReturnDepartureID
+			updateOutbound = false
+		} else {
+			oldDepartureID = current.OutboundDepartureID
+			updateOutbound = true
+		}
+	} else {
+		oldDepartureID = current.OutboundDepartureID
+	}
+	if oldDepartureID == departureID {
+		return fmt.Errorf("départ identique")
+	}
+
+	newDeparture, err := s.ticketRepo.GetBusDepartureInfoForChange(ctx, tx, departureID)
+	if err != nil {
+		return err
+	}
+	if newDeparture == nil || !newDeparture.IsActive {
+		return fmt.Errorf("départ navette invalide")
+	}
+	if newDeparture.Direction != direction {
+		return fmt.Errorf("départ navette invalide")
+	}
+	if newDeparture.Sold >= newDeparture.Capacity {
+		return fmt.Errorf("navette complète")
+	}
+
+	if err := s.ticketRepo.DecrementBusDepartureSeat(ctx, tx, oldDepartureID); err != nil {
+		return err
+	}
+	if err := s.ticketRepo.ReserveBusDepartureSeat(ctx, tx, departureID); err != nil {
+		return err
+	}
+
+	fromStation := current.FromStation
+	toStation := current.ToStation
+	if updateOutbound {
+		fromStation = newDeparture.StationName
+		if !current.IsRoundTrip {
+			toStation = "Festival"
+		}
+	} else {
+		toStation = newDeparture.StationName
+		if !current.IsRoundTrip {
+			fromStation = "Festival"
+		}
+	}
+
+	qrToken, err := s.qrService.GenerateToken()
+	if err != nil {
+		return fmt.Errorf("erreur génération token QR: %w", err)
+	}
+	qrPNG, err := s.qrService.GenerateQRCode(qrToken)
+	if err != nil {
+		return fmt.Errorf("erreur génération QR code: %w", err)
+	}
+
+	newTicket := &models.Ticket{
+		OrderID:           current.OrderID,
+		TicketTypeID:      current.TicketTypeID,
+		QRToken:           qrToken,
+		QRCodeData:        qrPNG,
+		IsCamping:         current.IsCamping,
+		AttendeeFirstName: current.AttendeeFirstName,
+		AttendeeLastName:  current.AttendeeLastName,
+		AttendeeEmail:     current.AttendeeEmail,
+	}
+
+	if err := s.ticketRepo.CreateTicket(ctx, tx, newTicket); err != nil {
+		return fmt.Errorf("erreur création ticket bus: %w", err)
+	}
+
+	outboundDepartureID := current.OutboundDepartureID
+	returnDepartureID := current.ReturnDepartureID
+	if updateOutbound {
+		outboundDepartureID = departureID
+	} else {
+		returnDepartureID = &departureID
+	}
+
+	if err := s.ticketRepo.SaveBusTicketDetails(ctx, tx, newTicket.ID, outboundDepartureID, returnDepartureID, fromStation, toStation, current.IsRoundTrip); err != nil {
+		return err
+	}
+
+	if direction == "to_festival" {
+		_ = s.ticketRepo.UpdateBusOrderRideDeparture(ctx, tx, current.OrderID, "outbound", outboundDepartureID, fromStation, "Festival")
+	} else {
+		_ = s.ticketRepo.UpdateBusOrderRideDeparture(ctx, tx, current.OrderID, "return", departureID, "Festival", toStation)
+	}
+
+	if err := s.ticketRepo.DeleteTicketByID(ctx, tx, current.TicketID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("erreur commit ticket bus: %w", err)
+	}
+
+	order, err := s.orderRepo.GetOrderByID(ctx, current.OrderID)
+	if err != nil || order == nil {
+		return nil
+	}
+
+	departureInfo := ""
+	if dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, outboundDepartureID); depErr == nil && dep != nil {
+		label := "Aller"
+		if dep.Direction == "from_festival" {
+			label = "Retour"
+		}
+		departureInfo = fmt.Sprintf("%s : %s", label, s.formatBusTime(dep.DepartureTime))
+	}
+	if returnDepartureID != nil {
+		if ret, retErr := s.ticketRepo.GetBusDepartureByID(ctx, *returnDepartureID); retErr == nil && ret != nil {
+			retInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(ret.DepartureTime))
+			if departureInfo != "" {
+				departureInfo = departureInfo + " • " + retInfo
+			} else {
+				departureInfo = retInfo
+			}
+		}
+	}
+
+	busLabel := "Navette"
+	if current.IsRoundTrip {
+		busLabel = "Navette Aller-Retour"
+	} else if current.OutboundDirection == "from_festival" && current.ReturnDepartureID == nil {
+		busLabel = "Navette Retour"
+	} else if current.OutboundDirection == "to_festival" {
+		busLabel = "Navette Aller"
+	}
+
+	details := fmt.Sprintf("%s → %s", fromStation, toStation)
+	if current.IsRoundTrip {
+		details += " · Aller-retour"
+	}
+
+	customerName := strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
+	_ = s.emailService.SendBusChangeEmail(order.CustomerEmail, customerName, order.OrderNumber, []TicketEmailData{{
+		TicketTypeName: busLabel,
+		AttendeeName:   details,
+		DepartureInfo:  departureInfo,
+		QRToken:        qrToken,
+		QRCodePNG:      qrPNG,
+		IsBus:          true,
+	}})
+
+	return nil
+}
+
 // ProcessPaymentWebhook traite le webhook de confirmation de paiement HelloAsso
 func (s *TicketService) ProcessPaymentWebhook(ctx context.Context, payload WebhookPaymentData, orderID string) error {
 	paymentID := fmt.Sprintf("%d", payload.ID)

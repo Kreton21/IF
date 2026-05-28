@@ -56,6 +56,8 @@ type Config struct {
 	EmailSubjectTemplate string
 	BusEmailTemplatePath    string
 	BusEmailSubjectTemplate string
+	BusChangeEmailTemplatePath string
+	BusChangeEmailSubjectTemplate string
 
 	// Festival
 	FestivalName    string
@@ -115,6 +117,8 @@ func Load() (*Config, error) {
 		EmailSubjectTemplate: getEnv("EMAIL_SUBJECT_TEMPLATE", "L'Interfilières 2026 — {{.EventDate}} — Vos billets (Commande {{.OrderNumber}})"),
 		BusEmailTemplatePath:    getEnv("BUS_EMAIL_TEMPLATE_PATH", "templates/bus_ticket_confirmation.html"),
 		BusEmailSubjectTemplate: getEnv("BUS_EMAIL_SUBJECT_TEMPLATE", "{{.FestivalName}} - Votre ticket navette (Commande {{.OrderNumber}})"),
+		BusChangeEmailTemplatePath: getEnv("BUS_CHANGE_EMAIL_TEMPLATE_PATH", "templates/bus_ticket_change.html"),
+		BusChangeEmailSubjectTemplate: getEnv("BUS_CHANGE_EMAIL_SUBJECT_TEMPLATE", "IF Festival - Changement d'horaire navette (Commande {{.OrderNumber}})"),
 
 		FestivalName:    getEnv("FESTIVAL_NAME", "L'Interfilières"),
 		FestivalDate:    getEnv("FESTIVAL_DATE", "2026-05-30"),

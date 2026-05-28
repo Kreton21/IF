@@ -59,6 +59,18 @@ func (s *EmailService) SendBusTicketEmail(to string, customerName string, orderN
 	)
 }
 
+func (s *EmailService) SendBusChangeEmail(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	return s.sendTicketEmailWithTemplate(
+		to,
+		customerName,
+		orderNumber,
+		tickets,
+		s.cfg.BusChangeEmailTemplatePath,
+		s.cfg.BusChangeEmailSubjectTemplate,
+		"bus-change",
+	)
+}
+
 func (s *EmailService) sendTicketEmailWithTemplate(
 	to string,
 	customerName string,
