@@ -13,7 +13,7 @@
 #    API_BASE           URL de base de l'API  (défaut: http://localhost:8080)
 #    BROADCAST_API_KEY  Clé secrète           (obligatoire)
 # ============================================================
-set -euo pipefail
+set -uo pipefail
 
 API_BASE="${API_BASE:-http://localhost:8080}"
 KEY="${BROADCAST_API_KEY:-}"
@@ -127,28 +127,71 @@ PYEOF
 }
 
 # ── Lancer le broadcast et streamer la progression ───────────
-# Note: curl exit code 23 (broken pipe) is normal when Python closes stdin
-# after receiving the final "done" line — we only fail on other errors.
-CURL_OUT=$(mktemp)
+RAW_OUT=$(mktemp)
+CURL_ERR=$(mktemp)
 
+echo "  → Connexion à l'API..."
+
+# Capture raw output to file AND stream to progress displayer simultaneously
+# Use tee so we always have a copy for debugging
 curl -sS -N --no-buffer \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/x-ndjson" \
-  -d "$BODY" 2>"$CURL_OUT" | draw_progress
-PYTHON_CODE=${PIPESTATUS[1]}
-CURL_CODE=${PIPESTATUS[0]}
+  -d "$BODY" 2>"$CURL_ERR" > "$RAW_OUT" &
+CURL_PID=$!
 
-# 23 = write error due to broken pipe (expected when Python exits after "done")
+# Give curl a moment to connect and get first bytes
+sleep 1
+if ! kill -0 "$CURL_PID" 2>/dev/null; then
+  CURL_CODE=$?
+  echo "❌  curl a échoué immédiatement (code $CURL_CODE)"
+  cat "$CURL_ERR"
+  rm -f "$RAW_OUT" "$CURL_ERR"
+  exit 1
+fi
+
+# Stream the file as it grows, pipe into progress
+tail -f "$RAW_OUT" | draw_progress &
+TAIL_PID=$!
+
+# Wait for curl to finish
+wait "$CURL_PID"
+CURL_CODE=$?
+
+# Give tail/python a moment to process the last line
+sleep 0.5
+kill "$TAIL_PID" 2>/dev/null || true
+
+echo ""
+
+# Always show raw response for debugging if empty or error
+LINE_COUNT=$(wc -l < "$RAW_OUT" | tr -d ' ')
+if [[ "$LINE_COUNT" -eq 0 ]]; then
+  echo "❌  Aucune réponse reçue du serveur."
+  if [[ -s "$CURL_ERR" ]]; then
+    echo "    Erreur curl : $(cat "$CURL_ERR")"
+  fi
+  echo "    Code curl   : $CURL_CODE"
+  rm -f "$RAW_OUT" "$CURL_ERR"
+  exit 1
+fi
+
+# Show first line in case of non-NDJSON error
+FIRST_LINE=$(head -1 "$RAW_OUT")
+if ! echo "$FIRST_LINE" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+  echo "❌  Réponse non-JSON du serveur :"
+  cat "$RAW_OUT"
+  rm -f "$RAW_OUT" "$CURL_ERR"
+  exit 1
+fi
+
+rm -f "$RAW_OUT" "$CURL_ERR"
+
 if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 23 ]]; then
-  echo "❌  curl a échoué (code $CURL_CODE) — vérifiez l'API et la clé."
-  cat "$CURL_OUT"
-  rm -f "$CURL_OUT"
+  echo "❌  curl a échoué (code $CURL_CODE)"
   exit "$CURL_CODE"
 fi
-rm -f "$CURL_OUT"
-
-[[ "$PYTHON_CODE" -ne 0 ]] && exit "$PYTHON_CODE"
 exit 0
 
