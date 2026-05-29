@@ -945,6 +945,10 @@ func (s *TicketService) ListBusTicketsAdmin(ctx context.Context) ([]models.BusTi
 	return s.ticketRepo.ListBusTickets(ctx, 300)
 }
 
+func (s *TicketService) ResyncBusDepartureSold(ctx context.Context) error {
+	return s.ticketRepo.ResyncBusDepartureSold(ctx)
+}
+
 func (s *TicketService) ChangeBusTicketDeparture(ctx context.Context, ticketID string, req models.ChangeBusTicketDepartureRequest) error {
 	direction := strings.TrimSpace(strings.ToLower(req.Direction))
 	if direction != "to_festival" && direction != "from_festival" {
