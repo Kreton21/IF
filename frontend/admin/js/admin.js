@@ -2254,17 +2254,42 @@ function populateBusTicketNavetteFilter() {
         ...(busOptionsCache?.return_departures || []),
     ];
 
-    const entries = [];
+    const entriesById = new Map();
+    const toEntry = (id, label, timeValue) => {
+        if (!id || entriesById.has(id)) return;
+        entriesById.set(id, {
+            id,
+            label,
+            time: Number.isFinite(timeValue) ? timeValue : 0,
+        });
+    };
+
     allDepartures.forEach(dep => {
         if (!dep?.id) return;
         const stationName = stationByID.get(dep.station_id) || dep.station_id;
         const directionLabel = dep.direction === 'to_festival' ? 'Aller' : 'Retour';
-        entries.push({
-            id: dep.id,
-            label: `${directionLabel} ${stationName} — ${formatDateTime(dep.departure_time)}`,
-            time: new Date(dep.departure_time).getTime(),
-        });
+        const timeValue = new Date(dep.departure_time).getTime();
+        toEntry(dep.id, `${directionLabel} ${stationName} — ${formatDateTime(dep.departure_time)}`, timeValue);
     });
+
+    (busTicketsCache || []).forEach(row => {
+        if (row.outbound_departure_id && row.departure_time) {
+            const directionLabel = row.outbound_direction === 'from_festival' ? 'Retour' : 'Aller';
+            const stationName = row.outbound_direction === 'from_festival'
+                ? (row.to_station || '')
+                : (row.from_station || '');
+            const timeValue = new Date(row.departure_time).getTime();
+            toEntry(row.outbound_departure_id, `${directionLabel} ${stationName} — ${formatDateTime(row.departure_time)}`, timeValue);
+        }
+
+        if (row.return_departure_id && row.return_departure_time) {
+            const stationName = row.to_station || '';
+            const timeValue = new Date(row.return_departure_time).getTime();
+            toEntry(row.return_departure_id, `Retour ${stationName} — ${formatDateTime(row.return_departure_time)}`, timeValue);
+        }
+    });
+
+    const entries = Array.from(entriesById.values());
 
     entries.sort((a, b) => a.time - b.time);
     const options = ['<option value="">Toutes les navettes</option>']
