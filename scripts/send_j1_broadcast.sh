@@ -34,7 +34,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$KEY" ]]; then
-  echo "❌  BROADCAST_API_KEY est vide. Définissez cette variable et relancez."
+  echo "❌  BROADCAST_API_KEY est vide. Définissez-la et relancez :"
+  echo "    export BROADCAST_API_KEY=<votre_clé>"
   exit 1
 fi
 
@@ -61,6 +62,7 @@ import sys, json, time
 BAR_WIDTH = 40
 start = time.time()
 exit_code = 0
+first_line = True
 
 for line in sys.stdin:
     line = line.strip()
@@ -69,7 +71,18 @@ for line in sys.stdin:
     try:
         data = json.loads(line)
     except json.JSONDecodeError:
+        if first_line:
+            print(f"\n❌  Réponse inattendue du serveur : {line}")
+            exit_code = 1
+            break
         continue
+    first_line = False
+
+    # Server returned an error before streaming (e.g. 401 Unauthorized)
+    if "error" in data and "total" not in data and "done" not in data:
+        print(f"\n❌  Erreur serveur : {data['error']}")
+        exit_code = 1
+        break
 
     sent   = data.get("sent",   0)
     failed = data.get("failed", 0)
