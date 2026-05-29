@@ -127,71 +127,31 @@ PYEOF
 }
 
 # ── Lancer le broadcast et streamer la progression ───────────
-RAW_OUT=$(mktemp)
 CURL_ERR=$(mktemp)
 
 echo "  → Connexion à l'API..."
 
-# Capture raw output to file AND stream to progress displayer simultaneously
-# Use tee so we always have a copy for debugging
 curl -sS -N --no-buffer \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/x-ndjson" \
-  -d "$BODY" 2>"$CURL_ERR" > "$RAW_OUT" &
-CURL_PID=$!
-
-# Give curl a moment to connect and get first bytes
-sleep 1
-if ! kill -0 "$CURL_PID" 2>/dev/null; then
-  CURL_CODE=$?
-  echo "❌  curl a échoué immédiatement (code $CURL_CODE)"
-  cat "$CURL_ERR"
-  rm -f "$RAW_OUT" "$CURL_ERR"
-  exit 1
-fi
-
-# Stream the file as it grows, pipe into progress
-tail -f "$RAW_OUT" | draw_progress &
-TAIL_PID=$!
-
-# Wait for curl to finish
-wait "$CURL_PID"
-CURL_CODE=$?
-
-# Give tail/python a moment to process the last line
-sleep 0.5
-kill "$TAIL_PID" 2>/dev/null || true
+  -d "$BODY" 2>"$CURL_ERR" | draw_progress
+CURL_CODE=${PIPESTATUS[0]}
+PYTHON_CODE=${PIPESTATUS[1]}
 
 echo ""
 
-# Always show raw response for debugging if empty or error
-LINE_COUNT=$(wc -l < "$RAW_OUT" | tr -d ' ')
-if [[ "$LINE_COUNT" -eq 0 ]]; then
-  echo "❌  Aucune réponse reçue du serveur."
-  if [[ -s "$CURL_ERR" ]]; then
-    echo "    Erreur curl : $(cat "$CURL_ERR")"
-  fi
-  echo "    Code curl   : $CURL_CODE"
-  rm -f "$RAW_OUT" "$CURL_ERR"
-  exit 1
-fi
-
-# Show first line in case of non-NDJSON error
-FIRST_LINE=$(head -1 "$RAW_OUT")
-if ! echo "$FIRST_LINE" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
-  echo "❌  Réponse non-JSON du serveur :"
-  cat "$RAW_OUT"
-  rm -f "$RAW_OUT" "$CURL_ERR"
-  exit 1
-fi
-
-rm -f "$RAW_OUT" "$CURL_ERR"
-
-if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 23 ]]; then
+# curl codes 0, 18 (partial/streaming close) and 23 (pipe write error) are OK
+if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 18 && "$CURL_CODE" -ne 23 ]]; then
   echo "❌  curl a échoué (code $CURL_CODE)"
+  if [[ -s "$CURL_ERR" ]]; then
+    echo "    $(cat "$CURL_ERR")"
+  fi
+  rm -f "$CURL_ERR"
   exit "$CURL_CODE"
 fi
-exit 0
+
+rm -f "$CURL_ERR"
+exit "${PYTHON_CODE:-0}"
 
