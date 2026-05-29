@@ -1541,6 +1541,18 @@ func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, ord
 	if len(rows) > 0 {
 		tickets := make([]TicketEmailData, 0, len(rows))
 		for _, row := range rows {
+			qrToken := strings.TrimSpace(row.QRToken)
+			qrPNG := []byte(nil)
+			if qrToken != "" {
+				if cachedQR, qrErr := s.ticketRepo.GetQRCodeDataByToken(ctx, qrToken); qrErr == nil && len(cachedQR) > 0 {
+					qrPNG = cachedQR
+				} else if generatedQR, genErr := s.qrService.GenerateQRCode(qrToken); genErr == nil && len(generatedQR) > 0 {
+					qrPNG = generatedQR
+				} else if genErr != nil {
+					log.Printf("WARN: QR indisponible pour bus reminder token=%s: %v", qrToken, genErr)
+				}
+			}
+
 			outbound := fmt.Sprintf("Aller : %s", s.formatBusTime(row.DepartureTime))
 			outboundAddr := busStationAddress(row.FromStation)
 
@@ -1554,6 +1566,8 @@ func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, ord
 				TicketTypeName: row.TicketTypeName,
 				AttendeeName:   strings.TrimSpace(row.FromStation),
 				DepartureInfo:  departureInfo,
+				QRToken:        qrToken,
+				QRCodePNG:      qrPNG,
 				IsBus:          true,
 			})
 		}
@@ -1618,10 +1632,25 @@ func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, ord
 		departureInfo = busStationAddress(outboundStation)
 	}
 
+	qrToken := ""
+	qrPNG := []byte(nil)
+	if orderTickets, ticketErr := s.ticketRepo.GetTicketsByOrderID(ctx, order.ID); ticketErr == nil && len(orderTickets) > 0 {
+		qrToken = strings.TrimSpace(orderTickets[0].QRToken)
+		if qrToken != "" {
+			if cachedQR, qrErr := s.ticketRepo.GetQRCodeDataByToken(ctx, qrToken); qrErr == nil && len(cachedQR) > 0 {
+				qrPNG = cachedQR
+			} else if generatedQR, genErr := s.qrService.GenerateQRCode(qrToken); genErr == nil && len(generatedQR) > 0 {
+				qrPNG = generatedQR
+			}
+		}
+	}
+
 	return []TicketEmailData{{
 		TicketTypeName: "Navette",
 		AttendeeName:   outboundStation,
 		DepartureInfo:  departureInfo,
+		QRToken:        qrToken,
+		QRCodePNG:      qrPNG,
 		IsBus:          true,
 	}}, nil
 }
