@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -1502,8 +1503,9 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 
 // BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to confirmed festival ticket holders.
 // If targetEmail is non-empty, only orders matching that address are processed (for testing).
-// Bus-only orders are skipped. Returns (sent, failed, firstErr).
-func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string) (int, int, error) {
+// Bus-only orders are skipped. Returns (sent, failed, error).
+// progress is called (with the service-level lock held) after each order completes; it may be nil.
+func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string, concurrency int, progress func(sent, failed, total int)) (int, int, error) {
 	var orderIDs []string
 	var err error
 
@@ -1517,17 +1519,39 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 		return 0, 0, err
 	}
 
-	sent := 0
-	failed := 0
-	for _, orderID := range orderIDs {
-		if err := s.sendJ1EmailForOrder(ctx, orderID); err != nil {
-			failed++
-			log.Printf("WARN: J-1 broadcast commande %s échoué: %v", orderID, err)
-			continue
-		}
-		sent++
+	total := len(orderIDs)
+	if concurrency <= 0 {
+		concurrency = 5
 	}
 
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sent := 0
+	failed := 0
+
+	for _, orderID := range orderIDs {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(oid string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			e := s.sendJ1EmailForOrder(ctx, oid)
+			mu.Lock()
+			if e != nil {
+				failed++
+				log.Printf("WARN: J-1 broadcast commande %s échoué: %v", oid, e)
+			} else {
+				sent++
+			}
+			if progress != nil {
+				progress(sent, failed, total)
+			}
+			mu.Unlock()
+		}(orderID)
+	}
+
+	wg.Wait()
 	return sent, failed, nil
 }
 

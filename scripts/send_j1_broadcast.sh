@@ -2,6 +2,8 @@
 # ============================================================
 #  send_j1_broadcast.sh
 #  Envoie l'email J-1 (MailJ-2) avec billet PDF.
+#  Affiche une barre de progression en temps réel.
+#  Envoi en parallèle (5 workers) sans surcharger le système.
 #
 #  Usage:
 #    ./send_j1_broadcast.sh                          # envoie à tout le monde
@@ -17,7 +19,7 @@ API_BASE="${API_BASE:-http://localhost:8080}"
 KEY="${BROADCAST_API_KEY:-}"
 TARGET_EMAIL=""
 
-# Parse arguments
+# ── Parse arguments ──────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -u|--user)
@@ -46,27 +48,80 @@ else
   BODY="{}"
 fi
 
-echo "    Endpoint : $ENDPOINT"
+echo "    Endpoint  : $ENDPOINT"
+echo "    Parallèle : 5 workers"
 echo ""
 
-RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+# ── Barre de progression ─────────────────────────────────────
+# Lit le flux NDJSON ligne par ligne et affiche l'avancement.
+draw_progress() {
+python3 - "$@" << 'PYEOF'
+import sys, json, time
+
+BAR_WIDTH = 40
+start = time.time()
+
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        data = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+
+    sent   = data.get("sent",   0)
+    failed = data.get("failed", 0)
+    total  = data.get("total",  0)
+    done   = data.get("done",   False)
+
+    if total > 0:
+        pct  = (sent + failed) / total
+        done_chars = int(BAR_WIDTH * pct)
+        bar  = "█" * done_chars + "░" * (BAR_WIDTH - done_chars)
+    else:
+        bar  = "░" * BAR_WIDTH
+        pct  = 0
+
+    elapsed = time.time() - start
+    rate    = (sent + failed) / elapsed if elapsed > 0 else 0
+    remaining = (total - sent - failed) / rate if rate > 0 and not done else 0
+
+    status = ""
+    if failed > 0:
+        status = f"  ⚠️  {failed} échec(s)"
+
+    if done:
+        elapsed_str = f"{elapsed:.0f}s"
+        print(f"\r  [{bar}] {sent+failed}/{total}  ✅ Terminé en {elapsed_str}{status}          ")
+        # final summary
+        print()
+        print(f"  ✅  Envoyés  : {sent}")
+        if failed:
+            print(f"  ❌  Échoués  : {failed}")
+        err = data.get("error")
+        if err:
+            print(f"  ⚠️  Erreur   : {err}")
+        sys.exit(0 if not data.get("error") else 1)
+    else:
+        eta_str = f"  ETA {remaining:.0f}s" if remaining > 0 else ""
+        line_out = f"\r  [{bar}] {sent+failed}/{total}  ({pct*100:.0f}%)  {rate:.1f}/s{eta_str}{status}   "
+        print(line_out, end="", flush=True)
+
+PYEOF
+}
+
+# ── Lancer le broadcast et streamer la progression ───────────
+curl -sS -N --no-buffer \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
-  -d "$BODY")
+  -H "Accept: application/x-ndjson" \
+  -d "$BODY" | draw_progress
 
-BODY_OUT=$(echo "$RESPONSE" | head -n1)
-HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
-
-echo "    Statut HTTP : $HTTP_STATUS"
-echo "    Réponse     : $BODY_OUT"
-echo ""
-
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  SENT=$(echo "$BODY_OUT" | grep -o '"sent":[0-9]*' | cut -d: -f2)
-  FAILED=$(echo "$BODY_OUT" | grep -o '"failed":[0-9]*' | cut -d: -f2)
-  echo "✅  Terminé — Envoyés : ${SENT:-?}  |  Échoués : ${FAILED:-?}"
-else
-  echo "❌  Échec (HTTP $HTTP_STATUS)"
-  exit 1
+EXIT_CODE=${PIPESTATUS[0]}
+if [[ "$EXIT_CODE" -ne 0 ]]; then
+  echo "❌  curl a échoué (code $EXIT_CODE) — vérifiez l'API et la clé."
+  exit "$EXIT_CODE"
 fi
+

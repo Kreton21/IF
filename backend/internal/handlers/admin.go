@@ -1216,26 +1216,41 @@ func publicBaseURL(r *http.Request) string {
 // BroadcastJ1Email sends the J-1 reminder email (with ticket PDFs) to all confirmed
 // festival ticket holders. Protected by X-Broadcast-Key header, not JWT.
 // Optional JSON body: {"target_email": "someone@example.com"} restricts to one address (for testing).
+// Streams NDJSON progress lines: {"sent":N,"failed":M,"total":T} then {"done":true,...}
 func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		TargetEmail string `json:"target_email"`
 	}
-	// body is optional — ignore decode errors
 	_ = json.NewDecoder(r.Body).Decode(&body)
 
-	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context(), strings.TrimSpace(body.TargetEmail))
+	// Stream NDJSON so the caller can track progress in real time.
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+
+	flusher, canFlush := w.(http.Flusher)
+	enc := json.NewEncoder(w)
+
+	// progress is called (already under the service mutex) after each order.
+	progress := func(sent, failed, total int) {
+		_ = enc.Encode(map[string]int{"sent": sent, "failed": failed, "total": total})
+		if canFlush {
+			flusher.Flush()
+		}
+	}
+
+	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context(), strings.TrimSpace(body.TargetEmail), 5, progress)
+
+	final := map[string]interface{}{"done": true, "sent": sent, "failed": failed}
 	if err != nil {
 		log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
-		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{
-			"error":  err.Error(),
-			"sent":   sent,
-			"failed": failed,
-		})
-		return
+		final["error"] = err.Error()
+	} else {
+		log.Printf("Broadcast J-1 terminé: %d envoyés, %d échoués", sent, failed)
 	}
-	log.Printf("Broadcast J-1 terminé: %d envoyés, %d échoués", sent, failed)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"sent":   sent,
-		"failed": failed,
-	})
+	_ = enc.Encode(final)
+	if canFlush {
+		flusher.Flush()
+	}
 }
