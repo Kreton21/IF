@@ -1526,9 +1526,9 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 
 	targetEmail = strings.ToLower(strings.TrimSpace(targetEmail))
 	if targetEmail != "" {
-		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsByEmail(ctx, targetEmail)
+		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsByEmailForBroadcast(ctx, targetEmail, "j1")
 	} else {
-		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsWithTickets(ctx)
+		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsForBroadcast(ctx, "j1")
 	}
 	if err != nil {
 		return 0, 0, err
@@ -1567,6 +1567,10 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 			} else {
 				sent++
 				atomic.StoreInt64(&s.broadcastSent, int64(sent))
+				// Record as sent so retries skip this order
+				if markErr := s.orderRepo.MarkBroadcastSent(ctx, oid, "j1"); markErr != nil {
+					log.Printf("WARN: impossible de marquer %s comme envoyé: %v", oid, markErr)
+				}
 			}
 			if progress != nil {
 				progress(sent, failed, total)

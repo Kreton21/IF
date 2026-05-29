@@ -1242,7 +1242,7 @@ func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) 
 	// Launch in detached goroutine with its own context so nginx timeout cannot kill it.
 	go func() {
 		ctx := context.Background()
-		sent, failed, err := h.ticketService.BroadcastJ1Email(ctx, targetEmail, 5, nil)
+		sent, failed, err := h.ticketService.BroadcastJ1Email(ctx, targetEmail, 2, nil)
 		if err != nil {
 			log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
 		} else {

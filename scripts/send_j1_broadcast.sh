@@ -88,6 +88,7 @@ BAR_WIDTH=40
 START_TIME=$(date +%s)
 FINAL_SENT=0
 FINAL_FAILED=0
+DONE_FILE=$(mktemp)
 
 while true; do
   STATUS=$(curl -sS -m 5 \
@@ -99,14 +100,13 @@ while true; do
     continue
   fi
 
-  RESULT=$(python3 - "$STATUS" "$START_TIME" "$BAR_WIDTH" << 'PYEOF'
+  python3 - "$STATUS" "$START_TIME" "$BAR_WIDTH" "$DONE_FILE" << 'PYEOF'
 import sys, json, time
 
-raw, start_ts, bar_width = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+raw, start_ts, bar_width, done_file = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
 try:
     d = json.loads(raw)
 except Exception:
-    print("CONTINUE")
     sys.exit(0)
 
 running = d.get("running", False)
@@ -129,16 +129,11 @@ else:
     print(f"\r  ⠸ En attente du démarrage...   ", end="", flush=True)
 
 if not running and total > 0:
-    print(f"\nDONE:{sent}:{failed}:{total}")
-else:
-    print("CONTINUE", file=sys.stderr)
+    open(done_file, "w").write(f"{sent}:{failed}:{total}")
 PYEOF
-)
 
-  if echo "$RESULT" | grep -q "^DONE:"; then
-    FINAL_LINE=$(echo "$RESULT" | grep "^DONE:")
-    FINAL_SENT=$(echo "$FINAL_LINE" | cut -d: -f2)
-    FINAL_FAILED=$(echo "$FINAL_LINE" | cut -d: -f3)
+  if [[ -s "$DONE_FILE" ]]; then
+    IFS=: read -r FINAL_SENT FINAL_FAILED FINAL_TOTAL < "$DONE_FILE"
     break
   fi
 
@@ -146,8 +141,8 @@ PYEOF
 done
 
 printf "\n\n"
-echo "  ✅  Envoyés  : $FINAL_SENT"
+echo "  ✅  Envoyés  : $FINAL_SENT / $FINAL_TOTAL"
 [[ "$FINAL_FAILED" -gt 0 ]] && echo "  ❌  Échoués  : $FINAL_FAILED"
 
-rm -f "$RAW_OUT" "$CURL_ERR"
+rm -f "$RAW_OUT" "$CURL_ERR" "$DONE_FILE"
 

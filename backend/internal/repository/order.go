@@ -272,6 +272,76 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmail(ctx context.Context, 
 	return orderIDs, nil
 }
 
+// ListPaidConfirmedOrderIDsForBroadcast returns order IDs that have NOT yet been sent
+// the given campaign. Pass campaign="" to skip the filter (returns all eligible orders).
+func (r *OrderRepository) ListPaidConfirmedOrderIDsForBroadcast(ctx context.Context, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT o.id
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND EXISTS (
+			SELECT 1 FROM tickets t WHERE t.order_id = o.id
+		  )
+		  AND NOT EXISTS (
+			SELECT 1 FROM broadcast_sent bs
+			WHERE bs.order_id = o.id AND bs.campaign = $1
+		  )
+		ORDER BY o.created_at DESC`, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query orders for broadcast: %w", err)
+	}
+	defer rows.Close()
+	var orderIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("erreur scan order id for broadcast: %w", err)
+		}
+		orderIDs = append(orderIDs, id)
+	}
+	return orderIDs, nil
+}
+
+// ListPaidConfirmedOrderIDsByEmailForBroadcast is the same as above, filtered by email.
+func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmailForBroadcast(ctx context.Context, email, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT o.id
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND EXISTS (
+			SELECT 1 FROM tickets t WHERE t.order_id = o.id
+		  )
+		  AND NOT EXISTS (
+			SELECT 1 FROM broadcast_sent bs
+			WHERE bs.order_id = o.id AND bs.campaign = $2
+		  )
+		ORDER BY o.created_at DESC`, email, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query orders by email for broadcast: %w", err)
+	}
+	defer rows.Close()
+	var orderIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("erreur scan order id by email for broadcast: %w", err)
+		}
+		orderIDs = append(orderIDs, id)
+	}
+	return orderIDs, nil
+}
+
+// MarkBroadcastSent records that an order has received the given campaign email.
+func (r *OrderRepository) MarkBroadcastSent(ctx context.Context, orderID, campaign string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO broadcast_sent (order_id, campaign)
+		VALUES ($1, $2)
+		ON CONFLICT (order_id, campaign) DO NOTHING`,
+		orderID, campaign)
+	return err
+}
+
 func (r *OrderRepository) SetHelloAssoPaymentID(ctx context.Context, orderID string, paymentID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE orders SET helloasso_payment_id = $1 WHERE id = $2`,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"log"
 	"mime"
 	"net/smtp"
 	"os"
@@ -332,8 +333,22 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, at
 
 	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 	addr := fmt.Sprintf("%s:%d", s.cfg.SMTPHost, s.cfg.SMTPPort)
+	msgBytes := []byte(msg.String())
 
-	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, []byte(msg.String()))
+	// Retry up to 4 times with exponential backoff (handles transient SMTP rate limits)
+	var lastErr error
+	for attempt := 0; attempt < 4; attempt++ {
+		lastErr = smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{to}, msgBytes)
+		if lastErr == nil {
+			return nil
+		}
+		if attempt < 3 {
+			backoff := time.Duration(1<<uint(attempt)) * time.Second
+			log.Printf("SMTP retry %d/3 pour %s après %v: %v", attempt+1, to, backoff, lastErr)
+			time.Sleep(backoff)
+		}
+	}
+	return lastErr
 }
 
 func (s *EmailService) buildPDFTicketAttachments(customerName, orderNumber string, tickets []TicketEmailData) ([]EmailAttachment, error) {
