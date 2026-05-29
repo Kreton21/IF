@@ -133,7 +133,7 @@ func Load() (*Config, error) {
 
 		BroadcastAPIKey:     getEnv("BROADCAST_API_KEY", ""),
 		J1EmailTemplatePath: getEnv("J1_EMAIL_TEMPLATE_PATH", "mail/MailJ-2-optimized.html"),
-		J1EmailSubject:      getEnv("J1_EMAIL_SUBJECT", "J-1 — L'Interfilières 2026 — Ton billet + tout ce qu'il faut savoir !"),
+		J1EmailSubject:      getEnv("J1_EMAIL_SUBJECT", "J-1 — L'Interfilières 2026 — Ton billet + tout ce qu'il faut savoir ! (ERRATUM)"),
 		VSSPDFPath:          getEnv("VSS_PDF_PATH", "mail/IF26 - POSTS - VSS prevention.pdf"),
 	}
 
