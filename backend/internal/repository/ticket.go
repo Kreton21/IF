@@ -1509,6 +1509,33 @@ func (r *TicketRepository) DeleteTicketByID(ctx context.Context, tx pgx.Tx, tick
 	return nil
 }
 
+func (r *TicketRepository) ResyncBusDepartureSold(ctx context.Context) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE bus_departures d
+		SET sold = COALESCE(s.cnt, 0)
+		FROM (
+			SELECT departure_id, COUNT(*) AS cnt
+			FROM bus_order_rides
+			GROUP BY departure_id
+		) s
+		WHERE d.id = s.departure_id`)
+	if err != nil {
+		return fmt.Errorf("erreur resync navettes: %w", err)
+	}
+
+	_, err = r.pool.Exec(ctx, `
+		UPDATE bus_departures d
+		SET sold = 0
+		WHERE NOT EXISTS (
+			SELECT 1 FROM bus_order_rides r WHERE r.departure_id = d.id
+		)`)
+	if err != nil {
+		return fmt.Errorf("erreur resync navettes: %w", err)
+	}
+
+	return nil
+}
+
 func (r *TicketRepository) ListBusTicketsByOrderID(ctx context.Context, orderID string) ([]models.BusTicketEmailRow, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT tt.name, t.qr_token,

@@ -1043,6 +1043,22 @@ func (h *AdminHandler) ListBusTickets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rows)
 }
 
+func (h *AdminHandler) ResyncBusDepartureSold(w http.ResponseWriter, r *http.Request) {
+	role := middleware.GetAdminRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "Accès réservé aux administrateurs"})
+		return
+	}
+
+	if err := h.ticketService.ResyncBusDepartureSold(r.Context()); err != nil {
+		log.Printf("Erreur resync navettes: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Erreur serveur"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Navettes resynchronisées"})
+}
+
 func (h *AdminHandler) ChangeBusTicketDeparture(w http.ResponseWriter, r *http.Request) {
 	role := middleware.GetAdminRole(r.Context())
 	if role != "admin" {

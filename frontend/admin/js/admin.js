@@ -2483,6 +2483,17 @@ async function toggleBusDepartureSoldOut(departureID) {
     }
 }
 
+async function resyncBusDeparturesSold() {
+    if (!confirm('Resynchroniser le compteur vendus des navettes ?')) return;
+    try {
+        const res = await apiFetch(`${API_BASE}/admin/bus/departures/resync`, { method: 'POST' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        await loadBusAdminData();
+    } catch (error) {
+        alert(`Erreur resync: ${error.message}`);
+    }
+}
+
 async function deleteBusDeparture(departureID) {
     if (!confirm('Supprimer ce départ navette ?')) return;
     try {
