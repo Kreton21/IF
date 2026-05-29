@@ -119,6 +119,36 @@ body {
 .info-box .ib-icon { font-size:1.4rem; flex-shrink:0; margin-top:2px; }
 .info-box p { font-size:.88rem; color:var(--text); line-height:1.6; }
 
+.email-alert {
+  background:linear-gradient(135deg, var(--rose), var(--peach));
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:18px;
+  box-shadow:0 8px 24px rgba(30,8,69,.12);
+}
+
+.email-alert-inner {
+  background:rgba(255,255,255,.96);
+  border-radius:12px;
+  padding:16px 14px;
+  text-align:center;
+}
+
+.email-alert-title {
+  font-size:1rem;
+  font-weight:800;
+  color:var(--text);
+  line-height:1.4;
+}
+
+.email-alert-text {
+  margin-top:8px;
+  font-size:.9rem;
+  font-weight:700;
+  color:#3b2667;
+  line-height:1.55;
+}
+
 /* â”€â”€ Ticket cards â”€â”€ */
 .ticket-list { display:flex; flex-direction:column; gap:20px; }
 
@@ -289,6 +319,13 @@ body {
       <div class="success-icon">âœ“</div>
       <h1>Paiement confirmÃ© !</h1>
       <p>Commande <span class="order-number" id="order-number"></span></p>
+    </div>
+
+    <div class="email-alert">
+      <div class="email-alert-inner">
+        <div class="email-alert-title">⚠️ En raison d'une très grande affluence sur le site, les tickets achetés n'ont pas été envoyés par mail.</div>
+        <p class="email-alert-text">Vos commandes ont bien été prises en compte et vos tickets ont bien été générés. Ils vous seront envoyés dès que possible.</p>
+      </div>
     </div>
 
     <div class="info-box">
