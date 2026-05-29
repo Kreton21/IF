@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -1213,46 +1214,45 @@ func publicBaseURL(r *http.Request) string {
 	return scheme + "://" + host
 }
 
-// BroadcastJ1Email sends the J-1 reminder email (with ticket PDFs) to all confirmed
-// festival ticket holders. Protected by X-Broadcast-Key header, not JWT.
+// BroadcastJ1Email starts the J-1 broadcast in a detached goroutine and returns immediately.
+// Protected by X-Broadcast-Key header, not JWT.
 // Optional JSON body: {"target_email": "someone@example.com"} restricts to one address (for testing).
-// Streams NDJSON progress lines: {"sent":N,"failed":M,"total":T} then {"done":true,...}
+// Poll GET /api/v1/broadcast/j1/status for progress.
 func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		TargetEmail string `json:"target_email"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&body)
+	targetEmail := strings.TrimSpace(body.TargetEmail)
 
-	// Stream NDJSON so the caller can track progress in real time.
-	w.Header().Set("Content-Type", "application/x-ndjson")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.WriteHeader(http.StatusOK)
+	// Check if a broadcast is already running
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	if running {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":  "broadcast already running",
+			"sent":   sent,
+			"failed": failed,
+			"total":  total,
+		})
+		return
+	}
 
-	flusher, canFlush := w.(http.Flusher)
-	enc := json.NewEncoder(w)
-
-	// progress is called (already under the service mutex) after each order.
-	progress := func(sent, failed, total int) {
-		_ = enc.Encode(map[string]int{"sent": sent, "failed": failed, "total": total})
-		if canFlush {
-			flusher.Flush()
+	// Launch in detached goroutine with its own context so nginx timeout cannot kill it.
+	go func() {
+		ctx := context.Background()
+		sent, failed, err := h.ticketService.BroadcastJ1Email(ctx, targetEmail, 5, nil)
+		if err != nil {
+			log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
+		} else {
+			log.Printf("Broadcast J-1 terminé: %d envoyés, %d échoués", sent, failed)
 		}
-	}
+	}()
 
-	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context(), strings.TrimSpace(body.TargetEmail), 5, progress)
-
-	final := map[string]interface{}{"done": true, "sent": sent, "failed": failed}
-	if err != nil {
-		log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
-		final["error"] = err.Error()
-	} else {
-		log.Printf("Broadcast J-1 terminé: %d envoyés, %d échoués", sent, failed)
-	}
-	_ = enc.Encode(final)
-	if canFlush {
-		flusher.Flush()
-	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"started": true})
 }
 
 // BroadcastJ1Status returns the current progress of a running (or just finished) J-1 broadcast.
