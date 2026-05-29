@@ -1500,10 +1500,19 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 	return sent, failed, nil
 }
 
-// BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to all confirmed festival ticket holders.
+// BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to confirmed festival ticket holders.
+// If targetEmail is non-empty, only orders matching that address are processed (for testing).
 // Bus-only orders are skipped. Returns (sent, failed, firstErr).
-func (s *TicketService) BroadcastJ1Email(ctx context.Context) (int, int, error) {
-	orderIDs, err := s.orderRepo.ListPaidConfirmedOrderIDsWithTickets(ctx)
+func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string) (int, int, error) {
+	var orderIDs []string
+	var err error
+
+	targetEmail = strings.ToLower(strings.TrimSpace(targetEmail))
+	if targetEmail != "" {
+		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsByEmail(ctx, targetEmail)
+	} else {
+		orderIDs, err = s.orderRepo.ListPaidConfirmedOrderIDsWithTickets(ctx)
+	}
 	if err != nil {
 		return 0, 0, err
 	}

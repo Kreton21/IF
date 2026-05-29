@@ -21,6 +21,8 @@ WORKDIR /app
 
 COPY --from=builder /server .
 COPY frontend/ ./frontend/
+COPY mail/ ./mail/
+COPY backend/templates/ ./templates/
 
 EXPOSE 8080
 

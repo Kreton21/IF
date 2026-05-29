@@ -1215,8 +1215,15 @@ func publicBaseURL(r *http.Request) string {
 
 // BroadcastJ1Email sends the J-1 reminder email (with ticket PDFs) to all confirmed
 // festival ticket holders. Protected by X-Broadcast-Key header, not JWT.
+// Optional JSON body: {"target_email": "someone@example.com"} restricts to one address (for testing).
 func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) {
-	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context())
+	var body struct {
+		TargetEmail string `json:"target_email"`
+	}
+	// body is optional — ignore decode errors
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context(), strings.TrimSpace(body.TargetEmail))
 	if err != nil {
 		log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
 		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{

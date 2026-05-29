@@ -246,6 +246,32 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsWithTickets(ctx context.Conte
 	return orderIDs, nil
 }
 
+func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmail(ctx context.Context, email string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT o.id
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND EXISTS (
+			SELECT 1 FROM tickets t WHERE t.order_id = o.id
+		  )
+		ORDER BY o.created_at DESC`, email)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query orders by email: %w", err)
+	}
+	defer rows.Close()
+
+	orderIDs := make([]string, 0)
+	for rows.Next() {
+		var orderID string
+		if err := rows.Scan(&orderID); err != nil {
+			return nil, fmt.Errorf("erreur scan order id by email: %w", err)
+		}
+		orderIDs = append(orderIDs, orderID)
+	}
+	return orderIDs, nil
+}
+
 func (r *OrderRepository) SetHelloAssoPaymentID(ctx context.Context, orderID string, paymentID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE orders SET helloasso_payment_id = $1 WHERE id = $2`,
