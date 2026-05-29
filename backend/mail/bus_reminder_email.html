@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Rappel navette – {{.FestivalName}}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#FDF3EA;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FDF3EA;">
+<tr><td align="center" style="padding:20px 10px;">
+<table width="620" cellpadding="0" cellspacing="0" border="0" style="max-width:620px;width:100%;background-color:#FDF3EA;">
+
+<tr><td style="background-color:#FFF8F0;border-bottom:1px solid #E8E0F8;padding:0;">
+  <img src="{{.BannerDataURI}}" alt="{{.FestivalName}}" width="620" style="display:block;width:100%;max-width:620px;height:auto;border:0;">
+</td></tr>
+
+<tr><td style="background-color:#FFF8F0;padding:24px 30px;border-left:4px solid #F97FA0;border-bottom:1px solid #E8E0F8;">
+  <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1.6px;color:#D4145A;text-transform:uppercase;">🚌 Rappel navette</p>
+  <p style="margin:0;font-size:14px;line-height:1.7;color:#2A1060;font-family:Arial,Helvetica,sans-serif;">
+    Bonjour <strong>{{.CustomerName}}</strong>,<br>
+    voici un rappel de votre horaire de navette et de l'adresse de départ.
+  </p>
+</td></tr>
+
+<tr><td style="background-color:#FFF8F0;padding:0 30px 22px;border-bottom:1px solid #E8E0F8;">
+  {{range .Tickets}}
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+    <tr><td style="padding:14px 16px;">
+      <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#2A1060;">Départ : {{.AttendeeName}}</p>
+      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#2A1060;">{{.DepartureInfo}}</p>
+    </td></tr>
+  </table>
+  {{end}}
+
+  <p style="margin:14px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#2A1060;">
+    Merci d'arriver quelques minutes en avance à votre point de départ.
+  </p>
+</td></tr>
+
+<tr><td bgcolor="#1a0a40" style="background-color:#1a0a40;background:linear-gradient(160deg,#2A1060,#1a0a40);padding:24px 30px;" align="center">
+  <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;letter-spacing:.5px;color:#fff;">{{.FestivalName}}</p>
+  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:rgba(255,255,255,.65);">
+    Besoin d'aide : {{.SupportEmail}}<br>
+    Commande {{.OrderNumber}}
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

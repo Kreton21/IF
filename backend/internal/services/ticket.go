@@ -1516,6 +1516,150 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 	return sent, failed, nil
 }
 
+func busStationAddress(stationName string) string {
+	normalized := strings.ToUpper(strings.TrimSpace(stationName))
+	switch {
+	case strings.Contains(normalized, "MASSY"):
+		return "GARE DE MASSY PALAISEAU — 38 Av. Carnot, 91300 Massy"
+	case strings.Contains(normalized, "CENTRALE") || strings.Contains(normalized, "SUPELEC") || strings.Contains(normalized, "PLATEAU"):
+		return "PLATEAU CENTRALE SUPELEC — 3 RUE JOLIOT CURIE, GIF SUR YVETTE"
+	case strings.Contains(normalized, "ST QUENTIN") || strings.Contains(normalized, "MONTIGNY") || strings.Contains(normalized, "CHARLES DE GAULLE"):
+		return "GARE DE ST QUENTIN — 10 Pl. Charles de Gaulle, 78180 Montigny-le-Bretonneux"
+	case strings.Contains(normalized, "EVRY") || strings.Contains(normalized, "COURCOURONNE"):
+		return "GARE EVRY COURCOURONNE"
+	default:
+		return strings.TrimSpace(stationName)
+	}
+}
+
+// BroadcastBusReminderEmail sends a short reminder email for bus ticket holders.
+func (s *TicketService) BroadcastBusReminderEmail(ctx context.Context, targetEmail string, force bool, concurrency int, progress func(sent, failed, total int)) (int, int, error) {
+	var orderIDs []string
+	var err error
+
+	targetEmail = strings.ToLower(strings.TrimSpace(targetEmail))
+	if force {
+		if targetEmail != "" {
+			orderIDs, err = s.orderRepo.ListPaidConfirmedBusOrderIDsByEmail(ctx, targetEmail)
+		} else {
+			orderIDs, err = s.orderRepo.ListPaidConfirmedBusOrderIDs(ctx)
+		}
+	} else {
+		if targetEmail != "" {
+			orderIDs, err = s.orderRepo.ListPaidConfirmedBusOrderIDsByEmailForBroadcast(ctx, targetEmail, "bus_reminder")
+		} else {
+			orderIDs, err = s.orderRepo.ListPaidConfirmedBusOrderIDsForBroadcast(ctx, "bus_reminder")
+		}
+	}
+	if err != nil {
+		log.Printf("ERROR BroadcastBusReminderEmail: impossible de récupérer les commandes: %v", err)
+		return 0, 0, err
+	}
+
+	log.Printf("INFO BroadcastBusReminderEmail: %d commandes bus à traiter (force=%v, target=%q)", len(orderIDs), force, targetEmail)
+
+	total := len(orderIDs)
+	if concurrency <= 0 {
+		concurrency = 5
+	}
+
+	atomic.StoreInt64(&s.broadcastSent, 0)
+	atomic.StoreInt64(&s.broadcastFailed, 0)
+	atomic.StoreInt64(&s.broadcastTotal, int64(total))
+	atomic.StoreInt32(&s.broadcastRunning, 1)
+	defer atomic.StoreInt32(&s.broadcastRunning, 0)
+
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sent := 0
+	failed := 0
+
+	for _, orderID := range orderIDs {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(oid string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			e := s.sendBusReminderEmailForOrder(ctx, oid)
+			mu.Lock()
+			if e != nil {
+				failed++
+				atomic.StoreInt64(&s.broadcastFailed, int64(failed))
+				log.Printf("WARN: bus reminder commande %s échoué: %v", oid, e)
+			} else {
+				sent++
+				atomic.StoreInt64(&s.broadcastSent, int64(sent))
+				if markErr := s.orderRepo.MarkBroadcastSent(ctx, oid, "bus_reminder"); markErr != nil {
+					log.Printf("WARN: impossible de marquer %s comme envoyé (bus_reminder): %v", oid, markErr)
+				}
+			}
+			if progress != nil {
+				progress(sent, failed, total)
+			}
+			mu.Unlock()
+		}(orderID)
+	}
+
+	wg.Wait()
+	return sent, failed, nil
+}
+
+func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("récupération commande %s: %w", orderID, err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable: %s", orderID)
+	}
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return nil
+	}
+
+	rows, err := s.ticketRepo.ListBusTicketsByOrderID(ctx, order.ID)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+
+	tickets := make([]TicketEmailData, 0, len(rows))
+	for _, row := range rows {
+		outbound := fmt.Sprintf("Aller : %s", s.formatBusTime(row.DepartureTime))
+		outboundAddr := busStationAddress(row.FromStation)
+
+		departureInfo := outbound + " — " + outboundAddr
+		if row.ReturnDepartureTime != nil {
+			returnInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(*row.ReturnDepartureTime))
+			departureInfo = departureInfo + " • " + returnInfo
+		}
+
+		tickets = append(tickets, TicketEmailData{
+			TicketTypeName: row.TicketTypeName,
+			AttendeeName:   strings.TrimSpace(row.FromStation),
+			DepartureInfo:  departureInfo,
+			IsBus:          true,
+		})
+	}
+
+	if len(tickets) == 0 {
+		return nil
+	}
+
+	customerName := strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
+	if customerName == "" {
+		customerName = strings.TrimSpace(order.CustomerEmail)
+	}
+
+	if err := s.emailService.SendBusReminderEmail(order.CustomerEmail, customerName, order.OrderNumber, tickets); err != nil {
+		return fmt.Errorf("échec bus reminder commande %s: %w", order.OrderNumber, err)
+	}
+
+	return nil
+}
+
 // BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to confirmed festival ticket holders.
 // If targetEmail is non-empty, only orders matching that address are processed (for testing).
 // Bus-only orders are skipped. Returns (sent, failed, error).

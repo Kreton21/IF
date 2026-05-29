@@ -193,6 +193,8 @@ func NewRouter(
 		r.Use(middleware.BroadcastAPIKeyAuth(broadcastKey))
 		r.Post("/j1", adminHandler.BroadcastJ1Email)
 		r.Get("/j1/status", adminHandler.BroadcastJ1Status)
+		r.Post("/bus-reminder", adminHandler.BroadcastBusReminderEmail)
+		r.Get("/bus-reminder/status", adminHandler.BroadcastBusReminderStatus)
 	})
 
 	// ==========================================

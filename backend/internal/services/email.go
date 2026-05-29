@@ -72,6 +72,32 @@ func (s *EmailService) SendBusChangeEmail(to string, customerName string, orderN
 	)
 }
 
+func (s *EmailService) SendBusReminderEmail(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	if s.cfg.SMTPHost == "" {
+		fmt.Printf("📧 [MOCK:bus-reminder] Email envoyé à %s pour commande %s (%d tickets)\n", to, orderNumber, len(tickets))
+		return nil
+	}
+
+	subject, err := s.buildSubject(orderNumber, s.cfg.BusReminderEmailSubject)
+	if err != nil {
+		return fmt.Errorf("erreur génération sujet email bus reminder: %w", err)
+	}
+
+	htmlBody, err := s.buildEmailHTML(to, customerName, orderNumber, tickets, s.cfg.BusReminderEmailTemplatePath)
+	if err != nil {
+		return fmt.Errorf("erreur génération HTML bus reminder: %w", err)
+	}
+
+	plainBody := buildPlainTextBusReminderEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, ticketSupportEmail)
+
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, nil); err != nil {
+		return err
+	}
+
+	fmt.Printf("📧 Email bus reminder envoyé à %s (commande %s)\n", to, orderNumber)
+	return nil
+}
+
 // SendJ1Email sends the J-1 broadcast email with ticket PDFs and the VSS
 // prevention PDF attached alongside them.
 func (s *EmailService) SendJ1Email(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
@@ -705,6 +731,34 @@ func buildPlainTextTicketEmail(festivalName, customerName, orderNumber string, t
 	if strings.TrimSpace(supportEmail) != "" {
 		b.WriteString(fmt.Sprintf("Contact: %s\n", supportEmail))
 	}
+	return b.String()
+}
+
+func buildPlainTextBusReminderEmail(festivalName, customerName, orderNumber string, tickets []TicketEmailData, supportEmail string) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("%s\n", festivalName))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("Bonjour %s,\n", customerName))
+	b.WriteString(fmt.Sprintf("Rappel navette pour la commande %s.\n", orderNumber))
+	b.WriteString("\nDéparts navette :\n")
+
+	for _, t := range tickets {
+		line := "- "
+		if strings.TrimSpace(t.AttendeeName) != "" {
+			line += t.AttendeeName
+		} else {
+			line += "Navette"
+		}
+		if strings.TrimSpace(t.DepartureInfo) != "" {
+			line += " | " + t.DepartureInfo
+		}
+		b.WriteString(line + "\n")
+	}
+
+	if strings.TrimSpace(supportEmail) != "" {
+		b.WriteString("\nContact: " + supportEmail + "\n")
+	}
+
 	return b.String()
 }
 

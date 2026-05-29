@@ -1268,3 +1268,53 @@ func (h *AdminHandler) BroadcastJ1Status(w http.ResponseWriter, r *http.Request)
 		"total":   total,
 	})
 }
+
+// BroadcastBusReminderEmail starts the bus reminder broadcast (short reminder with departure info).
+// Protected by X-Broadcast-Key header, not JWT.
+func (h *AdminHandler) BroadcastBusReminderEmail(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TargetEmail string `json:"target_email"`
+		Force       bool   `json:"force"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	targetEmail := strings.TrimSpace(body.TargetEmail)
+
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	if running {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":  "broadcast already running",
+			"sent":   sent,
+			"failed": failed,
+			"total":  total,
+		})
+		return
+	}
+
+	go func() {
+		ctx := context.Background()
+		sent, failed, err := h.ticketService.BroadcastBusReminderEmail(ctx, targetEmail, body.Force, 2, nil)
+		if err != nil {
+			log.Printf("Erreur broadcast bus reminder: %v (sent=%d, failed=%d)", err, sent, failed)
+		} else {
+			log.Printf("Broadcast bus reminder terminé: %d envoyés, %d échoués", sent, failed)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"started": true})
+}
+
+// BroadcastBusReminderStatus returns current progress for bus reminder broadcast.
+func (h *AdminHandler) BroadcastBusReminderStatus(w http.ResponseWriter, r *http.Request) {
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"running": running,
+		"sent":    sent,
+		"failed":  failed,
+		"total":   total,
+	})
+}

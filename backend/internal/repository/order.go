@@ -272,6 +272,55 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmail(ctx context.Context, 
 	return orderIDs, nil
 }
 
+func (r *OrderRepository) ListPaidConfirmedBusOrderIDs(ctx context.Context) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT o.id
+		FROM orders o
+		JOIN tickets t ON t.order_id = o.id
+		JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE o.status IN ('paid', 'confirmed')
+		ORDER BY o.created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query bus orders: %w", err)
+	}
+	defer rows.Close()
+
+	orderIDs := make([]string, 0)
+	for rows.Next() {
+		var orderID string
+		if err := rows.Scan(&orderID); err != nil {
+			return nil, fmt.Errorf("erreur scan bus order id: %w", err)
+		}
+		orderIDs = append(orderIDs, orderID)
+	}
+	return orderIDs, nil
+}
+
+func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmail(ctx context.Context, email string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT o.id
+		FROM orders o
+		JOIN tickets t ON t.order_id = o.id
+		JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(o.customer_email) = LOWER($1)
+		ORDER BY o.created_at DESC`, email)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query bus orders by email: %w", err)
+	}
+	defer rows.Close()
+
+	orderIDs := make([]string, 0)
+	for rows.Next() {
+		var orderID string
+		if err := rows.Scan(&orderID); err != nil {
+			return nil, fmt.Errorf("erreur scan bus order id by email: %w", err)
+		}
+		orderIDs = append(orderIDs, orderID)
+	}
+	return orderIDs, nil
+}
+
 // ListPaidConfirmedOrderIDsForBroadcast returns order IDs that have NOT yet been sent
 // the given campaign. Pass campaign="" to skip the filter (returns all eligible orders).
 func (r *OrderRepository) ListPaidConfirmedOrderIDsForBroadcast(ctx context.Context, campaign string) ([]string, error) {
@@ -326,6 +375,61 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmailForBroadcast(ctx conte
 		var id string
 		if err := rows.Scan(&id); err != nil {
 			return nil, fmt.Errorf("erreur scan order id by email for broadcast: %w", err)
+		}
+		orderIDs = append(orderIDs, id)
+	}
+	return orderIDs, nil
+}
+
+func (r *OrderRepository) ListPaidConfirmedBusOrderIDsForBroadcast(ctx context.Context, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT o.id
+		FROM orders o
+		JOIN tickets t ON t.order_id = o.id
+		JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND NOT EXISTS (
+			SELECT 1 FROM broadcast_sent bs
+			WHERE bs.order_id = o.id AND bs.campaign = $1
+		  )
+		ORDER BY o.created_at DESC`, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query bus orders for broadcast: %w", err)
+	}
+	defer rows.Close()
+	var orderIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("erreur scan bus order id for broadcast: %w", err)
+		}
+		orderIDs = append(orderIDs, id)
+	}
+	return orderIDs, nil
+}
+
+func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmailForBroadcast(ctx context.Context, email, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT o.id
+		FROM orders o
+		JOIN tickets t ON t.order_id = o.id
+		JOIN bus_tickets bt ON bt.ticket_id = t.id
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND NOT EXISTS (
+			SELECT 1 FROM broadcast_sent bs
+			WHERE bs.order_id = o.id AND bs.campaign = $2
+		  )
+		ORDER BY o.created_at DESC`, email, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query bus orders by email for broadcast: %w", err)
+	}
+	defer rows.Close()
+	var orderIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("erreur scan bus order id by email for broadcast: %w", err)
 		}
 		orderIDs = append(orderIDs, id)
 	}
