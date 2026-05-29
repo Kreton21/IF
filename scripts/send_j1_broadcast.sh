@@ -59,31 +59,65 @@ echo ""
 # ── Lancer le broadcast ───────────────────────────────────────
 CURL_ERR=$(mktemp)
 RAW_OUT=$(mktemp)
+STATUS_URL="${ENDPOINT}/status"
 
-echo "  → Envoi en cours (patientez)..."
+echo "  → Lancement du broadcast..."
 
+# Fire the POST in background
 curl -sS -m 600 \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
   -d "$BODY" \
-  -o "$RAW_OUT" \
-  -w "%{http_code}" 2>"$CURL_ERR" &
+  -o "$RAW_OUT" 2>"$CURL_ERR" &
 CURL_PID=$!
 
-# Spinner while waiting
-SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-i=0
+# Give the server a moment to start
+sleep 1
+
+# Poll status endpoint while POST is running
+BAR_WIDTH=40
+START_TIME=$(date +%s)
+
 while kill -0 "$CURL_PID" 2>/dev/null; do
-  printf "\r  %s  En attente de la réponse..." "${SPIN:$((i % ${#SPIN})):1}"
-  sleep 0.15
-  i=$((i+1))
+  STATUS=$(curl -sS -m 3 \
+    -H "X-Broadcast-Key: $KEY" \
+    "$STATUS_URL" 2>/dev/null)
+
+  if [[ -n "$STATUS" ]]; then
+    python3 - "$STATUS" "$START_TIME" "$BAR_WIDTH" << 'PYEOF'
+import sys, json, time
+
+raw, start_ts, bar_width = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+try:
+    d = json.loads(raw)
+except Exception:
+    sys.exit(0)
+sent   = d.get("sent",   0)
+failed = d.get("failed", 0)
+total  = d.get("total",  0)
+elapsed = time.time() - start_ts
+rate    = (sent + failed) / elapsed if elapsed > 0 else 0
+if total > 0:
+    pct       = (sent + failed) / total
+    done_chars = int(bar_width * pct)
+    bar = "█" * done_chars + "░" * (bar_width - done_chars)
+    eta = (total - sent - failed) / rate if rate > 0 else 0
+    eta_str = f"  ETA {eta:.0f}s" if eta > 0 else ""
+    fail_str = f"  ⚠️ {failed} échec(s)" if failed > 0 else ""
+    print(f"\r  [{bar}] {sent+failed}/{total}  {rate:.1f}/s{eta_str}{fail_str}   ", end="", flush=True)
+else:
+    print(f"\r  ⠸ En attente du démarrage...   ", end="", flush=True)
+PYEOF
+  fi
+  sleep 1
 done
-printf "\r                                          \r"
 
 wait "$CURL_PID"
 CURL_CODE=$?
+printf "\n"
 
+# Handle curl error
 if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 18 ]]; then
   echo "❌  curl a échoué (code $CURL_CODE)"
   [[ -s "$CURL_ERR" ]] && echo "    $(cat "$CURL_ERR")"
@@ -91,7 +125,7 @@ if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 18 ]]; then
   exit "$CURL_CODE"
 fi
 
-# Parse result from response body
+# Parse final result from response body
 python3 - "$RAW_OUT" << 'PYEOF'
 import sys, json
 
@@ -106,7 +140,6 @@ if not content:
     print("❌  Aucune donnée reçue du serveur (réponse vide).")
     sys.exit(1)
 
-# Find the "done" line (last NDJSON line with done:true), or try single JSON
 done_data = None
 error_data = None
 lines = [l.strip() for l in content.splitlines() if l.strip()]
@@ -138,7 +171,6 @@ if done_data:
         sys.exit(1)
     sys.exit(0)
 
-# No done line found — show raw
 print("⚠️  Réponse reçue mais sans confirmation :")
 for l in lines[-5:]:
     print(f"    {l}")
