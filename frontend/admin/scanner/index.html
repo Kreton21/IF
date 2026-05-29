@@ -467,7 +467,7 @@ function showResult(data) {
     ? `<br>Départ : ${data.from_station || '-'}<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}`
     : '';
   const campingDetails = (!isBus && data.is_camping) ? '<br>Camping : Oui' : '';
-  const alreadyValidated = data.already_validated && !isBus;
+  const alreadyValidated = !!data.already_validated;
 
   if (data.valid && !alreadyValidated) {
     // ✅ Valid - first scan
@@ -504,8 +504,11 @@ function showResult(data) {
     icon.textContent = '❌';
     status.textContent = 'BILLET INVALIDE';
     status.className = 'result-status invalid';
-    name.textContent = '';
-    detail.textContent = data.message || 'QR code non reconnu';
+    const hasDetails = !!(data.ticket_type_name || data.order_number || data.attendee_first_name || data.attendee_last_name || isBus);
+    name.textContent = `${data.attendee_first_name || ''} ${data.attendee_last_name || ''}`.trim();
+    detail.innerHTML = (data.message || 'QR code non reconnu') + (hasDetails
+      ? `<br><br>${data.ticket_type_name || 'Billet'}<br>Commande ${data.order_number || '-'}${campingDetails}${busDetails}`
+      : '');
     btn.className = 'result-btn btn-err';
   }
 
