@@ -78,6 +78,12 @@ func (s *EmailService) SendBusReminderEmail(to string, customerName string, orde
 		return nil
 	}
 
+	for i := range tickets {
+		if strings.TrimSpace(tickets[i].CID) == "" {
+			tickets[i].CID = fmt.Sprintf("qr-%d", i)
+		}
+	}
+
 	subject, err := s.buildSubject(orderNumber, s.cfg.BusReminderEmailSubject)
 	if err != nil {
 		return fmt.Errorf("erreur génération sujet email bus reminder: %w", err)
@@ -90,7 +96,12 @@ func (s *EmailService) SendBusReminderEmail(to string, customerName string, orde
 
 	plainBody := buildPlainTextBusReminderEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, ticketSupportEmail)
 
-	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, nil); err != nil {
+	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
+	if err != nil {
+		return fmt.Errorf("erreur génération PDF billets bus reminder: %w", err)
+	}
+
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, attachments); err != nil {
 		return err
 	}
 
