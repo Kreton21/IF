@@ -60,6 +60,7 @@ import sys, json, time
 
 BAR_WIDTH = 40
 start = time.time()
+exit_code = 0
 
 for line in sys.stdin:
     line = line.strip()
@@ -87,14 +88,11 @@ for line in sys.stdin:
     rate    = (sent + failed) / elapsed if elapsed > 0 else 0
     remaining = (total - sent - failed) / rate if rate > 0 and not done else 0
 
-    status = ""
-    if failed > 0:
-        status = f"  ⚠️  {failed} échec(s)"
+    status = f"  ⚠️  {failed} échec(s)" if failed > 0 else ""
 
     if done:
         elapsed_str = f"{elapsed:.0f}s"
         print(f"\r  [{bar}] {sent+failed}/{total}  ✅ Terminé en {elapsed_str}{status}          ")
-        # final summary
         print()
         print(f"  ✅  Envoyés  : {sent}")
         if failed:
@@ -102,26 +100,39 @@ for line in sys.stdin:
         err = data.get("error")
         if err:
             print(f"  ⚠️  Erreur   : {err}")
-        sys.exit(0 if not data.get("error") else 1)
+            exit_code = 1
+        break  # stop reading — don't close stdin abruptly
     else:
         eta_str = f"  ETA {remaining:.0f}s" if remaining > 0 else ""
-        line_out = f"\r  [{bar}] {sent+failed}/{total}  ({pct*100:.0f}%)  {rate:.1f}/s{eta_str}{status}   "
-        print(line_out, end="", flush=True)
+        print(f"\r  [{bar}] {sent+failed}/{total}  ({pct*100:.0f}%)  {rate:.1f}/s{eta_str}{status}   ", end="", flush=True)
 
+sys.exit(exit_code)
 PYEOF
 }
 
 # ── Lancer le broadcast et streamer la progression ───────────
+# Note: curl exit code 23 (broken pipe) is normal when Python closes stdin
+# after receiving the final "done" line — we only fail on other errors.
+CURL_OUT=$(mktemp)
+
 curl -sS -N --no-buffer \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/x-ndjson" \
-  -d "$BODY" | draw_progress
+  -d "$BODY" 2>"$CURL_OUT" | draw_progress
+PYTHON_CODE=${PIPESTATUS[1]}
+CURL_CODE=${PIPESTATUS[0]}
 
-EXIT_CODE=${PIPESTATUS[0]}
-if [[ "$EXIT_CODE" -ne 0 ]]; then
-  echo "❌  curl a échoué (code $EXIT_CODE) — vérifiez l'API et la clé."
-  exit "$EXIT_CODE"
+# 23 = write error due to broken pipe (expected when Python exits after "done")
+if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 23 ]]; then
+  echo "❌  curl a échoué (code $CURL_CODE) — vérifiez l'API et la clé."
+  cat "$CURL_OUT"
+  rm -f "$CURL_OUT"
+  exit "$CURL_CODE"
 fi
+rm -f "$CURL_OUT"
+
+[[ "$PYTHON_CODE" -ne 0 ]] && exit "$PYTHON_CODE"
+exit 0
 
