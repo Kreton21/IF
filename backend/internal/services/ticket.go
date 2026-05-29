@@ -942,7 +942,7 @@ func (s *TicketService) DeleteBusDeparture(ctx context.Context, id string) error
 }
 
 func (s *TicketService) ListBusTicketsAdmin(ctx context.Context) ([]models.BusTicketAdminRow, error) {
-	return s.ticketRepo.ListBusTickets(ctx, 300)
+	return s.ticketRepo.ListBusTickets(ctx, 0)
 }
 
 func (s *TicketService) ResyncBusDepartureSold(ctx context.Context) error {

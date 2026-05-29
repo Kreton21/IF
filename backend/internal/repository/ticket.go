@@ -1346,11 +1346,10 @@ func (r *TicketRepository) SaveBusTicketDetails(ctx context.Context, tx pgx.Tx, 
 }
 
 func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]models.BusTicketAdminRow, error) {
-	if limit <= 0 {
-		limit = 100
-	}
-
-	rows, err := r.pool.Query(ctx, `
+	var rows pgx.Rows
+	var err error
+	if limit > 0 {
+		rows, err = r.pool.Query(ctx, `
 		SELECT t.id, bt.outbound_departure_id, bt.return_departure_id, od.direction, COALESCE(rd.direction, ''),
 		       o.order_number, o.total_cents, o.customer_first_name, o.customer_last_name, o.customer_email,
 		       bt.from_station, bt.to_station, od.departure_time, rd.departure_time,
@@ -1362,6 +1361,19 @@ func (r *TicketRepository) ListBusTickets(ctx context.Context, limit int) ([]mod
 		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
 		ORDER BY t.created_at DESC
 		LIMIT $1`, limit)
+	} else {
+		rows, err = r.pool.Query(ctx, `
+		SELECT t.id, bt.outbound_departure_id, bt.return_departure_id, od.direction, COALESCE(rd.direction, ''),
+		       o.order_number, o.total_cents, o.customer_first_name, o.customer_last_name, o.customer_email,
+		       bt.from_station, bt.to_station, od.departure_time, rd.departure_time,
+		       bt.is_round_trip, t.is_validated, t.created_at
+		FROM bus_tickets bt
+		JOIN tickets t ON t.id = bt.ticket_id
+		JOIN orders o ON o.id = t.order_id
+		JOIN bus_departures od ON od.id = bt.outbound_departure_id
+		LEFT JOIN bus_departures rd ON rd.id = bt.return_departure_id
+		ORDER BY t.created_at DESC`)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("erreur query tickets bus admin: %w", err)
 	}
