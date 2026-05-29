@@ -137,33 +137,94 @@ sys.exit(exit_code)
 PYEOF
 }
 
-# ── Lancer le broadcast et streamer la progression ───────────
+# ── Lancer le broadcast ───────────────────────────────────────
 CURL_ERR=$(mktemp)
+RAW_OUT=$(mktemp)
 
-echo "  → Connexion à l'API..."
+echo "  → Envoi en cours (patientez)..."
 
-curl -sS -N --no-buffer \
+curl -sS -m 600 \
   -X POST "$ENDPOINT" \
   -H "X-Broadcast-Key: $KEY" \
   -H "Content-Type: application/json" \
-  -H "Accept: application/x-ndjson" \
-  -d "$BODY" 2>"$CURL_ERR" | draw_progress
-PIPE_STATUS=("${PIPESTATUS[@]}")
-CURL_CODE=${PIPE_STATUS[0]:-0}
-PYTHON_CODE=${PIPE_STATUS[1]:-0}
+  -d "$BODY" \
+  -o "$RAW_OUT" \
+  -w "%{http_code}" 2>"$CURL_ERR" &
+CURL_PID=$!
 
-echo ""
+# Spinner while waiting
+SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+i=0
+while kill -0 "$CURL_PID" 2>/dev/null; do
+  printf "\r  %s  En attente de la réponse..." "${SPIN:$((i % ${#SPIN})):1}"
+  sleep 0.15
+  i=$((i+1))
+done
+printf "\r                                          \r"
 
-# curl codes 0, 18 (partial/streaming close) and 23 (pipe write error) are OK
-if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 18 && "$CURL_CODE" -ne 23 ]]; then
+wait "$CURL_PID"
+CURL_CODE=$?
+
+if [[ "$CURL_CODE" -ne 0 ]]; then
   echo "❌  curl a échoué (code $CURL_CODE)"
-  if [[ -s "$CURL_ERR" ]]; then
-    echo "    $(cat "$CURL_ERR")"
-  fi
-  rm -f "$CURL_ERR"
+  [[ -s "$CURL_ERR" ]] && echo "    $(cat "$CURL_ERR")"
+  rm -f "$RAW_OUT" "$CURL_ERR"
   exit "$CURL_CODE"
 fi
 
-rm -f "$CURL_ERR"
-exit "${PYTHON_CODE:-0}"
+# Parse result from response body
+python3 - "$RAW_OUT" << 'PYEOF'
+import sys, json
+
+path = sys.argv[1]
+try:
+    content = open(path).read().strip()
+except Exception as e:
+    print(f"❌  Impossible de lire la réponse : {e}")
+    sys.exit(1)
+
+if not content:
+    print("❌  Aucune donnée reçue du serveur (réponse vide).")
+    sys.exit(1)
+
+# Find the "done" line (last NDJSON line with done:true), or try single JSON
+done_data = None
+error_data = None
+lines = [l.strip() for l in content.splitlines() if l.strip()]
+for line in reversed(lines):
+    try:
+        d = json.loads(line)
+        if d.get("done"):
+            done_data = d
+            break
+        if "error" in d and "total" not in d:
+            error_data = d
+            break
+    except json.JSONDecodeError:
+        pass
+
+if error_data:
+    print(f"❌  Erreur serveur : {error_data['error']}")
+    sys.exit(1)
+
+if done_data:
+    sent   = done_data.get("sent",   0)
+    failed = done_data.get("failed", 0)
+    print(f"  ✅  Envoyés  : {sent}")
+    if failed:
+        print(f"  ❌  Échoués  : {failed}")
+    err = done_data.get("error")
+    if err:
+        print(f"  ⚠️  Erreur   : {err}")
+        sys.exit(1)
+    sys.exit(0)
+
+# No done line found — show raw
+print("⚠️  Réponse reçue mais sans confirmation :")
+for l in lines[-5:]:
+    print(f"    {l}")
+sys.exit(1)
+PYEOF
+
+rm -f "$RAW_OUT" "$CURL_ERR"
 
