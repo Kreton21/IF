@@ -137,8 +137,9 @@ curl -sS -N --no-buffer \
   -H "Content-Type: application/json" \
   -H "Accept: application/x-ndjson" \
   -d "$BODY" 2>"$CURL_ERR" | draw_progress
-CURL_CODE=${PIPESTATUS[0]}
-PYTHON_CODE=${PIPESTATUS[1]}
+PIPE_STATUS=("${PIPESTATUS[@]}")
+CURL_CODE=${PIPE_STATUS[0]:-0}
+PYTHON_CODE=${PIPE_STATUS[1]:-0}
 
 echo ""
 
