@@ -1384,9 +1384,21 @@ async function validateQR() {
             body: JSON.stringify({ qr_token: qrToken }),
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         resultEl.classList.remove('hidden', 'valid', 'invalid', 'warning');
+
+        if (!response.ok) {
+            const serverMsg = data.error || data.message || `Erreur serveur (${response.status})`;
+            resultEl.classList.add('invalid');
+            resultEl.innerHTML = `
+                <div class="result-icon">❌</div>
+                <strong>${serverMsg}</strong>`;
+            playSound('error');
+            input.value = '';
+            input.focus();
+            return;
+        }
 
         if (data.valid) {
             const busDetails = data.ride_type
@@ -1434,7 +1446,7 @@ async function validateQR() {
             resultEl.classList.add('invalid');
             resultEl.innerHTML = `
                 <div class="result-icon">❌</div>
-                <strong>${data.message}</strong>
+                <strong>${data.message || data.error || 'Ticket invalide'}</strong>
                 ${hasDetails ? `<div class="result-details">${attendeeLine}Ticket : ${data.ticket_type_name || '-'}<br>Commande : ${data.order_number || '-'}${campingDetails}${busDetails}</div>` : ''}`;
             playSound('error');
         }
