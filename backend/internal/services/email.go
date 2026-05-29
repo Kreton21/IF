@@ -71,18 +71,57 @@ func (s *EmailService) SendBusChangeEmail(to string, customerName string, orderN
 	)
 }
 
-// SendJ1Email sends the J-1 broadcast email with ticket PDFs attached.
-// The J-1 HTML template is used in place of the regular confirmation template.
+// SendJ1Email sends the J-1 broadcast email with ticket PDFs and the VSS
+// prevention PDF attached alongside them.
 func (s *EmailService) SendJ1Email(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
-	return s.sendTicketEmailWithTemplate(
-		to,
-		customerName,
-		orderNumber,
-		tickets,
-		s.cfg.J1EmailTemplatePath,
-		s.cfg.J1EmailSubject,
-		"j1-broadcast",
-	)
+	if s.cfg.SMTPHost == "" {
+		fmt.Printf("📧 [MOCK:j1-broadcast] Email envoyé à %s pour commande %s (%d tickets)\n", to, orderNumber, len(tickets))
+		return nil
+	}
+
+	for i := range tickets {
+		if strings.TrimSpace(tickets[i].CID) == "" {
+			tickets[i].CID = fmt.Sprintf("qr-%d", i)
+		}
+	}
+
+	subject, err := s.buildSubject(orderNumber, s.cfg.J1EmailSubject)
+	if err != nil {
+		return fmt.Errorf("erreur génération sujet J-1: %w", err)
+	}
+
+	htmlBody, err := s.buildEmailHTML(to, customerName, orderNumber, tickets, s.cfg.J1EmailTemplatePath)
+	if err != nil {
+		return fmt.Errorf("erreur génération HTML J-1: %w", err)
+	}
+
+	plainBody := buildPlainTextTicketEmail(s.cfg.FestivalName, customerName, orderNumber, tickets, ticketSupportEmail)
+
+	// Build ticket PDF attachments
+	attachments, err := s.buildPDFTicketAttachments(customerName, orderNumber, tickets)
+	if err != nil {
+		return fmt.Errorf("erreur génération PDF billets: %w", err)
+	}
+
+	// Append VSS prevention PDF if configured and readable
+	if path := strings.TrimSpace(s.cfg.VSSPDFPath); path != "" {
+		if pdfData, readErr := os.ReadFile(path); readErr == nil {
+			attachments = append(attachments, EmailAttachment{
+				Filename:    "IF26 - Prevention VSS.pdf",
+				ContentType: "application/pdf",
+				Data:        pdfData,
+			})
+		} else {
+			fmt.Printf("WARN: impossible de lire VSS PDF=%s: %v\n", path, readErr)
+		}
+	}
+
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, attachments); err != nil {
+		return err
+	}
+
+	fmt.Printf("📧 Email J-1 broadcast envoyé à %s (commande %s)\n", to, orderNumber)
+	return nil
 }
 
 func (s *EmailService) sendTicketEmailWithTemplate(

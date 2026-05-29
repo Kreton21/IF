@@ -208,54 +208,13 @@
  </div>
  <div class="sec-bar"></div>
  <div class="sec-body">
- <div class="vss-wrap">
- <div class="vss-slides">
- <div class="vss-slide active">
- <img src="https://interfilieres.fr/img/Mail/VSS-1.png" alt="Prévention VSS - Slide 1">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-2.png" alt="Prévention VSS - Slide 2">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-3.png" alt="Prévention VSS - Slide 3">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-4.png" alt="Prévention VSS - Slide 4">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-5.png" alt="Prévention VSS - Slide 5">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-6.png" alt="Prévention VSS - Slide 6">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-7.png" alt="Prévention VSS - Slide 7">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-8.png" alt="Prévention VSS - Slide 8">
- </div>
- <div class="vss-slide">
- <img src="https://interfilieres.fr/img/Mail/VSS-9.png" alt="Prévention VSS - Slide 9">
- </div>
- </div>
- <div class="vss-nav">
- <button class="vss-btn" onclick="vssSlide(-1)">◀</button>
- <div class="vss-dots">
- <span class="vss-dot active" onclick="vssGoTo(0)"></span>
- <span class="vss-dot" onclick="vssGoTo(1)"></span>
- <span class="vss-dot" onclick="vssGoTo(2)"></span>
- <span class="vss-dot" onclick="vssGoTo(3)"></span>
- <span class="vss-dot" onclick="vssGoTo(4)"></span>
- <span class="vss-dot" onclick="vssGoTo(5)"></span>
- <span class="vss-dot" onclick="vssGoTo(6)"></span>
- <span class="vss-dot" onclick="vssGoTo(7)"></span>
- <span class="vss-dot" onclick="vssGoTo(8)"></span>
- </div>
- <button class="vss-btn" onclick="vssSlide(1)">▶</button>
- </div>
- </div>
- <div class="camp-badge" style="background:rgba(107,168,240,.1);border-color:var(--blue);color:var(--blue);">
- 🛡️ Dispositif anti-VSS actif – équipes formées – Bénévoles sensibilisés – Stand d'écoute
+ <div style="background:rgba(107,168,240,.08);border:1.5px solid #6ba8f0;border-radius:12px;padding:18px 22px;">
+ <div style="font-size:15px;font-weight:800;color:#2A1060;margin-bottom:8px;">🛡️ Dispositif anti-VSS actif</div>
+ <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px 0;">
+ Équipes formées · Bénévoles sensibilisés · Stand d'écoute<br>
+ Notre guide de prévention contre les VSS est <strong>joint à cet e-mail en pièce jointe PDF</strong> – consulte-le avant de venir.
+ </p>
+ <div style="font-size:12px;color:#6ba8f0;font-weight:700;">📎 IF26 - Prévention VSS.pdf</div>
  </div>
  </div>
 </div>
@@ -420,10 +379,6 @@
  festival@interfilieres.fr
  </div>
  </div>
-<script>
-(function(){
- var cur=0, n=9;var slides = document.querySelectorAll(".vss-slide");var dots = document.querySelectorAll(".vss-dot");var counter= document.getElementById("vssCounter");function show(i){
- slides[cur].classList.remove("active");dots[cur].classList.remove("active");cur = (i + n) % n;slides[cur].classList.add("active");dots[cur].classList.add("active");if (counter) counter.textContent = (cur + 1) + " / " + n;}window.vssSlide = function(d){ show(cur + d);};window.vssGoTo = function(i){ show(i);};})();</script>
 </body>
 </html>
 
