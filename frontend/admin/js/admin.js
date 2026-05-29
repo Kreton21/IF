@@ -1423,10 +1423,15 @@ async function validateQR() {
                 </div>`;
             playSound('warning');
         } else {
+            const busDetails = data.ride_type
+                ? `<br>Destination : ${data.to_station || '-'}<br>Horaire : ${data.departure_at ? formatDateTime(data.departure_at) : '-'}${data.return_departure_at ? `<br>Horaire retour : ${formatDateTime(data.return_departure_at)}` : ''}${data.bus_max_scans ? `<br>Scans : ${data.bus_scan_count || 0}/${data.bus_max_scans}` : ''}`
+                : '';
+            const campingDetails = data.ticket_type_name ? `<br>Camping : ${data.is_camping ? 'Oui' : 'Non'}` : '';
             resultEl.classList.add('invalid');
             resultEl.innerHTML = `
                 <div class="result-icon">❌</div>
-                <strong>${data.message}</strong>`;
+                <strong>${data.message}</strong>
+                ${data.ticket_type_name ? `<div class="result-details">Ticket : ${data.ticket_type_name}<br>Commande : ${data.order_number || '-'}${campingDetails}${busDetails}</div>` : ''}`;
             playSound('error');
         }
 

@@ -283,6 +283,8 @@ type ValidateQRResponse struct {
 	ToStation         string `json:"to_station,omitempty"`
 	DepartureAt       string `json:"departure_at,omitempty"`
 	ReturnDepartureAt string `json:"return_departure_at,omitempty"`
+	BusScanCount      int    `json:"bus_scan_count,omitempty"`
+	BusMaxScans       int    `json:"bus_max_scans,omitempty"`
 }
 
 type SalesStats struct {

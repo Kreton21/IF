@@ -772,7 +772,7 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		SELECT t.id, t.order_id, t.is_validated, t.is_refunded, t.is_camping, t.attendee_first_name, t.attendee_last_name,
 		       tt.name as ticket_type_name, o.order_number, o.status,
 		       COALESCE(bt.from_station, ''), COALESCE(bt.to_station, ''),
-		       od.departure_time, rd.departure_time, COALESCE(bt.is_round_trip, false)
+		       od.departure_time, rd.departure_time, COALESCE(bt.is_round_trip, false), COALESCE(bt.scan_count, 0)
 		FROM tickets t
 		JOIN ticket_types tt ON tt.id = t.ticket_type_id
 		JOIN orders o ON o.id = t.order_id
@@ -798,12 +798,13 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		outboundAt        *time.Time
 		returnAt          *time.Time
 		isRoundTrip       bool
+		busScanCount      int
 	)
 
 	err = tx.QueryRow(ctx, query, qrToken).Scan(
 		&ticketID, &orderID, &isValidated, &isRefunded, &isCamping, &attendeeFirstName, &attendeeLastName,
 		&ticketTypeName, &orderNumber, &orderStatus,
-		&fromStation, &toStation, &outboundAt, &returnAt, &isRoundTrip,
+		&fromStation, &toStation, &outboundAt, &returnAt, &isRoundTrip, &busScanCount,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -878,9 +879,55 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 		if attendeeLastName != nil {
 			lastName = *attendeeLastName
 		}
+
+		maxScans := 1
+		if isRoundTrip {
+			maxScans = 2
+		}
+
+		if busScanCount >= maxScans {
+			return &models.ValidateQRResponse{
+				Valid:             false,
+				Message:           fmt.Sprintf("⚠️ Ticket navette déjà scanné %d/%d fois", busScanCount, maxScans),
+				TicketID:          ticketID,
+				AttendeeFirstName: firstName,
+				AttendeeLastName:  lastName,
+				TicketTypeName:    ticketTypeName,
+				OrderNumber:       orderNumber,
+				AlreadyValidated:  true,
+				IsCamping:         isCamping,
+				RideType:          busRideType(isRoundTrip, fromStation),
+				FromStation:       fromStation,
+				ToStation:         toStation,
+				DepartureAt:       formatTimePtr(outboundAt),
+				ReturnDepartureAt: formatTimePtr(returnAt),
+				BusScanCount:      busScanCount,
+				BusMaxScans:       maxScans,
+			}, nil
+		}
+
+		now := time.Now()
+		_, err = tx.Exec(ctx, `
+			UPDATE bus_tickets
+			SET scan_count = scan_count + 1
+			WHERE ticket_id = $1`, ticketID)
+		if err != nil {
+			return nil, fmt.Errorf("erreur incrément scan ticket bus: %w", err)
+		}
+
+		_, _ = tx.Exec(ctx,
+			`UPDATE tickets SET validated_at = $1, validated_by = $2 WHERE id = $3`,
+			now, validatedBy, ticketID,
+		)
+
+		if err := tx.Commit(ctx); err != nil {
+			return nil, fmt.Errorf("erreur commit scan bus: %w", err)
+		}
+
+		newCount := busScanCount + 1
 		return &models.ValidateQRResponse{
 			Valid:             true,
-			Message:           "🚌 Ticket navette scanné",
+			Message:           fmt.Sprintf("🚌 Ticket navette scanné (%d/%d)", newCount, maxScans),
 			TicketID:          ticketID,
 			AttendeeFirstName: firstName,
 			AttendeeLastName:  lastName,
@@ -892,6 +939,8 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 			ToStation:         toStation,
 			DepartureAt:       formatTimePtr(outboundAt),
 			ReturnDepartureAt: formatTimePtr(returnAt),
+			BusScanCount:      newCount,
+			BusMaxScans:       maxScans,
 		}, nil
 	}
 
