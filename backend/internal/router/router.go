@@ -186,6 +186,15 @@ func NewRouter(
 	r.Get("/r/{code}", ticketHandler.HandleReferralRedirect)
 
 	// ==========================================
+	// Broadcast routes (API key auth, no JWT)
+	// ==========================================
+	broadcastKey := os.Getenv("BROADCAST_API_KEY")
+	r.Route("/api/v1/broadcast", func(r chi.Router) {
+		r.Use(middleware.BroadcastAPIKeyAuth(broadcastKey))
+		r.Post("/j1", adminHandler.BroadcastJ1Email)
+	})
+
+	// ==========================================
 	// Frontend static files (no-cache for dev)
 	// ==========================================
 	noCache := func(next http.Handler) http.Handler {

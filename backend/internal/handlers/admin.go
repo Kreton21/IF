@@ -1212,3 +1212,23 @@ func publicBaseURL(r *http.Request) string {
 	}
 	return scheme + "://" + host
 }
+
+// BroadcastJ1Email sends the J-1 reminder email (with ticket PDFs) to all confirmed
+// festival ticket holders. Protected by X-Broadcast-Key header, not JWT.
+func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) {
+	sent, failed, err := h.ticketService.BroadcastJ1Email(r.Context())
+	if err != nil {
+		log.Printf("Erreur broadcast J-1: %v (sent=%d, failed=%d)", err, sent, failed)
+		writeJSON(w, http.StatusInternalServerError, map[string]interface{}{
+			"error":  err.Error(),
+			"sent":   sent,
+			"failed": failed,
+		})
+		return
+	}
+	log.Printf("Broadcast J-1 terminé: %d envoyés, %d échoués", sent, failed)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"sent":   sent,
+		"failed": failed,
+	})
+}

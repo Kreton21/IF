@@ -71,6 +71,20 @@ func (s *EmailService) SendBusChangeEmail(to string, customerName string, orderN
 	)
 }
 
+// SendJ1Email sends the J-1 broadcast email with ticket PDFs attached.
+// The J-1 HTML template is used in place of the regular confirmation template.
+func (s *EmailService) SendJ1Email(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {
+	return s.sendTicketEmailWithTemplate(
+		to,
+		customerName,
+		orderNumber,
+		tickets,
+		s.cfg.J1EmailTemplatePath,
+		s.cfg.J1EmailSubject,
+		"j1-broadcast",
+	)
+}
+
 func (s *EmailService) sendTicketEmailWithTemplate(
 	to string,
 	customerName string,

@@ -1500,6 +1500,109 @@ func (s *TicketService) ResendAllConfirmationEmails(ctx context.Context) (int, i
 	return sent, failed, nil
 }
 
+// BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to all confirmed festival ticket holders.
+// Bus-only orders are skipped. Returns (sent, failed, firstErr).
+func (s *TicketService) BroadcastJ1Email(ctx context.Context) (int, int, error) {
+	orderIDs, err := s.orderRepo.ListPaidConfirmedOrderIDsWithTickets(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	sent := 0
+	failed := 0
+	for _, orderID := range orderIDs {
+		if err := s.sendJ1EmailForOrder(ctx, orderID); err != nil {
+			failed++
+			log.Printf("WARN: J-1 broadcast commande %s échoué: %v", orderID, err)
+			continue
+		}
+		sent++
+	}
+
+	return sent, failed, nil
+}
+
+func (s *TicketService) sendJ1EmailForOrder(ctx context.Context, orderID string) error {
+	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("récupération commande %s: %w", orderID, err)
+	}
+	if order == nil {
+		return fmt.Errorf("commande introuvable: %s", orderID)
+	}
+	if order.Status != models.OrderStatusPaid && order.Status != models.OrderStatusConfirmed {
+		return nil // skip silently
+	}
+
+	totalTickets, err := s.ticketRepo.CountTicketsByOrder(ctx, order.ID)
+	if err != nil {
+		return err
+	}
+	if totalTickets == 0 {
+		return nil // nothing to send
+	}
+
+	busTickets, err := s.ticketRepo.CountBusTicketsByOrder(ctx, order.ID)
+	if err != nil {
+		return err
+	}
+	// Skip bus-only orders
+	if busTickets > 0 && busTickets == totalTickets {
+		return nil
+	}
+
+	emailTickets, err := s.buildFestivalEmailTicketsForOrder(ctx, order)
+	if err != nil {
+		return err
+	}
+
+	return s.dispatchJ1FestivalEmails(order, emailTickets)
+}
+
+func (s *TicketService) dispatchJ1FestivalEmails(order *models.Order, emailTickets []TicketEmailData) error {
+	if len(emailTickets) == 0 {
+		return nil
+	}
+
+	type recipientBatch struct {
+		name    string
+		tickets []TicketEmailData
+	}
+
+	batches := map[string]*recipientBatch{}
+	for _, ticket := range emailTickets {
+		email := strings.ToLower(strings.TrimSpace(ticket.RecipientEmail))
+		if email == "" {
+			email = strings.ToLower(strings.TrimSpace(order.CustomerEmail))
+		}
+		if email == "" {
+			continue
+		}
+		batch, exists := batches[email]
+		if !exists {
+			name := strings.TrimSpace(ticket.AttendeeName)
+			if name == "" {
+				name = strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
+			}
+			batch = &recipientBatch{name: name}
+			batches[email] = batch
+		}
+		batch.tickets = append(batch.tickets, ticket)
+	}
+
+	var firstErr error
+	for email, batch := range batches {
+		if err := s.emailService.SendJ1Email(email, batch.name, order.OrderNumber, batch.tickets); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			log.Printf("WARN: échec J-1 broadcast à %s (commande %s): %v", email, order.OrderNumber, err)
+		}
+	}
+
+	return firstErr
+}
+
 func (s *TicketService) ListOrderTickets(ctx context.Context, orderID string) ([]models.OrderTicketAdminRow, error) {
 	if strings.TrimSpace(orderID) == "" {
 		return nil, fmt.Errorf("id commande manquant")

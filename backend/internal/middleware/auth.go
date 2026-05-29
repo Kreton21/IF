@@ -104,3 +104,17 @@ func RequireNotRawRole(disallowedRole string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// BroadcastAPIKeyAuth protects broadcast routes with a static API key.
+// The caller must send the key in the X-Broadcast-Key header.
+func BroadcastAPIKeyAuth(apiKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if apiKey == "" || r.Header.Get("X-Broadcast-Key") != apiKey {
+				http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

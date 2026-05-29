@@ -64,6 +64,11 @@ type Config struct {
 	FestivalDate    string
 	VenueName       string
 	VenueAddress    string
+
+	// Broadcast
+	BroadcastAPIKey     string
+	J1EmailTemplatePath string
+	J1EmailSubject      string
 }
 
 func Load() (*Config, error) {
@@ -124,6 +129,10 @@ func Load() (*Config, error) {
 		FestivalDate:    getEnv("FESTIVAL_DATE", "2026-05-30"),
 		VenueName:       getEnv("VENUE_NAME", ""),
 		VenueAddress:    getEnv("VENUE_ADDRESS", ""),
+
+		BroadcastAPIKey:     getEnv("BROADCAST_API_KEY", ""),
+		J1EmailTemplatePath: getEnv("J1_EMAIL_TEMPLATE_PATH", "mail/MailJ-2-optimized.html"),
+		J1EmailSubject:      getEnv("J1_EMAIL_SUBJECT", "J-1 — L'Interfilières 2026 — Ton billet + tout ce qu'il faut savoir !"),
 	}
 
 	return cfg, nil
