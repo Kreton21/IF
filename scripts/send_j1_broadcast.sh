@@ -66,19 +66,20 @@ BAR_WIDTH = 40
 start = time.time()
 exit_code = 0
 first_line = True
+got_done = False
+raw_lines = []
 
 for line in sys.stdin:
     line = line.strip()
     if not line:
         continue
+    raw_lines.append(line)
     try:
         data = json.loads(line)
     except json.JSONDecodeError:
-        if first_line:
-            print(f"\n❌  Réponse inattendue du serveur : {line}")
-            exit_code = 1
-            break
-        continue
+        print(f"\n❌  Réponse inattendue du serveur : {line}")
+        exit_code = 1
+        break
     first_line = False
 
     # Server returned an error before streaming (e.g. 401 Unauthorized)
@@ -117,10 +118,20 @@ for line in sys.stdin:
         if err:
             print(f"  ⚠️  Erreur   : {err}")
             exit_code = 1
+        got_done = True
         break  # stop reading — don't close stdin abruptly
     else:
         eta_str = f"  ETA {remaining:.0f}s" if remaining > 0 else ""
         print(f"\r  [{bar}] {sent+failed}/{total}  ({pct*100:.0f}%)  {rate:.1f}/s{eta_str}{status}   ", end="", flush=True)
+
+if not got_done and not exit_code:
+    if raw_lines:
+        print(f"\n⚠️  Flux terminé sans confirmation. Dernières lignes reçues :")
+        for l in raw_lines[-5:]:
+            print(f"    {l}")
+    else:
+        print("\n❌  Aucune donnée reçue du serveur (réponse vide).")
+    exit_code = 1
 
 sys.exit(exit_code)
 PYEOF
