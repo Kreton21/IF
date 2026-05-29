@@ -192,6 +192,7 @@ func NewRouter(
 	r.Route("/api/v1/broadcast", func(r chi.Router) {
 		r.Use(middleware.BroadcastAPIKeyAuth(broadcastKey))
 		r.Post("/j1", adminHandler.BroadcastJ1Email)
+		r.Get("/j1/status", adminHandler.BroadcastJ1Status)
 	})
 
 	// ==========================================

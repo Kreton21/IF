@@ -1254,3 +1254,16 @@ func (h *AdminHandler) BroadcastJ1Email(w http.ResponseWriter, r *http.Request) 
 		flusher.Flush()
 	}
 }
+
+// BroadcastJ1Status returns the current progress of a running (or just finished) J-1 broadcast.
+// GET /api/v1/broadcast/j1/status  — same X-Broadcast-Key auth.
+func (h *AdminHandler) BroadcastJ1Status(w http.ResponseWriter, r *http.Request) {
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"running": running,
+		"sent":    sent,
+		"failed":  failed,
+		"total":   total,
+	})
+}

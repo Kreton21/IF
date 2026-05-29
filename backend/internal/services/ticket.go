@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,6 +30,20 @@ type TicketService struct {
 	qrService       *QRCodeService
 	emailService    *EmailService
 	redis           *redis.Client
+
+	// Broadcast progress (atomic, reset at each run)
+	broadcastRunning int32
+	broadcastSent    int64
+	broadcastFailed  int64
+	broadcastTotal   int64
+}
+
+// BroadcastProgress returns current broadcast counters.
+func (s *TicketService) BroadcastProgress() (running bool, sent, failed, total int) {
+	return atomic.LoadInt32(&s.broadcastRunning) == 1,
+		int(atomic.LoadInt64(&s.broadcastSent)),
+		int(atomic.LoadInt64(&s.broadcastFailed)),
+		int(atomic.LoadInt64(&s.broadcastTotal))
 }
 
 func NewTicketService(
@@ -1524,6 +1539,13 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 		concurrency = 5
 	}
 
+	// Reset and mark as running
+	atomic.StoreInt64(&s.broadcastSent, 0)
+	atomic.StoreInt64(&s.broadcastFailed, 0)
+	atomic.StoreInt64(&s.broadcastTotal, int64(total))
+	atomic.StoreInt32(&s.broadcastRunning, 1)
+	defer atomic.StoreInt32(&s.broadcastRunning, 0)
+
 	sem := make(chan struct{}, concurrency)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -1540,9 +1562,11 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 			mu.Lock()
 			if e != nil {
 				failed++
+				atomic.StoreInt64(&s.broadcastFailed, int64(failed))
 				log.Printf("WARN: J-1 broadcast commande %s échoué: %v", oid, e)
 			} else {
 				sent++
+				atomic.StoreInt64(&s.broadcastSent, int64(sent))
 			}
 			if progress != nil {
 				progress(sent, failed, total)

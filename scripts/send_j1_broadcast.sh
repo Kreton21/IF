@@ -84,7 +84,7 @@ printf "\r                                          \r"
 wait "$CURL_PID"
 CURL_CODE=$?
 
-if [[ "$CURL_CODE" -ne 0 ]]; then
+if [[ "$CURL_CODE" -ne 0 && "$CURL_CODE" -ne 18 ]]; then
   echo "❌  curl a échoué (code $CURL_CODE)"
   [[ -s "$CURL_ERR" ]] && echo "    $(cat "$CURL_ERR")"
   rm -f "$RAW_OUT" "$CURL_ERR"
