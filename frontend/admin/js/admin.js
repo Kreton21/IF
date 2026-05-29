@@ -2255,15 +2255,12 @@ function populateBusTicketNavetteFilter() {
     ];
 
     const entries = [];
-    const seen = new Set();
     allDepartures.forEach(dep => {
+        if (!dep?.id) return;
         const stationName = stationByID.get(dep.station_id) || dep.station_id;
-        const key = `${dep.direction}|${stationName}|${dep.departure_time}`;
-        if (seen.has(key)) return;
-        seen.add(key);
         const directionLabel = dep.direction === 'to_festival' ? 'Aller' : 'Retour';
         entries.push({
-            key,
+            id: dep.id,
             label: `${directionLabel} ${stationName} — ${formatDateTime(dep.departure_time)}`,
             time: new Date(dep.departure_time).getTime(),
         });
@@ -2271,13 +2268,13 @@ function populateBusTicketNavetteFilter() {
 
     entries.sort((a, b) => a.time - b.time);
     const options = ['<option value="">Toutes les navettes</option>']
-        .concat(entries.map(e => `<option value="${escapeAttr(e.key)}">${e.label}</option>`));
+        .concat(entries.map(e => `<option value="${escapeAttr(e.id)}">${e.label}</option>`));
     select.innerHTML = options.join('');
 }
 
 function applyBusTicketsFilters() {
     const query = (document.getElementById('bus-ticket-search')?.value || '').trim().toLowerCase();
-    const navetteKey = document.getElementById('bus-ticket-filter-navette')?.value || '';
+    const navetteId = document.getElementById('bus-ticket-filter-navette')?.value || '';
 
     const rows = (busTicketsCache || []).filter(r => {
         if (query) {
@@ -2288,10 +2285,10 @@ function applyBusTicketsFilters() {
             }
         }
 
-        if (navetteKey) {
-            const outboundKey = `to_festival|${r.from_station}|${r.departure_time}`;
-            const returnKey = r.return_departure_time ? `from_festival|${r.to_station}|${r.return_departure_time}` : '';
-            if (navetteKey !== outboundKey && navetteKey !== returnKey) {
+        if (navetteId) {
+            const outboundID = r.outbound_departure_id;
+            const returnID = r.return_departure_id;
+            if (navetteId !== outboundID && navetteId !== returnID) {
                 return false;
             }
         }
