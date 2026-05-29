@@ -818,9 +818,28 @@ func (r *TicketRepository) ValidateTicket(ctx context.Context, qrToken string, v
 
 	// Vérifier le statut de la commande
 	if orderStatus != models.OrderStatusConfirmed && orderStatus != models.OrderStatusPaid {
+		firstName := ""
+		lastName := ""
+		if attendeeFirstName != nil {
+			firstName = *attendeeFirstName
+		}
+		if attendeeLastName != nil {
+			lastName = *attendeeLastName
+		}
 		return &models.ValidateQRResponse{
-			Valid:   false,
-			Message: fmt.Sprintf("Commande non valide (statut: %s)", orderStatus),
+			Valid:             false,
+			Message:           fmt.Sprintf("Commande non valide (statut: %s)", orderStatus),
+			TicketID:          ticketID,
+			AttendeeFirstName: firstName,
+			AttendeeLastName:  lastName,
+			TicketTypeName:    ticketTypeName,
+			OrderNumber:       orderNumber,
+			IsCamping:         isCamping,
+			RideType:          busRideType(isRoundTrip, fromStation),
+			FromStation:       fromStation,
+			ToStation:         toStation,
+			DepartureAt:       formatTimePtr(outboundAt),
+			ReturnDepartureAt: formatTimePtr(returnAt),
 		}, nil
 	}
 
