@@ -1532,6 +1532,100 @@ func busStationAddress(stationName string) string {
 	}
 }
 
+func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, order *models.Order) ([]TicketEmailData, error) {
+	rows, err := s.ticketRepo.ListBusTicketsByOrderID(ctx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rows) > 0 {
+		tickets := make([]TicketEmailData, 0, len(rows))
+		for _, row := range rows {
+			outbound := fmt.Sprintf("Aller : %s", s.formatBusTime(row.DepartureTime))
+			outboundAddr := busStationAddress(row.FromStation)
+
+			departureInfo := outbound + " — " + outboundAddr
+			if row.ReturnDepartureTime != nil {
+				returnInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(*row.ReturnDepartureTime))
+				departureInfo = departureInfo + " • " + returnInfo
+			}
+
+			tickets = append(tickets, TicketEmailData{
+				TicketTypeName: row.TicketTypeName,
+				AttendeeName:   strings.TrimSpace(row.FromStation),
+				DepartureInfo:  departureInfo,
+				IsBus:          true,
+			})
+		}
+		return tickets, nil
+	}
+
+	rides, err := s.ticketRepo.GetBusOrderRides(ctx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(rides) == 0 {
+		return nil, nil
+	}
+
+	outboundDepartureID := ""
+	outboundStation := ""
+	var returnDepartureID *string
+
+	for _, ride := range rides {
+		rideKind := strings.TrimSpace(strings.ToLower(ride["ride_kind"]))
+		depID := strings.TrimSpace(ride["departure_id"])
+		switch rideKind {
+		case "outbound":
+			outboundDepartureID = depID
+			outboundStation = strings.TrimSpace(ride["from_station"])
+		case "return":
+			if outboundDepartureID == "" {
+				outboundDepartureID = depID
+				outboundStation = strings.TrimSpace(ride["from_station"])
+			} else {
+				id := depID
+				returnDepartureID = &id
+			}
+		}
+	}
+
+	if outboundDepartureID == "" {
+		return nil, nil
+	}
+
+	outboundInfo := ""
+	if dep, depErr := s.ticketRepo.GetBusDepartureByID(ctx, outboundDepartureID); depErr == nil && dep != nil {
+		outboundInfo = fmt.Sprintf("Aller : %s", s.formatBusTime(dep.DepartureTime))
+	}
+	departureInfo := strings.TrimSpace(outboundInfo)
+	if departureInfo != "" {
+		departureInfo += " — " + busStationAddress(outboundStation)
+	}
+
+	if returnDepartureID != nil {
+		if ret, retErr := s.ticketRepo.GetBusDepartureByID(ctx, *returnDepartureID); retErr == nil && ret != nil {
+			retInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(ret.DepartureTime))
+			if departureInfo != "" {
+				departureInfo += " • " + retInfo
+			} else {
+				departureInfo = retInfo
+			}
+		}
+	}
+
+	if departureInfo == "" {
+		departureInfo = busStationAddress(outboundStation)
+	}
+
+	return []TicketEmailData{{
+		TicketTypeName: "Navette",
+		AttendeeName:   outboundStation,
+		DepartureInfo:  departureInfo,
+		IsBus:          true,
+	}}, nil
+}
+
 // BroadcastBusReminderEmail sends a short reminder email for bus ticket holders.
 func (s *TicketService) BroadcastBusReminderEmail(ctx context.Context, targetEmail string, force bool, concurrency int, progress func(sent, failed, total int)) (int, int, error) {
 	var orderIDs []string
@@ -1617,31 +1711,9 @@ func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderI
 		return nil
 	}
 
-	rows, err := s.ticketRepo.ListBusTicketsByOrderID(ctx, order.ID)
+	tickets, err := s.buildBusReminderTicketsForOrder(ctx, order)
 	if err != nil {
 		return err
-	}
-	if len(rows) == 0 {
-		return nil
-	}
-
-	tickets := make([]TicketEmailData, 0, len(rows))
-	for _, row := range rows {
-		outbound := fmt.Sprintf("Aller : %s", s.formatBusTime(row.DepartureTime))
-		outboundAddr := busStationAddress(row.FromStation)
-
-		departureInfo := outbound + " — " + outboundAddr
-		if row.ReturnDepartureTime != nil {
-			returnInfo := fmt.Sprintf("Retour : %s", s.formatBusTime(*row.ReturnDepartureTime))
-			departureInfo = departureInfo + " • " + returnInfo
-		}
-
-		tickets = append(tickets, TicketEmailData{
-			TicketTypeName: row.TicketTypeName,
-			AttendeeName:   strings.TrimSpace(row.FromStation),
-			DepartureInfo:  departureInfo,
-			IsBus:          true,
-		})
 	}
 
 	if len(tickets) == 0 {

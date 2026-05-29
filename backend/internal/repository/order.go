@@ -274,11 +274,20 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmail(ctx context.Context, 
 
 func (r *OrderRepository) ListPaidConfirmedBusOrderIDs(ctx context.Context) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT o.id
+		SELECT o.id
 		FROM orders o
-		JOIN tickets t ON t.order_id = o.id
-		JOIN bus_tickets bt ON bt.ticket_id = t.id
 		WHERE o.status IN ('paid', 'confirmed')
+		  AND (
+			EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+			)
+			OR EXISTS (
+				SELECT 1 FROM bus_order_rides bor WHERE bor.order_id = o.id
+			)
+		  )
 		ORDER BY o.created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("erreur query bus orders: %w", err)
@@ -298,12 +307,21 @@ func (r *OrderRepository) ListPaidConfirmedBusOrderIDs(ctx context.Context) ([]s
 
 func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmail(ctx context.Context, email string) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT o.id
+		SELECT o.id
 		FROM orders o
-		JOIN tickets t ON t.order_id = o.id
-		JOIN bus_tickets bt ON bt.ticket_id = t.id
 		WHERE o.status IN ('paid', 'confirmed')
 		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND (
+			EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+			)
+			OR EXISTS (
+				SELECT 1 FROM bus_order_rides bor WHERE bor.order_id = o.id
+			)
+		  )
 		ORDER BY o.created_at DESC`, email)
 	if err != nil {
 		return nil, fmt.Errorf("erreur query bus orders by email: %w", err)
@@ -383,11 +401,20 @@ func (r *OrderRepository) ListPaidConfirmedOrderIDsByEmailForBroadcast(ctx conte
 
 func (r *OrderRepository) ListPaidConfirmedBusOrderIDsForBroadcast(ctx context.Context, campaign string) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT o.id
+		SELECT o.id
 		FROM orders o
-		JOIN tickets t ON t.order_id = o.id
-		JOIN bus_tickets bt ON bt.ticket_id = t.id
 		WHERE o.status IN ('paid', 'confirmed')
+		  AND (
+			EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+			)
+			OR EXISTS (
+				SELECT 1 FROM bus_order_rides bor WHERE bor.order_id = o.id
+			)
+		  )
 		  AND NOT EXISTS (
 			SELECT 1 FROM broadcast_sent bs
 			WHERE bs.order_id = o.id AND bs.campaign = $1
@@ -410,12 +437,21 @@ func (r *OrderRepository) ListPaidConfirmedBusOrderIDsForBroadcast(ctx context.C
 
 func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmailForBroadcast(ctx context.Context, email, campaign string) ([]string, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT o.id
+		SELECT o.id
 		FROM orders o
-		JOIN tickets t ON t.order_id = o.id
-		JOIN bus_tickets bt ON bt.ticket_id = t.id
 		WHERE o.status IN ('paid', 'confirmed')
 		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND (
+			EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+			)
+			OR EXISTS (
+				SELECT 1 FROM bus_order_rides bor WHERE bor.order_id = o.id
+			)
+		  )
 		  AND NOT EXISTS (
 			SELECT 1 FROM broadcast_sent bs
 			WHERE bs.order_id = o.id AND bs.campaign = $2
