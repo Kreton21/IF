@@ -3,11 +3,13 @@
 #  send_j1_broadcast.sh
 #  Envoie l'email J-1 (MailJ-2) avec billet PDF.
 #  Affiche une barre de progression en temps réel.
-#  Envoi en parallèle (5 workers) sans surcharger le système.
+#  Envoi en parallèle (2 workers) sans surcharger le système.
 #
 #  Usage:
-#    ./send_j1_broadcast.sh                          # envoie à tout le monde
+#    ./send_j1_broadcast.sh                          # envoie à tout le monde (non déjà reçu)
 #    ./send_j1_broadcast.sh -u test@example.com      # test : un seul email
+#    ./send_j1_broadcast.sh --force                  # renvoie même à ceux déjà reçu
+#    ./send_j1_broadcast.sh -u test@example.com --force
 #
 #  Variables d'environnement :
 #    API_BASE           URL de base de l'API  (défaut: http://localhost:8080)
@@ -18,6 +20,7 @@ set -uo pipefail
 API_BASE="${API_BASE:-http://localhost:8080}"
 KEY="${BROADCAST_API_KEY:-}"
 TARGET_EMAIL=""
+FORCE="false"
 
 # ── Parse arguments ──────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -26,8 +29,12 @@ while [[ $# -gt 0 ]]; do
       TARGET_EMAIL="${2:-}"
       shift 2
       ;;
+    --force)
+      FORCE="true"
+      shift
+      ;;
     *)
-      echo "Usage: $0 [-u email@example.com]"
+      echo "Usage: $0 [-u email@example.com] [--force]"
       exit 1
       ;;
   esac
@@ -46,11 +53,13 @@ ENDPOINT="${API_BASE}/api/v1/broadcast/j1"
 
 if [[ -n "$TARGET_EMAIL" ]]; then
   echo "🧪  Mode test — envoi uniquement à : $TARGET_EMAIL"
-  BODY="{\"target_email\":\"${TARGET_EMAIL}\"}"
+  BODY="{\"target_email\":\"${TARGET_EMAIL}\",\"force\":${FORCE}}"
 else
   echo "🚀  Envoi du broadcast J-1 à tous les participants..."
-  BODY="{}"
+  BODY="{\"force\":${FORCE}}"
 fi
+
+[[ "$FORCE" == "true" ]] && echo "    ⚠️  Mode --force : ignore la table broadcast_sent"
 
 echo "    Endpoint  : $ENDPOINT"
 echo "    Parallèle : 5 workers"
@@ -113,6 +122,12 @@ running = d.get("running", False)
 sent    = d.get("sent",    0)
 failed  = d.get("failed",  0)
 total   = d.get("total",   0)
+
+# Nothing left to send
+if not running and total == 0:
+    open(done_file, "w").write("0:0:0")
+    print("\n  ℹ️  Aucun email à envoyer (tous déjà reçus ou aucune commande éligible).")
+    sys.exit(0)
 
 elapsed = time.time() - start_ts
 rate    = (sent + failed) / elapsed if elapsed > 0 else 0
