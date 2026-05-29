@@ -1322,34 +1322,16 @@ func (r *TicketRepository) UpdateOrderAttendees(ctx context.Context, orderID str
 }
 
 func (r *TicketRepository) ReleaseBusOrderRides(ctx context.Context, orderID string) error {
-	rows, err := r.pool.Query(ctx, `
-		SELECT departure_id
-		FROM bus_order_rides
+	// Deleting from bus_order_rides lets the trigger trg_sync_bus_departure_sold
+	// recompute bus_departures.sold automatically via COUNT(*), which is correct.
+	// The old approach of manually doing sold-1 without deleting the row left orphaned
+	// rows that caused over-counting on subsequent inserts.
+	_, err := r.pool.Exec(ctx, `
+		DELETE FROM bus_order_rides
 		WHERE order_id = $1`, orderID)
 	if err != nil {
-		return fmt.Errorf("erreur récupération rides à libérer: %w", err)
+		return fmt.Errorf("erreur libération places navette: %w", err)
 	}
-	defer rows.Close()
-
-	ids := make([]string, 0)
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return fmt.Errorf("erreur scan departure_id: %w", err)
-		}
-		ids = append(ids, id)
-	}
-
-	for _, id := range ids {
-		_, err := r.pool.Exec(ctx, `
-			UPDATE bus_departures
-			SET sold = GREATEST(0, sold - 1), updated_at = NOW()
-			WHERE id = $1`, id)
-		if err != nil {
-			return fmt.Errorf("erreur libération place bus: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -1510,9 +1492,24 @@ func (r *TicketRepository) DeleteTicketByID(ctx context.Context, tx pgx.Tx, tick
 }
 
 func (r *TicketRepository) ResyncBusDepartureSold(ctx context.Context) error {
+	// First, delete orphaned bus_order_rides rows belonging to cancelled/refunded orders.
+	// These were left behind by the old ReleaseBusOrderRides which only decremented sold
+	// without cleaning up the rides table.
 	_, err := r.pool.Exec(ctx, `
+		DELETE FROM bus_order_rides
+		WHERE order_id IN (
+			SELECT id FROM orders
+			WHERE status IN ('cancelled', 'refunded')
+		)`)
+	if err != nil {
+		return fmt.Errorf("erreur nettoyage rides annulés: %w", err)
+	}
+
+	// Now recompute sold for all departures from the clean bus_order_rides table.
+	// The trigger keeps this in sync going forward; this handles historical drift.
+	_, err = r.pool.Exec(ctx, `
 		UPDATE bus_departures d
-		SET sold = COALESCE(s.cnt, 0)
+		SET sold = COALESCE(s.cnt, 0), updated_at = NOW()
 		FROM (
 			SELECT departure_id, COUNT(*) AS cnt
 			FROM bus_order_rides
@@ -1525,12 +1522,12 @@ func (r *TicketRepository) ResyncBusDepartureSold(ctx context.Context) error {
 
 	_, err = r.pool.Exec(ctx, `
 		UPDATE bus_departures d
-		SET sold = 0
+		SET sold = 0, updated_at = NOW()
 		WHERE NOT EXISTS (
 			SELECT 1 FROM bus_order_rides r WHERE r.departure_id = d.id
 		)`)
 	if err != nil {
-		return fmt.Errorf("erreur resync navettes: %w", err)
+		return fmt.Errorf("erreur resync navettes zéro: %w", err)
 	}
 
 	return nil
