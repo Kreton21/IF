@@ -1540,8 +1540,11 @@ func (s *TicketService) BroadcastJ1Email(ctx context.Context, targetEmail string
 		}
 	}
 	if err != nil {
+		log.Printf("ERROR BroadcastJ1Email: impossible de récupérer les commandes: %v", err)
 		return 0, 0, err
 	}
+
+	log.Printf("INFO BroadcastJ1Email: %d commandes à traiter (force=%v, target=%q)", len(orderIDs), force, targetEmail)
 
 	total := len(orderIDs)
 	if concurrency <= 0 {
