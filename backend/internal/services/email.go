@@ -164,6 +164,7 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 	eventDateText := formatFrenchDate(s.cfg.FestivalDate)
 
 	var buf bytes.Buffer
+	baseURL := strings.TrimRight(s.cfg.BaseURL, "/")
 	err = t.Execute(&buf, map[string]interface{}{
 		"FestivalName":  s.cfg.FestivalName,
 		"FestivalDate":  s.cfg.FestivalDate,
@@ -176,6 +177,7 @@ func (s *EmailService) buildEmailHTML(customerEmail, customerName, orderNumber s
 		"VenueName":     s.cfg.VenueName,
 		"VenueAddress":  s.cfg.VenueAddress,
 		"BannerDataURI": bannerURL,
+		"BaseURL":       baseURL,
 	})
 	if err != nil {
 		return "", err
@@ -215,9 +217,16 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, at
 		msg.WriteString(fmt.Sprintf("From: %s\r\n", s.cfg.SMTPFrom))
 	}
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	if strings.TrimSpace(s.cfg.SMTPFrom) != "" {
+		msg.WriteString(fmt.Sprintf("Reply-To: %s\r\n", ticketSupportEmail))
+	}
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", encodedSubject))
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", now))
 	msg.WriteString(fmt.Sprintf("Message-ID: %s\r\n", messageID))
+	msg.WriteString(fmt.Sprintf("List-Unsubscribe: <mailto:%s?subject=unsubscribe>\r\n", ticketSupportEmail))
+	msg.WriteString("List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n")
+	msg.WriteString("Auto-Submitted: auto-generated\r\n")
+	msg.WriteString("X-Mailer: Interfilieres-Festival\r\n")
 	msg.WriteString("MIME-Version: 1.0\r\n")
 	msg.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", mixedBoundary))
 	msg.WriteString("\r\n")
@@ -227,20 +236,20 @@ func (s *EmailService) sendMIMEEmail(to, subject, plainBody, htmlBody string, at
 	msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", altBoundary))
 	msg.WriteString("\r\n")
 
-	// Plain text version
+	// Plain text version (base64 — sûr pour tout SMTP, pas de pb 8BITMIME ni ligne > 998)
 	msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
 	msg.WriteString("Content-Type: text/plain; charset=utf-8\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 8bit\r\n")
+	msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 	msg.WriteString("\r\n")
-	msg.WriteString(plainBody)
+	msg.WriteString(encodeBase64RFC2045([]byte(plainBody)))
 	msg.WriteString("\r\n")
 
-	// HTML version
+	// HTML version (base64 — évite le rejet des serveurs stricts sur lignes trop longues / 8bit)
 	msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
 	msg.WriteString("Content-Type: text/html; charset=utf-8\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 8bit\r\n")
+	msg.WriteString("Content-Transfer-Encoding: base64\r\n")
 	msg.WriteString("\r\n")
-	msg.WriteString(htmlBody)
+	msg.WriteString(encodeBase64RFC2045([]byte(htmlBody)))
 	msg.WriteString("\r\n")
 	msg.WriteString(fmt.Sprintf("--%s--\r\n", altBoundary))
 
