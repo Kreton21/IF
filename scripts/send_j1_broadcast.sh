@@ -34,9 +34,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$KEY" ]]; then
-  echo "❌  BROADCAST_API_KEY est vide. Définissez-la et relancez :"
-  echo "    export BROADCAST_API_KEY=<votre_clé>"
-  exit 1
+  read -rsp "🔑  BROADCAST_API_KEY : " KEY
+  echo ""
+  if [[ -z "$KEY" ]]; then
+    echo "❌  Clé vide, abandon."
+    exit 1
+  fi
 fi
 
 ENDPOINT="${API_BASE}/api/v1/broadcast/j1"
