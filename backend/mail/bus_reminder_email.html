@@ -19,19 +19,50 @@
   <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1.6px;color:#D4145A;text-transform:uppercase;">🚌 Rappel navette</p>
   <p style="margin:0;font-size:14px;line-height:1.7;color:#2A1060;font-family:Arial,Helvetica,sans-serif;">
     Bonjour <strong>{{.CustomerName}}</strong>,<br>
-    voici un rappel de votre horaire de navette et de l'adresse de départ.
+    voici les points de départ navette avec adresses et liens Google Maps.
   </p>
 </td></tr>
 
 <tr><td style="background-color:#FFF8F0;padding:0 30px 22px;border-bottom:1px solid #E8E0F8;">
-  {{range .Tickets}}
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;overflow:hidden;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+    <tr><td style="padding:0;">
+      <img src="{{.BaseURL}}/img/busSQY.png" alt="SQY - 5 Av. des Prés" width="560" style="display:block;width:100%;height:auto;border:0;">
+    </td></tr>
     <tr><td style="padding:14px 16px;">
-      <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#2A1060;">Départ : {{.AttendeeName}}</p>
-      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#2A1060;">{{.DepartureInfo}}</p>
+      <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#2A1060;">SQY Gare Saint-Quentin-en-Yvelines</p>
+      <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#2A1060;">Dépôt minute, 5 Av. des Prés</p>
+      <p style="margin:0;"><a href="https://maps.app.goo.gl/CpQ5htXJAgqW9Vg58" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#D4145A;text-decoration:underline;">Voir sur Google Maps</a></p>
     </td></tr>
   </table>
-  {{end}}
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;overflow:hidden;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+    <tr><td style="padding:0;">
+      <img src="{{.BaseURL}}/img/BUSplateau.png" alt="Plateau du Moulon - Brass & Co" width="560" style="display:block;width:100%;height:auto;border:0;">
+    </td></tr>
+    <tr><td style="padding:14px 16px;">
+      <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#2A1060;">Plateau du Moulon</p>
+      <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#2A1060;">Devant le restaurant Brass &amp; Co</p>
+      <p style="margin:0;"><a href="https://maps.app.goo.gl/6CM5WB7Sc423tLgv9" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#D4145A;text-decoration:underline;">Voir sur Google Maps</a></p>
+    </td></tr>
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;overflow:hidden;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+    <tr><td style="padding:0;">
+      <img src="{{.BaseURL}}/img/busMassy.png" alt="Massy-Palaiseau - Le Calypso" width="560" style="display:block;width:100%;height:auto;border:0;">
+    </td></tr>
+    <tr><td style="padding:14px 16px;">
+      <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#2A1060;">Massy Palaiseau Gare (RER B)</p>
+      <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#2A1060;">Devant le restaurant Le Calypso (Massy)</p>
+      <p style="margin:0;"><a href="https://maps.app.goo.gl/w8RU2ygMrfHT1Yt97" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#D4145A;text-decoration:underline;">Voir sur Google Maps</a></p>
+    </td></tr>
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:14px;border-left:3px solid #F97FA0;margin-top:12px;box-shadow:0 4px 18px rgba(155,143,212,.12);">
+    <tr><td style="padding:14px 16px;">
+      <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#2A1060;">Évry Gare</p>
+      <p style="margin:0;"><a href="https://maps.app.goo.gl/gHniMw1LtivALTKd9?g_st=iw" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#D4145A;text-decoration:underline;">Voir sur Google Maps</a></p>
+    </td></tr>
+  </table>
 
   <p style="margin:14px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#2A1060;">
     Merci d'arriver quelques minutes en avance à votre point de départ.
