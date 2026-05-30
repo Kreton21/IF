@@ -1539,6 +1539,15 @@ func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, ord
 	}
 
 	if len(rows) > 0 {
+		orderTickets, _ := s.ticketRepo.GetTicketsByOrderID(ctx, order.ID)
+		attendeeByToken := make(map[string]string, len(orderTickets))
+		for _, t := range orderTickets {
+			name := strings.TrimSpace(strings.TrimSpace(t.AttendeeFirstName) + " " + strings.TrimSpace(t.AttendeeLastName))
+			if name != "" {
+				attendeeByToken[strings.TrimSpace(t.QRToken)] = name
+			}
+		}
+
 		tickets := make([]TicketEmailData, 0, len(rows))
 		for _, row := range rows {
 			qrToken := strings.TrimSpace(row.QRToken)
@@ -1562,9 +1571,14 @@ func (s *TicketService) buildBusReminderTicketsForOrder(ctx context.Context, ord
 				departureInfo = departureInfo + " • " + returnInfo
 			}
 
+			attendeeName := strings.TrimSpace(row.FromStation)
+			if n := attendeeByToken[qrToken]; n != "" {
+				attendeeName = n
+			}
+
 			tickets = append(tickets, TicketEmailData{
 				TicketTypeName: row.TicketTypeName,
-				AttendeeName:   strings.TrimSpace(row.FromStation),
+				AttendeeName:   attendeeName,
 				DepartureInfo:  departureInfo,
 				QRToken:        qrToken,
 				QRCodePNG:      qrPNG,
@@ -1704,7 +1718,7 @@ func (s *TicketService) BroadcastBusReminderEmail(ctx context.Context, targetEma
 		go func(oid string) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			e := s.sendBusReminderEmailForOrder(ctx, oid)
+			e := s.sendBusReminderEmailForOrder(ctx, oid, targetEmail)
 			mu.Lock()
 			if e != nil {
 				failed++
@@ -1728,7 +1742,7 @@ func (s *TicketService) BroadcastBusReminderEmail(ctx context.Context, targetEma
 	return sent, failed, nil
 }
 
-func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderID string) error {
+func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderID string, forcedRecipient string) error {
 	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("récupération commande %s: %w", orderID, err)
@@ -1749,12 +1763,17 @@ func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderI
 		return nil
 	}
 
+	target := strings.ToLower(strings.TrimSpace(order.CustomerEmail))
+	if strings.TrimSpace(forcedRecipient) != "" {
+		target = strings.ToLower(strings.TrimSpace(forcedRecipient))
+	}
+
 	customerName := strings.TrimSpace(fmt.Sprintf("%s %s", order.CustomerFirstName, order.CustomerLastName))
 	if customerName == "" {
 		customerName = strings.TrimSpace(order.CustomerEmail)
 	}
 
-	if err := s.emailService.SendBusReminderEmail(order.CustomerEmail, customerName, order.OrderNumber, tickets); err != nil {
+	if err := s.emailService.SendBusReminderEmail(target, customerName, order.OrderNumber, tickets); err != nil {
 		return fmt.Errorf("échec bus reminder commande %s: %w", order.OrderNumber, err)
 	}
 

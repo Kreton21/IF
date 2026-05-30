@@ -310,7 +310,16 @@ func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmail(ctx context.Contex
 		SELECT o.id
 		FROM orders o
 		WHERE o.status IN ('paid', 'confirmed')
-		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND (
+			LOWER(o.customer_email) = LOWER($1)
+			OR EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+				  AND LOWER(COALESCE(t.attendee_email, '')) = LOWER($1)
+			)
+		  )
 		  AND (
 			EXISTS (
 				SELECT 1
@@ -440,7 +449,16 @@ func (r *OrderRepository) ListPaidConfirmedBusOrderIDsByEmailForBroadcast(ctx co
 		SELECT o.id
 		FROM orders o
 		WHERE o.status IN ('paid', 'confirmed')
-		  AND LOWER(o.customer_email) = LOWER($1)
+		  AND (
+			LOWER(o.customer_email) = LOWER($1)
+			OR EXISTS (
+				SELECT 1
+				FROM tickets t
+				JOIN bus_tickets bt ON bt.ticket_id = t.id
+				WHERE t.order_id = o.id
+				  AND LOWER(COALESCE(t.attendee_email, '')) = LOWER($1)
+			)
+		  )
 		  AND (
 			EXISTS (
 				SELECT 1
