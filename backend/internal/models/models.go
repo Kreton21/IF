@@ -143,6 +143,7 @@ type RefundTicketInfo struct {
 	OrderNumber string      `json:"order_number"`
 	OrderStatus OrderStatus `json:"order_status"`
 	PaymentID  string       `json:"payment_id"`
+	OrderTotalCents int     `json:"order_total_cents"`
 	PriceCents int          `json:"price_cents"`
 	IsValidated bool        `json:"is_validated"`
 	IsRefunded  bool        `json:"is_refunded"`

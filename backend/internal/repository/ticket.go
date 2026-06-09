@@ -684,7 +684,7 @@ func (r *TicketRepository) CountBusTicketsByOrder(ctx context.Context, orderID s
 func (r *TicketRepository) GetRefundTicketInfo(ctx context.Context, ticketID string) (*models.RefundTicketInfo, error) {
 	query := `
 		SELECT t.id, t.order_id, o.order_number, o.status, COALESCE(o.helloasso_payment_id, ''),
-		       tt.price_cents, t.is_validated, t.is_refunded,
+		       o.total_cents, tt.price_cents, t.is_validated, t.is_refunded,
 		       (bt.ticket_id IS NOT NULL) as is_bus
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
@@ -695,7 +695,7 @@ func (r *TicketRepository) GetRefundTicketInfo(ctx context.Context, ticketID str
 	var info models.RefundTicketInfo
 	err := r.pool.QueryRow(ctx, query, ticketID).Scan(
 		&info.TicketID, &info.OrderID, &info.OrderNumber, &info.OrderStatus, &info.PaymentID,
-		&info.PriceCents, &info.IsValidated, &info.IsRefunded, &info.IsBus,
+		&info.OrderTotalCents, &info.PriceCents, &info.IsValidated, &info.IsRefunded, &info.IsBus,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {

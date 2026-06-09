@@ -1965,9 +1965,6 @@ func (s *TicketService) RefundSingleTicket(ctx context.Context, orderID, ticketI
 	if info.OrderStatus != models.OrderStatusPaid && info.OrderStatus != models.OrderStatusConfirmed {
 		return fmt.Errorf("seules les commandes payées/confirmées sont remboursables")
 	}
-	if info.IsBus {
-		return fmt.Errorf("remboursement par ticket non disponible pour les navettes")
-	}
 	if info.IsValidated {
 		return fmt.Errorf("ticket déjà validé")
 	}
@@ -1984,6 +1981,9 @@ func (s *TicketService) RefundSingleTicket(ctx context.Context, orderID, ticketI
 	}
 
 	refundCents := info.PriceCents - 100
+	if info.IsBus {
+		refundCents = info.OrderTotalCents
+	}
 	if refundCents <= 0 {
 		return fmt.Errorf("montant à rembourser invalide (prix %d centimes)", info.PriceCents)
 	}
@@ -2000,6 +2000,26 @@ func (s *TicketService) RefundSingleTicket(ctx context.Context, orderID, ticketI
 
 	if err := s.ticketRepo.MarkTicketRefunded(ctx, ticketID); err != nil {
 		return err
+	}
+
+	if info.IsBus {
+		if err := s.ticketRepo.ReleaseBusOrderRides(ctx, info.OrderID); err != nil {
+			return fmt.Errorf("remboursement effectué mais erreur libération places navette: %w", err)
+		}
+
+		totalTickets, countErr := s.ticketRepo.CountTicketsByOrder(ctx, info.OrderID)
+		if countErr != nil {
+			return fmt.Errorf("remboursement effectué mais erreur vérification commande: %w", countErr)
+		}
+		busTickets, countBusErr := s.ticketRepo.CountBusTicketsByOrder(ctx, info.OrderID)
+		if countBusErr != nil {
+			return fmt.Errorf("remboursement effectué mais erreur vérification commande: %w", countBusErr)
+		}
+		if totalTickets > 0 && totalTickets == busTickets {
+			if err := s.orderRepo.UpdateOrderStatus(ctx, info.OrderID, models.OrderStatusRefunded); err != nil {
+				return fmt.Errorf("remboursement effectué mais statut non mis à jour: %w", err)
+			}
+		}
 	}
 
 	s.redis.Del(ctx, "ticket_types:active")
