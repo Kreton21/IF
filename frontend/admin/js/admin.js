@@ -962,7 +962,7 @@ function renderOrdersTable(orders, options = {}) {
                             <div class="order-details-actions">
                                 <button class="btn btn-sm btn-primary" onclick="saveOrderDetails('${o.id}')">Confirmer</button>
                                 <button class="btn btn-sm" onclick="resendOrderEmailFromDetails('${o.id}')">Renvoyer</button>
-                                <button class="btn btn-sm btn-danger" onclick="refundOrderTotalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Rembourser</button>
+                                <button class="btn btn-sm btn-danger" onclick="refundOrderTotalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}', ${o.total_cents || 0})">Rembourser</button>
                                 <button class="btn btn-sm btn-warning" onclick="removeOrderLocalFromDetails('${o.id}', '${escapeAttr(o.order_number || '')}')">Supprimer local</button>
                             </div>
                             <div id="order-tickets-${o.id}" style="margin-top:16px;">
@@ -1034,9 +1034,10 @@ async function resendOrderEmailFromDetails(orderID) {
     }
 }
 
-async function refundOrderTotalFromDetails(orderID, orderNumber) {
+async function refundOrderTotalFromDetails(orderID, orderNumber, orderTotalCents) {
     const label = orderNumber ? ` (${orderNumber})` : '';
-    if (!confirm(`Confirmer le remboursement total de cette commande${label} ?\nLe remboursement gardera 1€ par ticket.\nCette action mettra le statut à "Remboursé" et les tickets deviendront invalides au scan.`)) {
+    const policyMessage = 'Commande navette: remboursement 100% du montant.\nCommande festival: 1€ gardé par ticket.';
+    if (!confirm(`Confirmer le remboursement total de cette commande${label} ?\n${policyMessage}\nCette action mettra le statut à "Remboursé" et les tickets deviendront invalides au scan.`)) {
         return;
     }
 

@@ -2223,26 +2223,34 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 	if err != nil {
 		return fmt.Errorf("erreur récupération items: %w", err)
 	}
-	if len(items) == 0 {
-		return fmt.Errorf("navettes non remboursables")
+	totalTickets, err := s.ticketRepo.CountTicketsByOrder(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur comptage tickets: %w", err)
 	}
+	if totalTickets <= 0 {
+		return fmt.Errorf("aucun ticket à rembourser")
+	}
+
+	busTickets, err := s.ticketRepo.CountBusTicketsByOrder(ctx, orderID)
+	if err != nil {
+		return fmt.Errorf("erreur comptage tickets bus: %w", err)
+	}
+
+	busOnlyOrder := busTickets > 0 && busTickets == totalTickets
 
 	ticketCount := 0
 	for _, item := range items {
 		ticketCount += item.Quantity
 	}
-	if ticketCount == 0 {
-		count, err := s.ticketRepo.CountTicketsByOrder(ctx, orderID)
-		if err != nil {
-			return fmt.Errorf("erreur comptage tickets: %w", err)
+
+	refundCents := order.TotalCents
+	if !busOnlyOrder {
+		if ticketCount == 0 {
+			ticketCount = totalTickets
 		}
-		ticketCount = count
-	}
-	if ticketCount <= 0 {
-		return fmt.Errorf("aucun ticket à rembourser")
+		refundCents = order.TotalCents - (ticketCount * 100)
 	}
 
-	refundCents := order.TotalCents - (ticketCount * 100)
 	if refundCents <= 0 {
 		return fmt.Errorf("montant à rembourser invalide (total %d centimes)", order.TotalCents)
 	}
@@ -2264,7 +2272,7 @@ func (s *TicketService) RefundOrderTotal(ctx context.Context, orderID string) er
 		}
 	}
 
-	if len(items) == 0 {
+	if busOnlyOrder || len(items) == 0 {
 		if err := s.ticketRepo.ReleaseBusOrderRides(ctx, orderID); err != nil {
 			return fmt.Errorf("remboursement effectué mais erreur libération places navette: %w", err)
 		}
