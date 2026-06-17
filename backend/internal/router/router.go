@@ -195,6 +195,8 @@ func NewRouter(
 		r.Get("/j1/status", adminHandler.BroadcastJ1Status)
 		r.Post("/bus-reminder", adminHandler.BroadcastBusReminderEmail)
 		r.Get("/bus-reminder/status", adminHandler.BroadcastBusReminderStatus)
+		r.Post("/survey", adminHandler.BroadcastSurveyEmail)
+		r.Get("/survey/status", adminHandler.BroadcastSurveyStatus)
 	})
 
 	// ==========================================

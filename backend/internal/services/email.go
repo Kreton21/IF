@@ -109,6 +109,38 @@ func (s *EmailService) SendBusReminderEmail(to string, customerName string, orde
 	return nil
 }
 
+func (s *EmailService) SendSurveyEmail(to string, customerName string) error {
+	if s.cfg.SMTPHost == "" {
+		fmt.Printf("📧 [MOCK:survey] Email envoyé à %s\n", to)
+		return nil
+	}
+
+	subject, err := s.buildSubject("", s.cfg.SurveyEmailSubject)
+	if err != nil {
+		return fmt.Errorf("erreur génération sujet survey: %w", err)
+	}
+
+	htmlBody, err := s.buildEmailHTML(to, customerName, "", nil, s.cfg.SurveyEmailTemplatePath)
+	if err != nil {
+		return fmt.Errorf("erreur génération HTML survey: %w", err)
+	}
+
+	plainBody := strings.Join([]string{
+		"Bonjour à toutes et à tous,",
+		"",
+		"Merci d’avoir participé à cette 5e édition de L’Interfilières.",
+		"Questionnaire : https://forms.gle/XpMTtQdzyLiQomqm6",
+		"Objets perdus : https://forms.gle/5F8E6xkxakiAZaHM9",
+	}, "\n")
+
+	if err := s.sendMIMEEmail(to, subject, plainBody, htmlBody, nil); err != nil {
+		return err
+	}
+
+	fmt.Printf("📧 Email survey envoyé à %s\n", to)
+	return nil
+}
+
 // SendJ1Email sends the J-1 broadcast email with ticket PDFs and the VSS
 // prevention PDF attached alongside them.
 func (s *EmailService) SendJ1Email(to string, customerName string, orderNumber string, tickets []TicketEmailData) error {

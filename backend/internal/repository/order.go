@@ -500,6 +500,123 @@ func (r *OrderRepository) MarkBroadcastSent(ctx context.Context, orderID, campai
 	return err
 }
 
+// ListPaidConfirmedDistinctEmails returns unique customer emails for paid/confirmed orders.
+func (r *OrderRepository) ListPaidConfirmedDistinctEmails(ctx context.Context) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT LOWER(TRIM(o.customer_email)) AS email
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND TRIM(COALESCE(o.customer_email, '')) <> ''
+		ORDER BY email ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query emails distincts: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]string, 0)
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, fmt.Errorf("erreur scan email distinct: %w", err)
+		}
+		if strings.TrimSpace(email) != "" {
+			out = append(out, strings.TrimSpace(email))
+		}
+	}
+	return out, nil
+}
+
+// ListPaidConfirmedDistinctEmailsForBroadcast returns unique emails that still have at least
+// one paid/confirmed order not marked in broadcast_sent for the campaign.
+func (r *OrderRepository) ListPaidConfirmedDistinctEmailsForBroadcast(ctx context.Context, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT LOWER(TRIM(o.customer_email)) AS email
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND TRIM(COALESCE(o.customer_email, '')) <> ''
+		  AND EXISTS (
+			SELECT 1
+			FROM orders o2
+			WHERE o2.status IN ('paid', 'confirmed')
+			  AND LOWER(TRIM(o2.customer_email)) = LOWER(TRIM(o.customer_email))
+			  AND NOT EXISTS (
+				SELECT 1 FROM broadcast_sent bs
+				WHERE bs.order_id = o2.id AND bs.campaign = $1
+			  )
+		  )
+		ORDER BY email ASC`, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query emails distincts broadcast: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]string, 0)
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, fmt.Errorf("erreur scan email distinct broadcast: %w", err)
+		}
+		if strings.TrimSpace(email) != "" {
+			out = append(out, strings.TrimSpace(email))
+		}
+	}
+	return out, nil
+}
+
+// ListPaidConfirmedDistinctEmailsByEmailForBroadcast returns the target email if it is eligible
+// for the campaign (has at least one paid/confirmed order not yet marked).
+func (r *OrderRepository) ListPaidConfirmedDistinctEmailsByEmailForBroadcast(ctx context.Context, email, campaign string) ([]string, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT LOWER(TRIM(o.customer_email)) AS email
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(TRIM(o.customer_email)) = LOWER(TRIM($1))
+		  AND TRIM(COALESCE(o.customer_email, '')) <> ''
+		  AND EXISTS (
+			SELECT 1
+			FROM orders o2
+			WHERE o2.status IN ('paid', 'confirmed')
+			  AND LOWER(TRIM(o2.customer_email)) = LOWER(TRIM($1))
+			  AND NOT EXISTS (
+				SELECT 1 FROM broadcast_sent bs
+				WHERE bs.order_id = o2.id AND bs.campaign = $2
+			  )
+		  )
+		LIMIT 1`, email, campaign)
+	if err != nil {
+		return nil, fmt.Errorf("erreur query email ciblé broadcast: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]string, 0, 1)
+	for rows.Next() {
+		var normalized string
+		if err := rows.Scan(&normalized); err != nil {
+			return nil, fmt.Errorf("erreur scan email ciblé broadcast: %w", err)
+		}
+		if strings.TrimSpace(normalized) != "" {
+			out = append(out, strings.TrimSpace(normalized))
+		}
+	}
+	return out, nil
+}
+
+// MarkBroadcastSentByEmail marks all paid/confirmed orders of the email as sent for campaign.
+func (r *OrderRepository) MarkBroadcastSentByEmail(ctx context.Context, email, campaign string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO broadcast_sent (order_id, campaign)
+		SELECT o.id, $2
+		FROM orders o
+		WHERE o.status IN ('paid', 'confirmed')
+		  AND LOWER(TRIM(o.customer_email)) = LOWER(TRIM($1))
+		ON CONFLICT (order_id, campaign) DO NOTHING`,
+		email, campaign)
+	if err != nil {
+		return fmt.Errorf("erreur marquage broadcast par email: %w", err)
+	}
+	return nil
+}
+
 func (r *OrderRepository) SetHelloAssoPaymentID(ctx context.Context, orderID string, paymentID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE orders SET helloasso_payment_id = $1 WHERE id = $2`,

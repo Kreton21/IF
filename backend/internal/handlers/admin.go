@@ -1318,3 +1318,52 @@ func (h *AdminHandler) BroadcastBusReminderStatus(w http.ResponseWriter, r *http
 		"total":   total,
 	})
 }
+
+// BroadcastSurveyEmail starts the survey email broadcast (unique recipient emails).
+func (h *AdminHandler) BroadcastSurveyEmail(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TargetEmail string `json:"target_email"`
+		Force       bool   `json:"force"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	targetEmail := strings.TrimSpace(body.TargetEmail)
+
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	if running {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":  "broadcast already running",
+			"sent":   sent,
+			"failed": failed,
+			"total":  total,
+		})
+		return
+	}
+
+	go func() {
+		ctx := context.Background()
+		sent, failed, err := h.ticketService.BroadcastSurveyEmail(ctx, targetEmail, body.Force, 2, nil)
+		if err != nil {
+			log.Printf("Erreur broadcast survey: %v (sent=%d, failed=%d)", err, sent, failed)
+		} else {
+			log.Printf("Broadcast survey terminé: %d envoyés, %d échoués", sent, failed)
+		}
+	}()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"started": true})
+}
+
+// BroadcastSurveyStatus returns current progress for survey broadcast.
+func (h *AdminHandler) BroadcastSurveyStatus(w http.ResponseWriter, r *http.Request) {
+	running, sent, failed, total := h.ticketService.BroadcastProgress()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"running": running,
+		"sent":    sent,
+		"failed":  failed,
+		"total":   total,
+	})
+}

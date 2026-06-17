@@ -1780,6 +1780,92 @@ func (s *TicketService) sendBusReminderEmailForOrder(ctx context.Context, orderI
 	return nil
 }
 
+// BroadcastSurveyEmail sends the survey email once per unique email address.
+// It reuses broadcast_sent table by marking all paid/confirmed orders of that address.
+func (s *TicketService) BroadcastSurveyEmail(ctx context.Context, targetEmail string, force bool, concurrency int, progress func(sent, failed, total int)) (int, int, error) {
+	var emails []string
+	var err error
+
+	targetEmail = strings.ToLower(strings.TrimSpace(targetEmail))
+	if force {
+		if targetEmail != "" {
+			emails = []string{targetEmail}
+		} else {
+			emails, err = s.orderRepo.ListPaidConfirmedDistinctEmails(ctx)
+		}
+	} else {
+		if targetEmail != "" {
+			emails, err = s.orderRepo.ListPaidConfirmedDistinctEmailsByEmailForBroadcast(ctx, targetEmail, "survey")
+		} else {
+			emails, err = s.orderRepo.ListPaidConfirmedDistinctEmailsForBroadcast(ctx, "survey")
+		}
+	}
+	if err != nil {
+		log.Printf("ERROR BroadcastSurveyEmail: impossible de récupérer les emails: %v", err)
+		return 0, 0, err
+	}
+
+	log.Printf("INFO BroadcastSurveyEmail: %d emails à traiter (force=%v, target=%q)", len(emails), force, targetEmail)
+
+	total := len(emails)
+	if concurrency <= 0 {
+		concurrency = 5
+	}
+
+	atomic.StoreInt64(&s.broadcastSent, 0)
+	atomic.StoreInt64(&s.broadcastFailed, 0)
+	atomic.StoreInt64(&s.broadcastTotal, int64(total))
+	atomic.StoreInt32(&s.broadcastRunning, 1)
+	defer atomic.StoreInt32(&s.broadcastRunning, 0)
+
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sent := 0
+	failed := 0
+
+	for _, email := range emails {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(recipient string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			e := s.sendSurveyEmailForRecipient(ctx, recipient)
+			mu.Lock()
+			if e != nil {
+				failed++
+				atomic.StoreInt64(&s.broadcastFailed, int64(failed))
+				log.Printf("WARN: survey broadcast email %s échoué: %v", recipient, e)
+			} else {
+				sent++
+				atomic.StoreInt64(&s.broadcastSent, int64(sent))
+				if markErr := s.orderRepo.MarkBroadcastSentByEmail(ctx, recipient, "survey"); markErr != nil {
+					log.Printf("WARN: impossible de marquer %s comme envoyé (survey): %v", recipient, markErr)
+				}
+			}
+			if progress != nil {
+				progress(sent, failed, total)
+			}
+			mu.Unlock()
+		}(email)
+	}
+
+	wg.Wait()
+	return sent, failed, nil
+}
+
+func (s *TicketService) sendSurveyEmailForRecipient(ctx context.Context, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return fmt.Errorf("email vide")
+	}
+
+	if err := s.emailService.SendSurveyEmail(email, email); err != nil {
+		return fmt.Errorf("échec survey email %s: %w", email, err)
+	}
+	return nil
+}
+
 // BroadcastJ1Email sends the J-1 reminder email with ticket PDFs to confirmed festival ticket holders.
 // If targetEmail is non-empty, only orders matching that address are processed (for testing).
 // Bus-only orders are skipped. Returns (sent, failed, error).
